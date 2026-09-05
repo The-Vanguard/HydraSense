@@ -1,0 +1,12 @@
+# Normalise line endings: store LF in git, check out as-is on all platforms
+* text=auto eol=lf
+
+# Binary files — never mangle
+*.tif  binary
+*.tiff binary
+*.pkl  binary
+*.xgb  binary
+*.h5   binary
+*.nc   binary
+*.zip  binary
+*.gz   binary
