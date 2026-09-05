@@ -1,0 +1,28 @@
+# Ignore large terrain, raster, and raw data files.
+# Processed Parquet outputs and small CSVs are tracked.
+
+# GeoTIFFs and large rasters
+*.tif
+*.tiff
+*.geotiff
+
+# NetCDF / HDF5 files
+*.nc
+*.h5
+*.hdf5
+
+# Large raw downloads
+*.zip
+*.tar.gz
+
+# Keep directory structure
+!.gitkeep
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Cached demo snapshot is tracked (needed for fallback per SRS.md Section 13)
+!weather/cached_demo_snapshot.json

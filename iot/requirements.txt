@@ -1,0 +1,7 @@
+# IoT Simulator — MQTT publisher
+#
+# SRS.md Section 7, Section 16 — MQTT simulation only.
+# No LoRaWAN hardware. No real sensor integration (CLAUDE.md).
+
+paho-mqtt==2.1.0
+python-dotenv==1.0.1

@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.venv/
+venv/
+env/
+.env
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Node
+node_modules/
+dist/
+.vite/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Large data files (see data/.gitignore for details)
+*.tif
+*.tiff
+*.geotiff
+*.nc
+*.h5
+*.hdf5
+*.zip
+*.tar.gz
+
+# But keep the cached demo snapshot
+!data/weather/cached_demo_snapshot.json
+
+# Trained model artifacts (large)
+*.pkl
+*.model
+*.xgb
+
+# Logs
+*.log
+logs/
