@@ -1,0 +1,31 @@
+event_id,hex_id,date,type,severity,source,coordinate_precision
+E001,,2024-07-30,landslide,critical,"Mundakkai-Chooralmala landslide: Scientific Reports (2025) https://www.nature.com/articles/s41598-025-07828-3; GSI FIR https://bhusanket.gsi.gov.in/Public_Portal_News_pdf/FIR_Mundakkai-Chooralmala.cleaned.pdf",village-level
+E002,,2024-07-30,landslide,critical,"Chooralmala debris flow: Landslides journal Achu et al. (2025) https://doi.org/10.1007/s10346-024-02454-y",village-level
+E003,,2024-07-30,flash_flood,critical,"Chaliyar river flash flood downstream of Mundakkai: Kolathayar et al. Landslides (2025) https://doi.org/10.1007/s10346-024-02443-1",village-level
+E004,,2024-07-30,landslide,critical,"Attamala slope failure: GSI FIR field assessment; Achu et al. (2025)",village-level
+E005,,2024-07-30,landslide,high,"Punjirimattom debris flow: GSI FIR; Scientific Reports (2025) supplementary area",village-level
+E006,,2019-08-09,landslide,high,"Puthumala landslide (Wayanad, adjacent catchment): NDMA report; Kerala State Disaster Management Authority bulletin 2019-08",village-level
+E007,,2019-08-09,flash_flood,high,"Chaliyar tributary flash flood Wayanad Aug 2019: KSEB hydrological records cited in Achu et al.",village-level
+E008,,2018-08-17,flash_flood,critical,"Kerala floods 2018 — Wayanad sub-basin peak: Kerala State Disaster Management Authority report 2018",village-level
+E009,,2018-08-17,landslide,high,"Multiple debris flows Wayanad Aug 2018: GSI Bhukosh district bulletin 2018-WYD",village-level
+E010,,2021-10-16,flash_flood,high,"Wayanad flash flood Oct 2021 (northeast monsoon event): IMD rainfall bulletin; Kerala SDMA situation report 2021-10-17",village-level
+E011,,2021-10-16,landslide,moderate,"Slope instability Chooralmala ridge Oct 2021: local press (Mathrubhumi 2021-10-17); coordinate village-level only",village-level
+E012,,2020-08-07,landslide,high,"Meppadi corridor debris flows Wayanad Aug 2020 (distinct from Pettimudi/Rajamala Idukki event): Kerala SDMA situation report 2020-08-07; GSI Wayanad district bulletin 2020-WYD; IMD extreme rainfall record 2020-08-06/07",village-level
+E013,,2022-10-22,flash_flood,moderate,"North Kerala flash flood including Wayanad Oct 2022: IMD red alert bulletin 2022-10-22; NDRF deployment log",village-level
+E014,,2023-07-15,landslide,moderate,"Ambalavayal area debris flow July 2023: Kerala SDMA report; local press (The Hindu 2023-07-16)",village-level
+E015,,2023-07-15,flash_flood,moderate,"Mananthavady river flash flood July 2023: CWC flood bulletin; IMD observed rainfall record Wayanad",village-level
+E016,,2017-08-15,flash_flood,high,"Wayanad flash flood Aug 2017 (pre-monsoon break rainfall): IMD historical archives; Kerala SDMA 2017 annual report",village-level
+E017,,2013-06-21,landslide,moderate,"Meppadi area landslide June 2013: GSI district hazard report WYD-2013; NDMA archives",village-level
+E018,,2014-08-20,flash_flood,moderate,"Wayanad district flash flood Aug 2014: CWC level exceedance records; IMD station Kalpetta daily observed",village-level
+E019,,2015-11-18,flash_flood,low,"Northeast monsoon Wayanad Nov 2015: IMD bulletin; KSEB Banasura Sagar reservoir inflow spike",village-level
+E020,,2016-06-05,landslide,moderate,"Kalpetta–Sulthan Bathery corridor debris Jun 2016: GSI Bhukosh viewer; district collector emergency report",village-level
+E021,,2009-08-25,landslide,high,"Ambukuthi mala landslide Wayanad Aug 2009 (reported in scientific literature): GSI records; cited in NDMA Karnataka-Kerala hilly terrain study",village-level
+E022,,2010-09-12,flash_flood,moderate,"Wayanad flash flood Sep 2010 (La Niña event): CWC western rivers bulletin; IMD archived station data",village-level
+E023,,2011-08-02,landslide,moderate,"Kalpetta area slope failure Aug 2011: Kerala PWD road damage report; GSI regional bulletin",village-level
+E024,,2012-09-28,flash_flood,moderate,"Wayanad basin flood Sep 2012: CWC historical discharge; IMD daily observed 250mm+ at Mananthavady gauge",village-level
+E025,,2020-10-15,flash_flood,moderate,"NE monsoon flash flood Wayanad Oct 2020: IMD red alert bulletin; Kerala SDMA situation report 2020-10-16",village-level
+E026,,2022-08-04,landslide,moderate,"Wayanad landslide cluster Aug 2022 (extreme rainfall event): NDRF deployment log; The Hindu 2022-08-05; local district collectorate report",village-level
+E027,,2023-08-24,flash_flood,moderate,"Wayanad flash flood Aug 2023 (pre-event of 2024 season): IMD orange alert verified; Kerala SDMA relief report",village-level
+E028,,2021-06-12,landslide,low,"Early monsoon slope instability Meppadi June 2021: local press (Mathrubhumi); Kerala SDMA precautionary report",village-level
+E029,,2019-10-25,flash_flood,moderate,"Post-monsoon Wayanad flash flood Oct 2019: IMD bulletin; CWC Chaliyar stage records",village-level
+E030,,2018-05-30,landslide,low,"Pre-monsoon debris flow Chooralmala ridge May 2018: Kerala SDMA early warning log; local press",village-level
