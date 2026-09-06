@@ -715,12 +715,12 @@ last sentence before a judge asks it.
 
 | Role | Owns |
 |---|---|
-| A — Geo/Physics | DEM, H3 grid, FS model + uncertainty band, manual GSI susceptibility digitization for the pilot hexes |
-| B — Data/ML | Historical event compilation, event-centered temporal sampling with tier labels (Section 11.2), feature engineering, fusion model training |
-| F — Validation | LOEO harness, built in parallel with B, not after |
-| C — Backend | FastAPI, PostGIS, all endpoints, forecast-based lead-time, live/demo fallback, CAP generator with dedup/downgrade logic |
-| D — IoT/Simulation | MQTT publisher, scripted escalation curve, sensor-health fallback |
-| E — Frontend | Dashboard, heatmap, feature-contribution panel, confidence/lead-time display, validation panel, live/cached-demo label |
+| A — Geo/Physics (guru-elight) | DEM, H3 grid, FS model + uncertainty band, manual GSI susceptibility digitization for the pilot hexes |
+| B — Data/ML (Guhan-10) | Historical event compilation, event-centered temporal sampling with tier labels (Section 11.2), feature engineering, fusion model training |
+| F — Validation (Guhan-10) | LOEO harness, built in parallel with B, not after |
+| C — Backend (Guhan-10) | FastAPI, PostGIS, all endpoints, forecast-based lead-time, live/demo fallback, CAP generator with dedup/downgrade logic. **Phase 8 ownership transferred from guru-elight to Guhan-10.** |
+| D — IoT/Simulation (Guhan-10) | MQTT publisher, scripted escalation curve, sensor-health fallback |
+| E — Frontend (guru-elight) | Dashboard, heatmap, feature-contribution panel, confidence/lead-time display, validation panel, live/cached-demo label. **Phase 12 ownership transferred from Guhan-10 to guru-elight.** |
 
 **Hard cuts, no debate:** XGBoost only (no PSO-BP), one pilot cluster only, no
 exposure/routing layer, no live GSI/SAsiaFFGS integration, no SMAP, Leaflet only (no Mapbox),

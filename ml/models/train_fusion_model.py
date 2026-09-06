@@ -280,9 +280,10 @@ class FusionModel:
     """
 
     def __init__(self) -> None:
-        self.clf       = XGBClassifier(**XGBOOST_PARAMS)
-        self.is_fitted = False
+        self.clf        = XGBClassifier(**XGBOOST_PARAMS)
+        self.is_fitted  = False
         self.feature_cols = ALL_FEATURE_COLS
+        self._xgb_params  = XGBOOST_PARAMS
         self.training_meta: dict[str, Any] = {}
 
     def fit(self, X: pd.DataFrame, y: pd.Series) -> None:
@@ -408,24 +409,56 @@ class FusionModel:
         return out
 
     def save(self, path: Path = _MODEL_PATH) -> None:
-        """Pickle the fitted model to path for reuse by Phase 7 and Phase 9."""
+        """Save model state as a portable dict (JSON booster + metadata).
+        Avoids pickle class-resolution issues when loading from non-__main__ contexts.
+        """
         path.parent.mkdir(parents=True, exist_ok=True)
+        import tempfile, os
+        # Save XGBoost booster to JSON string
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tmp:
+            tmp_path = tmp.name
+        try:
+            self.clf.save_model(tmp_path)
+            with open(tmp_path, "r", encoding="utf-8") as f:
+                booster_json = f.read()
+        finally:
+            os.unlink(tmp_path)
+        state = {
+            "booster_json": booster_json,
+            "feature_cols": ALL_FEATURE_COLS,
+            "xgb_params":   XGBOOST_PARAMS,
+        }
         with open(path, "wb") as f:
-            pickle.dump(self, f)
+            pickle.dump(state, f)
         print(f"[train_fusion] Model saved -> {path}")
 
     @classmethod
     def load(cls, path: Path = _MODEL_PATH) -> "FusionModel":
-        """Load a previously saved FusionModel from path."""
+        """Load model from state dict. No class-resolution required -- state is primitive types."""
         if not path.exists():
             raise FileNotFoundError(
                 f"[FusionModel] Model not found at {path}. "
                 "Run train_fusion_model.py first."
             )
         with open(path, "rb") as f:
-            model = pickle.load(f)
-        print(f"[train_fusion] Model loaded ← {path}")
+            state = pickle.load(f)
+        # state is a plain dict -- no FusionModel class needed to unpickle
+        import tempfile, os
+        import xgboost as xgb
+        model = cls()
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False, mode="w", encoding="utf-8") as tmp:
+            tmp.write(state["booster_json"])
+            tmp_path = tmp.name
+        try:
+            model.clf = xgb.XGBClassifier()
+            model.clf.load_model(tmp_path)
+        finally:
+            os.unlink(tmp_path)
+        model._xgb_params = state.get("xgb_params", XGBOOST_PARAMS)
+        model.is_fitted   = True   # booster restored -- model is ready for inference
+        print(f"[train_fusion] Model loaded <- {path}")
         return model
+
 
 
 # ---------------------------------------------------------------------------
@@ -531,24 +564,26 @@ def join_dynamic_features(
     # Load static features from Phase 3 parquet if available
     static_map: dict[str, dict[str, Any]] = {}   # {hex_id: {col: val}}
     if static_features_path is None:
-        # Phase 3 writes to data/processed/; data/features/ is a legacy alias — check both
-        _sf_primary = ROOT / "data" / "processed" / "static_features.parquet"
-        _sf_alt     = ROOT / "data" / "features"  / "static_features.parquet"
-        static_features_path = _sf_primary if _sf_primary.exists() else _sf_alt
+        # Phase 3 writes exclusively to data/processed/static_features.parquet.
+        # (static_features.py L133: OUT_DIR = BASE_DIR / "data" / "processed")
+        static_features_path = ROOT / "data" / "processed" / "static_features.parquet"
     if static_features_path.exists():
         try:
             sf = pd.read_parquet(static_features_path)
             for _, row in sf.iterrows():
                 hid = str(row["hex_id"])
                 static_map[hid] = {c: row.get(c) for c in STATIC_FEATURE_COLS}
-            print(f"[train_fusion] Loaded Phase 3 static features for {len(static_map)} hexes")
+            print(f"[train_fusion] Loaded Phase 3 static features for {len(static_map)} hexes"
+                  f" from {static_features_path}")
         except Exception as exc:
-            print(f"[train_fusion] WARNING: Could not load Phase 3 parquet ({exc}); static features remain None")
+            print(f"[train_fusion] WARNING: Could not load Phase 3 parquet ({exc}); static features remain NaN")
     else:
         print(
-            f"[train_fusion] NOTE: Phase 3 static_features.parquet not found at "
-            f"{static_features_path}\n"
-            f"  slope_deg, aspect, TWI, TRI, elevation, etc. will be NaN for all rows."
+            f"[train_fusion] NOTE: Phase 3 static_features.parquet not found.\n"
+            f"  Expected: {static_features_path}\n"
+            f"  Run: python ml/features/static_features.py  (requires DEM + landcover rasters)\n"
+            f"  Until then: slope_deg, aspect, TWI, TRI, elevation, etc. will be NaN for all rows.\n"
+            f"  factor_of_safety will also be NaN (needs slope_deg)."
         )
 
     # Join dynamic features row by row
@@ -588,20 +623,43 @@ def join_dynamic_features(
         )
         dyn_records.append(dyn)
 
-    # Build a joined DataFrame — overwrite Phase 4 placeholders with computed values
+    # Build a joined DataFrame.
+    # IMPORTANT: event_centered_sampling.py already computed rainfall features at
+    # sample-generation time using the full historical + live lookup.  Those values
+    # are the authoritative ones — do NOT overwrite non-null parquet values with the
+    # freshly computed (and often NaN) values from the current lookup window.
+    # Only fill slots that are still NaN in the parquet (e.g. soil_saturation_ratio,
+    # simulated signals, and any column that sampling didn't pre-compute).
     dyn_df = pd.DataFrame(dyn_records, index=df.index)
 
     dyn_cols = DYNAMIC_FEATURE_COLS + ["fs_band_width_penalty", "fs_band_straddles_one"]
     for col in dyn_cols:
-        if col in dyn_df.columns:
+        if col not in dyn_df.columns:
+            continue
+        if col not in df.columns:
             df = df.copy()
             df[col] = dyn_df[col]
+        else:
+            # Prefer parquet value; fill only NaN slots from freshly computed values.
+            # Coerce to numeric first — compute_dynamic_features() returns Python None
+            # which pandas can't assign into a float64 parquet column directly.
+            df = df.copy()
+            null_mask = df[col].isna()
+            if null_mask.any():
+                fill_vals = pd.to_numeric(dyn_df.loc[null_mask, col], errors="coerce")
+                df.loc[null_mask, col] = fill_vals
 
-    # Join static features from Phase 3 if available
+    # Join static features from Phase 3 if available (Phase 3 parquet is authoritative)
     for col in STATIC_FEATURE_COLS:
-        if col in dyn_df.columns:
-            df[col] = dyn_df[col]
-        elif static_map and col not in df.columns:
+        if static_map:
+            # static_map is keyed by hex_id; fill from map, prefer parquet if non-null
+            vals = df["hex_id"].map(lambda h: static_map.get(str(h), {}).get(col))
+            if col not in df.columns:
+                df[col] = vals
+            else:
+                null_mask = df[col].isna()
+                df.loc[null_mask, col] = vals[null_mask]
+        elif col not in df.columns:
             df[col] = None
 
     # Count coverage after join
