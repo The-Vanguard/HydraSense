@@ -2,7 +2,7 @@
 ingest_rainfall_historical.py -- Pull archived hourly rainfall for historical event windows.
 
 Implements: SRS.md Section 8 (Data Sources), Phase 1 supplement.
-Owner: Dev A (Phase 1) / filed as Bug 3 fix from Phase 6 self-review.
+Owner: guru-elight (Phase 1) / filed as Bug 3 fix from Phase 6 self-review.
 
 WHY THIS EXISTS
 ---------------

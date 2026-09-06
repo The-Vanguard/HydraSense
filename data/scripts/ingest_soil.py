@@ -2,7 +2,7 @@
 ingest_soil.py — Pull soil moisture (GWETROOT) from NASA POWER API.
 
 Implements: SRS.md Section 8 (Data Sources — soil moisture row), Section 10.1 (FS model).
-Owner: Dev A (Phase 1)
+Owner: guru-elight (Phase 1)
 
 NASA POWER (Prediction of Worldwide Energy Resources) provides free, no-key-required
 access to modelled soil-moisture parameters derived from MERRA-2 reanalysis.

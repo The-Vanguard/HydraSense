@@ -3,7 +3,7 @@ train_fusion_model.py — XGBoost fusion model training.
 
 Implements: SRS.md Section 10.2 (fusion model), Section 10.3 (confidence score),
             Section 10.4 (tiering), Phase 6 Part 2.
-Owner: Dev B (Phase 6)
+Owner: Guhan-10 (Phase 6)
 
 WHAT THIS DOES
 --------------

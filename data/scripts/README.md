@@ -1,7 +1,7 @@
 # Data Ingestion Scripts (Phase 1)
 
 Implements SRS.md Section 8 — all data sources for the Wayanad pilot cluster.
-Owner: Dev A.
+Owner: guru-elight.
 
 ## Scripts
 

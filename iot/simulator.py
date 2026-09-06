@@ -2,7 +2,7 @@
 simulator.py — IoT MQTT publisher replaying a scripted escalation curve.
 
 Implements: SRS.md Section 16 (IoT Simulation Spec), Phase 10.
-Owner: Dev B (Phase 10)
+Owner: Guhan-10 (Phase 10)
 
 WHAT THIS IS:
   A pure software simulation — no real hardware, no LoRaWAN, no real sensors.

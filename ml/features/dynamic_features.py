@@ -3,7 +3,7 @@ dynamic_features.py — Dynamic (hazard) feature computation per hex per ingesti
 
 Implements: SRS.md Section 9 (dynamic features) + Section 10.1 (FS integration),
             Phase 6 Part 1.
-Owner: Dev B (Phase 6)
+Owner: Guhan-10 (Phase 6)
 
 WHAT THIS COMPUTES
 ------------------

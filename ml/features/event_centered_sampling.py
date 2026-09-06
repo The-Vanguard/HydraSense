@@ -2,7 +2,7 @@
 event_centered_sampling.py — Historical event expansion into time-stepped training samples.
 
 Implements: SRS.md Section 11 (Validation — Event-Based LOEO), Phase 4.
-Owner: Dev B (Phase 4)
+Owner: Guhan-10 (Phase 4)
 
 Context
 -------
