@@ -160,9 +160,10 @@ class StageSpec:
     expected_risk: int
     # Per-hex, per-sensor target values: {hex_id: {sensor_type: value}}
     readings:      dict = field(default_factory=dict)
-    # Dropout: if True, DEVICE_DROPOUT_ID stops publishing at start of this stage
+    # Dropout: if True, DEVICE_DROPOUT_ID stops publishing from the start of this stage onward.
+    # The runtime tracks dropout state via a local variable in run_simulation() — this field
+    # is only used to signal the *transition* point (Stage 3), not the ongoing state.
     dropout_starts: bool = False
-    dropout_active: bool = False   # set at runtime
 
 
 # Stage 1 — Normal: baseline readings, Green expected (risk ~21)
@@ -216,13 +217,13 @@ STAGE_3 = StageSpec(
 )
 
 # Stage 4 — Slope response: FS drops below 1.0 on adjacent hexes, Red expected (risk ~82)
+# Dropout is still active (started at Stage 3) — tracked by run_simulation()'s local variable.
 STAGE_4 = StageSpec(
     stage_number  = 4,
     name          = "Slope response",
     description   = "FS drops below 1.0 (band 0.7-1.1) — Red, feature-contribution panel shows",
     expected_tier = "Red",
     expected_risk = 82,
-    dropout_active = True,
     readings = {
         HEX_MUNDAKKAI_CORE:    {"rainfall": 52.0, "soil_moisture": 0.91, "tilt": 1.2},
         HEX_ATTAMALA_CORE:     {"rainfall": 48.0, "soil_moisture": 0.89, "tilt": 0.8},
@@ -233,13 +234,13 @@ STAGE_4 = StageSpec(
 )
 
 # Stage 5 — Decision: CAP alert fires; hold Red readings
+# Dropout still active — tracked by run_simulation()'s local variable.
 STAGE_5 = StageSpec(
     stage_number  = 5,
     name          = "Decision",
-    description   = "CAP alert fires on screen — tier, score, lead time, shelter shown",
+    description   = "CAP alert fires on screen — tier, score, confidence, lead time, shelter shown",
     expected_tier = "Red",
     expected_risk = 82,    # same values as Stage 4 (system in alarm state)
-    dropout_active = True,
     readings = STAGE_4.readings,   # identical sensor values — backend holds Red
 )
 
@@ -533,7 +534,19 @@ if __name__ == "__main__":
             sys.exit(1)
         stage = ESCALATION_CURVE[args.stage - 1]
         dropout = args.stage >= 3
-        print(f"[iot-sim] Running single stage: {stage.name}")
+        # Print the same simulation disclaimer as the full run, so per-stage testing
+        # is never mistaken for real sensor data (SRS.md Section 16 / CLAUDE.md).
+        print()
+        print("=" * 65)
+        print(f"[iot-sim] Single-stage mode — Stage {args.stage}: {stage.name}")
+        print(f"  Expected: Tier={stage.expected_tier}, Risk={stage.expected_risk}")
+        print(f"  Dropout active: {dropout} (hex {DEVICE_DROPOUT_HEX})")
+        print(f"  Dry run:        {args.dry_run}")
+        print()
+        print("  NOTE: ALL SENSOR VALUES ARE SIMULATED (SRS.md Section 16).")
+        print("  data_source='SIMULATED — not a real sensor' on every payload.")
+        print("=" * 65)
+        print()
         mqtt_client = None if args.dry_run else build_mqtt_client()
         for tick in range(1, TICKS_PER_STAGE + 1):
             readings = make_readings_for_stage(stage, dropout_active=dropout)
