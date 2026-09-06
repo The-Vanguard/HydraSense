@@ -55,16 +55,6 @@ function buildPopupHtml(simData, lat, lng) {
         </div>
         <span class="tier-badge ${tier}">${tier}</span>
       </div>
-
-      <div class="popup-section-title">Color / Hazard Tier</div>
-      <div class="popup-btn-grid">
-        <button class="pin-tier-btn ${tier === 'Green' ? 'active' : ''}" data-tier="Green" style="--btn-c: #22c55e;">🟢 Green</button>
-        <button class="pin-tier-btn ${tier === 'Yellow' ? 'active' : ''}" data-tier="Yellow" style="--btn-c: #eab308;">🟡 Yellow</button>
-        <button class="pin-tier-btn ${tier === 'Orange' ? 'active' : ''}" data-tier="Orange" style="--btn-c: #f97316;">🟠 Orange</button>
-        <button class="pin-tier-btn ${tier === 'Red' ? 'active' : ''}" data-tier="Red" style="--btn-c: #ef4444;">🔴 Red</button>
-      </div>
-
-      <button class="pin-rand-btn">🎲 Randomize Values</button>
     </div>
   `;
 }
@@ -87,7 +77,7 @@ export default function HexMap({
     onPinDropRef.current = onPinDrop;
   }, [onPinDrop]);
 
-  // Sync external pinData updates (e.g. from sidebar controls) with the map marker
+  // Sync external pinData updates with the map marker
   useEffect(() => {
     if (!pinData || !pinMarkerRef.current || !leafletRef.current) return;
     const { lat, lng } = pinData.risk.coordinates || {};
@@ -115,33 +105,8 @@ export default function HexMap({
     const popup = marker.getPopup();
     if (popup) {
       popup.setContent(buildPopupHtml(pinData, lat, lng));
-      attachPopupListeners(marker, lat, lng, pinData.surface);
     }
   }, [pinData]);
-
-  const attachPopupListeners = (marker, lat, lng, surfaceInfo) => {
-    setTimeout(() => {
-      const popupEl = marker.getPopup()?.getElement();
-      if (!popupEl) return;
-
-      const tierBtns = popupEl.querySelectorAll('.pin-tier-btn');
-      tierBtns.forEach((btn) => {
-        btn.onclick = (ev) => {
-          ev.stopPropagation();
-          const chosenTier = btn.getAttribute('data-tier');
-          dropOrUpdatePin(lat, lng, chosenTier, surfaceInfo);
-        };
-      });
-
-      const randBtn = popupEl.querySelector('.pin-rand-btn');
-      if (randBtn) {
-        randBtn.onclick = (ev) => {
-          ev.stopPropagation();
-          dropOrUpdatePin(lat, lng, pinStateRef.current.tier, surfaceInfo);
-        };
-      }
-    }, 50);
-  };
 
   const dropOrUpdatePin = (lat, lng, forcedTier = null, forcedSurface = null) => {
     const map = leafletRef.current;
@@ -177,12 +142,6 @@ export default function HexMap({
       className: 'hydra-leaflet-popup',
       maxWidth: 240,
       autoPan: false,
-    });
-
-    attachPopupListeners(marker, lat, lng, surfaceInfo);
-
-    marker.on('popupopen', () => {
-      attachPopupListeners(marker, lat, lng, surfaceInfo);
     });
 
     if (onPinDropRef.current) {

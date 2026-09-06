@@ -464,59 +464,5 @@ html, body, #root {
   margin-left: 3px;
 }
 
-.popup-section-title {
-  font-size: 9px;
-  text-transform: uppercase;
-  color: #8b949e;
-  letter-spacing: 0.05em;
-  margin-bottom: 4px;
-}
-
-.popup-btn-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4px;
-  margin-bottom: 8px;
-}
-
-.pin-rand-btn {
-  width: 100%;
-  padding: 5px;
-  background: rgba(88, 166, 255, 0.12);
-  border: 1px solid rgba(88, 166, 255, 0.35);
-  color: #79c0ff;
-  border-radius: 5px;
-  font-size: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.pin-rand-btn:hover {
-  background: rgba(88, 166, 255, 0.25);
-  color: #fff;
-}
-
-.pin-preset-btn {
-  padding: 5px 6px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border);
-  color: #c9d1d9;
-  border-radius: 5px;
-  font-size: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  text-align: center;
-  transition: all 0.15s ease;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.pin-preset-btn:hover {
-  background: rgba(88, 166, 255, 0.15);
-  border-color: #58a6ff;
-  color: #fff;
-}
 
 

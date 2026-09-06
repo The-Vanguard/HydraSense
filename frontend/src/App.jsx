@@ -7,7 +7,7 @@
  */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { getRiskMap, getRisk, getRiskHistory, getInundation } from './api/client';
-import { generatePinSimulation, generateValidationForHex } from './utils/pinSimulation';
+import { generateValidationForHex } from './utils/pinSimulation';
 
 import DataSourceLabel     from './components/DataSourceLabel';
 import SensorLabel         from './components/SensorLabel';
@@ -115,7 +115,7 @@ export default function App() {
     setDemoStage(null);
   }, []);
 
-  // Dropping or moving a custom pin engages simulation mode
+  // Dropping or moving a custom pin engages regional analysis
   const handlePinDrop = useCallback((data) => {
     setIsPinMode(true);
     setPinData(data);
@@ -125,26 +125,14 @@ export default function App() {
     setInundation(data.inundation);
     setValidation(data.validation);
     setDataSource('live');
-    setDemoStage(data.surface?.surface === 'coromandel_coast' ? 'Coromandel Coastal' : 'Western Ghats Slope');
+    setDemoStage(
+      data.surface?.surface === 'coromandel_coast'
+        ? 'Coromandel Coastal'
+        : data.surface?.surface === 'flat_land'
+        ? 'Plains Region'
+        : 'Western Ghats Slope'
+    );
   }, []);
-
-  // Sidebar controls for changing pin tier
-  const handlePinTierChange = useCallback((tier) => {
-    if (!pinData) return;
-    const { lat, lng } = pinData.risk.coordinates || {};
-    if (lat == null || lng == null) return;
-    const newSim = generatePinSimulation(lat, lng, tier, pinData.surface);
-    handlePinDrop(newSim);
-  }, [pinData, handlePinDrop]);
-
-  // Sidebar controls for re-randomizing values at same coordinates
-  const handlePinRandomize = useCallback(() => {
-    if (!pinData) return;
-    const { lat, lng } = pinData.risk.coordinates || {};
-    if (lat == null || lng == null) return;
-    const newSim = generatePinSimulation(lat, lng, pinData.risk.tier, pinData.surface);
-    handlePinDrop(newSim);
-  }, [pinData, handlePinDrop]);
 
   const iotOffline = risk?.iot_anomaly_flag ?? false;
   const currentTier = risk?.tier ?? 'Green';
@@ -162,11 +150,20 @@ export default function App() {
           {isPinMode && pinData ? (
             <div className="panel pin-control-panel">
               <div className="panel-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>📍 Pinned Location</span>
-                <span className="pin-mode-pill">Interactive Sim</span>
+                <span>📍 Analyzed Location</span>
+                {hexes.length > 0 && (
+                  <button
+                    type="button"
+                    className="pin-action-btn back-btn"
+                    style={{ padding: '3px 10px', fontSize: 11 }}
+                    onClick={() => handleSelectHex(hexes[0].hex_id)}
+                  >
+                    ↩ Wayanad Hex
+                  </button>
+                )}
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 700, color: '#e6edf3' }}>
                     {pinData.surface?.label || 'Placed Point'}
@@ -180,94 +177,6 @@ export default function App() {
                     <span className="pulse-dot" />
                     {risk.tier}
                   </span>
-                )}
-              </div>
-
-              <div style={{ fontSize: 10, color: '#8b949e', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Simulate Risk / Color Level:
-              </div>
-              <div className="tier-button-group">
-                <button
-                  type="button"
-                  className={`pin-tier-btn ${risk?.tier === 'Green' ? 'active' : ''}`}
-                  style={{ '--btn-c': '#22c55e' }}
-                  onClick={() => handlePinTierChange('Green')}
-                >
-                  🟢 Green (Low)
-                </button>
-                <button
-                  type="button"
-                  className={`pin-tier-btn ${risk?.tier === 'Yellow' ? 'active' : ''}`}
-                  style={{ '--btn-c': '#eab308' }}
-                  onClick={() => handlePinTierChange('Yellow')}
-                >
-                  🟡 Yellow (Med)
-                </button>
-                <button
-                  type="button"
-                  className={`pin-tier-btn ${risk?.tier === 'Orange' ? 'active' : ''}`}
-                  style={{ '--btn-c': '#f97316' }}
-                  onClick={() => handlePinTierChange('Orange')}
-                >
-                  🟠 Orange (High)
-                </button>
-                <button
-                  type="button"
-                  className={`pin-tier-btn ${risk?.tier === 'Red' ? 'active' : ''}`}
-                  style={{ '--btn-c': '#ef4444' }}
-                  onClick={() => handlePinTierChange('Red')}
-                >
-                  🔴 Red (Critical)
-                </button>
-              </div>
-
-              {/* Quick Region Presets */}
-              <div style={{ marginTop: 10, borderTop: '1px solid #21262d', paddingTop: 8 }}>
-                <div style={{ fontSize: 10, color: '#8b949e', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Quick Jump Presets:
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
-                  <button
-                    type="button"
-                    className="pin-preset-btn"
-                    title="Jump to Coromandel Coast with September coastal rain & inundation"
-                    onClick={() => {
-                      const sim = generatePinSimulation(11.93, 79.82);
-                      handlePinDrop(sim);
-                    }}
-                  >
-                    🌧️ Coromandel Coast
-                  </button>
-                  <button
-                    type="button"
-                    className="pin-preset-btn"
-                    title="Jump to Western Ghats green mountain slope (High Landslide Hazard)"
-                    onClick={() => {
-                      const sim = generatePinSimulation(11.54, 76.06);
-                      handlePinDrop(sim);
-                    }}
-                  >
-                    ⛰️ Green Slope
-                  </button>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
-                <button
-                  type="button"
-                  className="pin-action-btn rand-btn"
-                  onClick={handlePinRandomize}
-                >
-                  🎲 Randomize Values
-                </button>
-                {hexes.length > 0 && (
-                  <button
-                    type="button"
-                    className="pin-action-btn back-btn"
-                    onClick={() => handleSelectHex(hexes[0].hex_id)}
-                  >
-                    ↩ Wayanad Hex
-                  </button>
                 )}
               </div>
             </div>

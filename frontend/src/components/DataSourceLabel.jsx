@@ -13,8 +13,8 @@ export default function DataSourceLabel({ dataSource, stage }) {
         <span style={{ fontSize: 13, fontWeight: 700, color: '#58a6ff', letterSpacing: '-0.3px' }}>
           HydraSense
         </span>
-        <span style={{ fontSize: 11, color: '#484f58' }}>
-          Early Warning System — Landslide &amp; Inundation Monitoring
+        <span style={{ fontSize: 11, color: '#8b949e' }}>
+          Flash Flood Prediction System for Hilly Regions using Multi-Source Data Theme
         </span>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>

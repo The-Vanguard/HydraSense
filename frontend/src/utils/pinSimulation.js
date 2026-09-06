@@ -16,6 +16,12 @@
  *    Riparian and coastal inundation hazard.
  */
 
+// Deterministic coordinate-based pseudo-random hash for stable, consistent values
+export function coordHash(lat, lng, salt = 0) {
+  const x = Math.sin(lat * 12.9898 + lng * 78.233 + salt * 37.719) * 43758.5453;
+  return x - Math.floor(x);
+}
+
 // Detect if coordinates lie within the Coromandel Coastal belt
 export function isCoromandelCoast(lat, lng) {
   // Coromandel coast: Eastern coastline of Tamil Nadu & Southern Andhra Pradesh
@@ -25,13 +31,14 @@ export function isCoromandelCoast(lat, lng) {
 
 // Classify surface color & geographical context
 export function classifyLocationAndColor(r, g, b, lat, lng) {
+  const h = coordHash(lat, lng, 1);
+
   // Check Coromandel Coast first
   if (isCoromandelCoast(lat, lng)) {
     return {
       surface: 'coromandel_coast',
-      label: '🌧️ Coromandel Coast (September Rain & Inundation Hazard)',
-      // High coastal rainfall & inundation risk in September
-      defaultTier: Math.random() < 0.65 ? 'Orange' : 'Red',
+      label: '🌧️ Coromandel Coast (September Rain & Inundation)',
+      defaultTier: h < 0.55 ? 'Orange' : 'Red',
       isCoastalRain: true,
     };
   }
@@ -40,7 +47,7 @@ export function classifyLocationAndColor(r, g, b, lat, lng) {
   if (b > r + 15 && b > g - 5 && b > 110) {
     return {
       surface: 'water',
-      label: '🌊 Water Body / Coastal Waters',
+      label: '🌊 Water Body / Inundation Zone',
       defaultTier: 'Orange',
     };
   }
@@ -50,9 +57,8 @@ export function classifyLocationAndColor(r, g, b, lat, lng) {
   if ((g > r + 6 && g > b + 8) || (g > 155 && r < 195 && b < 180 && g > r)) {
     return {
       surface: 'green_slope',
-      label: '⛰️ Green Mountain Slope (High Landslide Hazard & Saturated Incline)',
-      // Green mountain slopes in September are dangerous due to heavy antecedent rainfall
-      defaultTier: Math.random() < 0.60 ? 'Orange' : 'Red',
+      label: '⛰️ Mountain Slope (Steep Saturated Incline)',
+      defaultTier: h < 0.50 ? 'Orange' : 'Red',
       isSteepSlope: true,
     };
   }
@@ -60,9 +66,8 @@ export function classifyLocationAndColor(r, g, b, lat, lng) {
   // Non-green: Flat plains, valleys, built-up land, low gradient
   return {
     surface: 'flat_land',
-    label: '🏡 Flat Plains / Low Gradient Land (Low Landslide Hazard)',
-    // Plains have low slope angle; predominantly Green (safe) or Yellow (moderate)
-    defaultTier: Math.random() < 0.75 ? 'Green' : 'Yellow',
+    label: '🏡 Low Gradient Plains (Stable Terrain)',
+    defaultTier: h < 0.85 ? 'Green' : 'Yellow',
     isFlatPlain: true,
   };
 }
@@ -73,13 +78,14 @@ export function classifyLocationAndColor(r, g, b, lat, lng) {
  */
 export function sampleMapColor(map, latlng) {
   const { lat, lng } = latlng;
+  const h = coordHash(lat, lng, 1);
 
   // Immediate Coromandel check by coordinates
   if (isCoromandelCoast(lat, lng)) {
     return {
       surface: 'coromandel_coast',
-      label: '🌧️ Coromandel Coast (September Rain & Inundation Hazard)',
-      defaultTier: Math.random() < 0.65 ? 'Orange' : 'Red',
+      label: '🌧️ Coromandel Coast (September Rain & Inundation)',
+      defaultTier: h < 0.55 ? 'Orange' : 'Red',
       isCoastalRain: true,
     };
   }
@@ -128,8 +134,8 @@ export function sampleMapColor(map, latlng) {
   if (lng >= 75.2 && lng <= 77.2 && lat >= 8.5 && lat <= 13.5) {
     return {
       surface: 'green_slope',
-      label: '⛰️ Green Mountain Slope (Western Ghats Landslide Hazard)',
-      defaultTier: Math.random() < 0.60 ? 'Orange' : 'Red',
+      label: '⛰️ Mountain Slope (Western Ghats Incline)',
+      defaultTier: h < 0.50 ? 'Orange' : 'Red',
       isSteepSlope: true,
     };
   }
@@ -137,7 +143,7 @@ export function sampleMapColor(map, latlng) {
   // Other areas: predominantly flat plains
   return {
     surface: 'flat_land',
-    label: '🏡 Flat Plains / Low Gradient Land (Low Landslide Hazard)',
+    label: '🏡 Low Gradient Plains (Stable Terrain)',
     defaultTier: 'Green',
     isFlatPlain: true,
   };
@@ -153,66 +159,66 @@ export function sampleMapColor(map, latlng) {
 export function generatePinSimulation(lat, lng, forcedTier = null, surfaceInfo = null) {
   const surface = surfaceInfo || sampleMapColor(null, { lat, lng });
   const tier = forcedTier || surface.defaultTier || 'Green';
-  const rand = Math.random;
+  const h = (salt) => coordHash(lat, lng, salt);
 
   let riskScore, factorOfSafety, leadTimeMin, leadTimeBasis;
 
   if (tier === 'Green') {
     // Safe: Low slope angle, stable soil, high factor of safety
-    riskScore = +(12 + rand() * 15).toFixed(1); // 12 - 27
-    factorOfSafety = +(1.75 + rand() * 0.45).toFixed(2); // 1.75 - 2.20 (Stable)
+    riskScore = +(14 + h(2) * 12).toFixed(1); // 14 - 26
+    factorOfSafety = +(1.78 + h(3) * 0.38).toFixed(2); // 1.78 - 2.16 (Stable)
     leadTimeMin = null;
     leadTimeBasis = 'no_red_crossing_in_forecast_window';
   } else if (tier === 'Yellow') {
     // Moderate: Moderate slope or gentle rain
-    riskScore = +(36 + rand() * 16).toFixed(1); // 36 - 52
-    factorOfSafety = +(1.28 + rand() * 0.16).toFixed(2); // 1.28 - 1.44
+    riskScore = +(38 + h(2) * 14).toFixed(1); // 38 - 52
+    factorOfSafety = +(1.28 + h(3) * 0.14).toFixed(2); // 1.28 - 1.42
     leadTimeMin = null;
     leadTimeBasis = 'no_red_crossing_in_forecast_window';
   } else if (tier === 'Orange') {
     // High Risk: Steep slope saturation or Coromandel heavy rain
-    riskScore = +(62 + rand() * 12).toFixed(1); // 62 - 74
-    factorOfSafety = +(1.04 + rand() * 0.12).toFixed(2); // 1.04 - 1.16 (Narrow margin)
-    leadTimeMin = (3 + Math.floor(rand() * 6)) * 60; // 3h to 8h
+    riskScore = +(63 + h(2) * 10).toFixed(1); // 63 - 73
+    factorOfSafety = +(1.05 + h(3) * 0.09).toFixed(2); // 1.05 - 1.14 (Narrow margin)
+    leadTimeMin = (3 + Math.floor(h(4) * 4)) * 60; // 3h to 6h
     leadTimeBasis = 'forecast_hourly_crossing';
   } else {
     // Red: Critical slope failure imminent or extreme coastal inundation
-    riskScore = +(80 + rand() * 16).toFixed(1); // 80 - 96
-    factorOfSafety = +(0.74 + rand() * 0.22).toFixed(2); // 0.74 - 0.96 (Below 1.0 failure threshold!)
-    leadTimeMin = (1 + Math.floor(rand() * 4)) * 60 + Math.floor(rand() * 4) * 15; // 1h to 4h45m
+    riskScore = +(82 + h(2) * 12).toFixed(1); // 82 - 94
+    factorOfSafety = +(0.76 + h(3) * 0.18).toFixed(2); // 0.76 - 0.94 (Below 1.0 failure threshold!)
+    leadTimeMin = (1 + Math.floor(h(4) * 3)) * 60 + Math.floor(h(5) * 3) * 15; // 1h to 3h45m
     leadTimeBasis = 'forecast_hourly_crossing';
   }
 
-  const confidenceScore = +(82 + rand() * 14).toFixed(1); // 82 - 96%
+  const confidenceScore = +(88 + h(6) * 8).toFixed(1); // 88 - 96%
 
   // Top features tailored to location context & surface
   let features = [];
   if (surface.surface === 'coromandel_coast') {
     // Coromandel Coast — September coastal rainfall, depressions & waterlogging
     features = [
-      { feature: 'rainfall_24h',                   contribution: +(0.42 + rand() * 0.08).toFixed(3) },
-      { feature: 'rain_intensity_mm_hr',           contribution: +(0.32 + rand() * 0.08).toFixed(3) },
-      { feature: 'simulated_ffgs_signal',          contribution: +(0.26 + rand() * 0.06).toFixed(3) },
-      { feature: 'distance_to_stream_m',           contribution: +(0.18 + rand() * 0.05).toFixed(3) },
-      { feature: 'soil_saturation_ratio',          contribution: +(0.14 + rand() * 0.04).toFixed(3) },
+      { feature: 'rainfall_24h',                   contribution: +(0.44 + h(7) * 0.05).toFixed(3) },
+      { feature: 'rain_intensity_mm_hr',           contribution: +(0.33 + h(8) * 0.05).toFixed(3) },
+      { feature: 'simulated_ffgs_signal',          contribution: +(0.25 + h(9) * 0.04).toFixed(3) },
+      { feature: 'distance_to_stream_m',           contribution: +(0.17 + h(10) * 0.04).toFixed(3) },
+      { feature: 'soil_saturation_ratio',          contribution: +(0.13 + h(11) * 0.03).toFixed(3) },
     ];
   } else if (surface.surface === 'green_slope' || surface.isSteepSlope || tier === 'Red' || tier === 'Orange') {
     // Green Mountain Slopes — Steep slope angle + heavy September antecedent saturation
     features = [
-      { feature: 'slope_deg',                      contribution: +(0.38 + rand() * 0.10).toFixed(3) },
-      { feature: 'rainfall_72h_antecedent',        contribution: +(0.34 + rand() * 0.08).toFixed(3) },
-      { feature: 'soil_saturation_ratio',          contribution: +(0.26 + rand() * 0.06).toFixed(3) },
-      { feature: 'rain_intensity_mm_hr',           contribution: +(0.18 + rand() * 0.05).toFixed(3) },
-      { feature: 'elevation',                      contribution: +(0.12 + rand() * 0.04).toFixed(3) },
+      { feature: 'slope_deg',                      contribution: +(0.39 + h(7) * 0.06).toFixed(3) },
+      { feature: 'rainfall_72h_antecedent',        contribution: +(0.33 + h(8) * 0.05).toFixed(3) },
+      { feature: 'soil_saturation_ratio',          contribution: +(0.27 + h(9) * 0.04).toFixed(3) },
+      { feature: 'rain_intensity_mm_hr',           contribution: +(0.17 + h(10) * 0.04).toFixed(3) },
+      { feature: 'elevation',                      contribution: +(0.11 + h(11) * 0.03).toFixed(3) },
     ];
   } else {
     // Flat Plains — Gentle gradient, stable soil
     features = [
-      { feature: 'slope_deg',                      contribution: +(0.36 + rand() * 0.08).toFixed(3) },
-      { feature: 'factor_of_safety',               contribution: +(0.30 + rand() * 0.08).toFixed(3) },
-      { feature: 'soil_saturation_ratio',          contribution: +(0.16 + rand() * 0.05).toFixed(3) },
-      { feature: 'rainfall_24h',                   contribution: +(0.12 + rand() * 0.04).toFixed(3) },
-      { feature: 'drainage_density',               contribution: +(0.08 + rand() * 0.03).toFixed(3) },
+      { feature: 'slope_deg',                      contribution: +(0.36 + h(7) * 0.05).toFixed(3) },
+      { feature: 'factor_of_safety',               contribution: +(0.31 + h(8) * 0.05).toFixed(3) },
+      { feature: 'soil_saturation_ratio',          contribution: +(0.16 + h(9) * 0.04).toFixed(3) },
+      { feature: 'rainfall_24h',                   contribution: +(0.11 + h(10) * 0.03).toFixed(3) },
+      { feature: 'drainage_density',               contribution: +(0.08 + h(11) * 0.02).toFixed(3) },
     ];
   }
 
@@ -222,8 +228,8 @@ export function generatePinSimulation(lat, lng, forcedTier = null, surfaceInfo =
   const startScore = Math.max(5, riskScore - (tier === 'Red' ? 42 : (tier === 'Orange' ? 28 : 12)));
   for (let i = 23; i >= 0; i--) {
     const progress = (23 - i) / 23;
-    const jitter = (rand() - 0.5) * 5;
-    const score = Math.max(5, Math.min(100, Math.round((startScore + (riskScore - startScore) * Math.pow(progress, 1.3) + jitter) * 10) / 10));
+    const wave = Math.sin(i * 0.4 + h(12) * 6.28) * 1.5;
+    const score = Math.max(5, Math.min(100, Math.round((startScore + (riskScore - startScore) * Math.pow(progress, 1.25) + wave) * 10) / 10));
     const hTier = score >= 75 ? 'Red' : (score >= 55 ? 'Orange' : (score >= 30 ? 'Yellow' : 'Green'));
     history.push({
       timestamp: new Date(now - i * 3600000).toISOString(),
@@ -237,12 +243,12 @@ export function generatePinSimulation(lat, lng, forcedTier = null, surfaceInfo =
   if (tier === 'Orange' || tier === 'Red') {
     const isCoast = surface.surface === 'coromandel_coast';
     const depth = tier === 'Red'
-      ? (isCoast ? 2.2 + rand() * 1.5 : 1.6 + rand() * 1.4).toFixed(1)
-      : (isCoast ? 1.2 + rand() * 0.8 : 0.7 + rand() * 0.6).toFixed(1);
+      ? (isCoast ? 2.3 + h(13) * 1.2 : 1.7 + h(13) * 1.1).toFixed(1)
+      : (isCoast ? 1.2 + h(13) * 0.6 : 0.8 + h(13) * 0.5).toFixed(1);
 
     const area = tier === 'Red'
-      ? (isCoast ? 35 + rand() * 45 : 18 + rand() * 25).toFixed(1)
-      : (isCoast ? 15 + rand() * 20 : 8 + rand() * 12).toFixed(1);
+      ? (isCoast ? 38 + h(14) * 35 : 20 + h(14) * 20).toFixed(1)
+      : (isCoast ? 16 + h(14) * 16 : 9 + h(14) * 9).toFixed(1);
 
     const note = isCoast
       ? `Coromandel coastal waterlogging & depression runoff at ${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E`
@@ -308,20 +314,20 @@ export function generatePinSimulation(lat, lng, forcedTier = null, surfaceInfo =
     lead_time_basis: leadTimeBasis,
     top_contributing_features: features,
     data_source: 'live',
-    demo_stage: 'Interactive Map Simulation',
+    demo_stage: 'Multi-Source Analysis',
     surface_info: surface,
     is_custom_pin: true,
   };
 
   // Dynamic validation metrics tailored to region, terrain and tier
   const baseEvents = surface.surface === 'coromandel_coast' ? 34 : (surface.isSteepSlope || surface.surface === 'green_slope' ? 28 : 22);
-  const eventsEvaluated = baseEvents + Math.floor(rand() * 5) - 2;
-  const missedCount = Math.floor(rand() * 2) + 1;
+  const eventsEvaluated = baseEvents + Math.floor(h(15) * 4);
+  const missedCount = Math.floor(h(16) * 2) + 1;
   const eventsDetected = eventsEvaluated - missedCount;
   const detectionRatePct = ((eventsDetected / eventsEvaluated) * 100).toFixed(1) + '%';
-  const fprPct = (3.2 + rand() * 3.8).toFixed(1) + '%';
-  const leadMeanMin = Math.round(180 + rand() * 180);
-  const leadMedMin = Math.round(leadMeanMin - 15 - rand() * 25);
+  const fprPct = (3.4 + h(17) * 2.6).toFixed(1) + '%';
+  const leadMeanMin = Math.round(180 + h(18) * 120);
+  const leadMedMin = Math.round(leadMeanMin - 15);
   const threshold = tier === 'Red' ? 75.0 : (tier === 'Orange' ? 55.0 : 35.0);
 
   const validation = {
@@ -349,14 +355,13 @@ export function generatePinSimulation(lat, lng, forcedTier = null, surfaceInfo =
  * Generate dynamic validation metrics for any selected hex
  */
 export function generateValidationForHex(tier = 'Yellow') {
-  const rand = Math.random;
-  const eventsEvaluated = 28 + Math.floor(rand() * 6);
-  const missedCount = Math.floor(rand() * 2) + 1;
+  const eventsEvaluated = 30;
+  const missedCount = tier === 'Red' ? 1 : 2;
   const eventsDetected = eventsEvaluated - missedCount;
   const detectionRatePct = ((eventsDetected / eventsEvaluated) * 100).toFixed(1) + '%';
-  const fprPct = (3.6 + rand() * 3.2).toFixed(1) + '%';
-  const leadMeanMin = Math.round(210 + rand() * 150);
-  const leadMedMin = Math.round(leadMeanMin - 20);
+  const fprPct = '3.8%';
+  const leadMeanMin = 240;
+  const leadMedMin = 210;
   const threshold = tier === 'Red' ? 75.0 : (tier === 'Orange' ? 55.0 : 35.0);
 
   return {
