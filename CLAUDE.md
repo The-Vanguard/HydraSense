@@ -52,8 +52,9 @@ SRS.md (in /docs/) supersedes even this file on factual/specification matters.
 
 - Never commit directly to `main`. Branch naming: `phase-<n>-<short-desc>`.
 - `git pull origin main` before starting any branch. Confirm no uncommitted changes first.
-- Dev A owns Phases 1, 3, 5, 8, 9, 11. Dev B owns Phases 2, 4, 6, 7, 10, 12.
-- Phase 8 depends on Phase 6 (Dev B). Phase 9 depends on Phase 7 (Dev B).
+- guru-elight owns Phases 1, 3, 5, 9, 11, 12 (Frontend). Guhan-10 owns Phases 2, 4, 6, 7, 8 (Backend), 10.
+- Phase 8 depends on Phase 6 (Guhan-10). Phase 9 depends on Phase 7 (Guhan-10).
+  (Phase 8 ownership transferred to Guhan-10; Phase 12 ownership transferred to guru-elight.)
   If those are not merged to main, stop and flag — do not stub/mock missing models.
 - Never touch /ml/models/train_fusion_model.py, /ml/validation/, or /frontend/ unless you
   are explicitly assigned to that phase.

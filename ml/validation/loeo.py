@@ -1,4 +1,4 @@
-﻿"""
+"""
 Phase 7 -- Leave-One-Event-Out (LOEO) Validation Harness.
 
 SRS.md references:
@@ -17,8 +17,9 @@ HARD CONSTRAINTS (SRS 11 + CLAUDE.md):
   - Output is static JSON (data/validation/loeo_results.json + loeo_summary.json).
   - Report honestly: detection rate, FP rate, mean AND median timing error, worst-case events.
 
-Owner: Guhan-10
-guru-elight: do not modify -- if FusionModel API changes, coordinate first.
+Owner: Guhan-10 (Phases 2, 4, 6, 7, 8, 10)
+guru-elight: do not modify -- owns Phases 1, 3, 5, 9, 11, 12 (Frontend).
+             If FusionModel API changes in train_fusion_model.py, coordinate with Guhan-10 first.
 """
 
 from __future__ import annotations
