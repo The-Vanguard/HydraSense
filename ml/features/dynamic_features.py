@@ -374,16 +374,52 @@ def _compute_simulated_gsi_signal(
     return False
 
 
-def _compute_iot_anomaly_flag() -> bool:
+_SENSOR_STATE_PATH = Path(__file__).resolve().parents[2] / "data" / "iot" / "sensor_state.json"
+_IOT_DROPOUT_MINUTES = 30   # sensor missing for >30 min = anomaly (matches Phase 10 curve)
+
+
+def _compute_iot_anomaly_flag(hex_id: str = "") -> bool:
     """
-    IoT sensor anomaly flag.
-    # TODO(Phase 10): wire in real IoT sensor data from Phase 10's simulation.
-    #   Until Phase 10 is implemented, this always returns False.
-    #   Do NOT substitute random values or heuristics here — the stub is explicit.
-    Stub returns False (no IoT data available until Phase 10).
+    IoT sensor anomaly flag. Reads Phase 8's persisted sensor state from
+    data/iot/sensor_state.json (written by POST /ingest/iot in backend/routers/ingest.py).
+
+    Returns True if:
+      - sensor_state.json exists AND has a record for this hex_id AND
+        the sensor's last_seen_utc is more than _IOT_DROPOUT_MINUTES ago.
+    Returns False if:
+      - sensor_state.json doesn't exist yet (Phase 8 not started, or no IoT data)
+      - hex_id has no sensor record
+      - last_seen_utc can't be parsed
+
+    Frozen wording per CLAUDE.md: when True, callers should label output
+    "external-data-only estimate" (not "satellite-only" or "NWP-only").
+
+    Phase 10 owns the dropout simulation; this function only reads the state.
     """
-    # TODO: replace with Phase 10 IoT sensor anomaly detection
-    return False
+    if not _SENSOR_STATE_PATH.exists():
+        return False  # Phase 8 not running or no IoT data yet
+    try:
+        import json as _json
+        state = _json.loads(_SENSOR_STATE_PATH.read_text(encoding="utf-8"))
+        if not hex_id or hex_id not in state:
+            return False
+        hex_state   = state[hex_id]
+        last_seen   = hex_state.get("last_seen_utc")
+        anomaly_flag = hex_state.get("anomaly_flag", False)
+        # Trust explicit anomaly_flag from Phase 10 simulator if set True
+        if anomaly_flag:
+            return True
+        # Otherwise compute from last_seen timestamp
+        if last_seen is None:
+            return False
+        from datetime import datetime, timezone, timedelta
+        last_dt = datetime.fromisoformat(last_seen)
+        if last_dt.tzinfo is None:
+            last_dt = last_dt.replace(tzinfo=timezone.utc)
+        age = datetime.now(timezone.utc) - last_dt
+        return age > timedelta(minutes=_IOT_DROPOUT_MINUTES)
+    except Exception:
+        return False  # any parse/IO error -> safe default, never crash the feature pipeline
 
 
 # ---------------------------------------------------------------------------
@@ -484,7 +520,7 @@ def compute_dynamic_features(
     simulated_gsi_signal  = _compute_simulated_gsi_signal(r24h, gsi_susceptibility_class)
 
     # ── IoT anomaly flag — STUB until Phase 10 ───────────────────────────
-    iot_anomaly_flag = _compute_iot_anomaly_flag()
+    iot_anomaly_flag = _compute_iot_anomaly_flag(hex_id)
 
     return {
         # ── 14 features per SRS §9 / §14 (field names frozen) ─────────
@@ -504,7 +540,8 @@ def compute_dynamic_features(
         # SIMULATED — NOT real SAsiaFFGS/GSI RLFS signals (SRS §8)
         "simulated_ffgs_signal":           simulated_ffgs_signal,
         "simulated_gsi_signal":            simulated_gsi_signal,
-        # STUB: iot_anomaly_flag — returns False until Phase 10
+        # iot_anomaly_flag: reads Phase 8 sensor_state.json; True = sensor dropout
+        # -> callers must label output "external-data-only estimate" (CLAUDE.md frozen wording)
         "iot_anomaly_flag":                iot_anomaly_flag,
         # ── Audit / confidence fields (not model inputs; for API/UI) ─────
         "fs_band_width_penalty":           fs_band_width_penalty,
@@ -665,9 +702,10 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # Verify iot_anomaly_flag is exactly False (stub check)
-    bad_iot = [hid for hid, r in results.items() if r["iot_anomaly_flag"] is not False]
+    bad_iot = [hid for hid, r in results.items()
+               if not isinstance(r["iot_anomaly_flag"], bool)]
     if bad_iot:
-        print(f"FAIL: iot_anomaly_flag != False for hexes: {bad_iot[:3]}")
+        print(f"FAIL: iot_anomaly_flag is not bool for hexes: {bad_iot[:3]}")
         sys.exit(1)
 
     # Verify antecedent_precipitation_index key present (never api_score)

@@ -139,7 +139,19 @@ def score_event_timesteps(
     df_event: pd.DataFrame,
     event_time: datetime,
 ) -> dict[str, Any]:
-    """Run retrained model through held-out event timesteps; return detection result."""
+    """Run retrained fold-model on held-out event rows; return detection result.
+
+    Detection semantics (corrected):
+      - 'detected' = fold model predicts Orange or Red at any snapshot whose
+        GROUND-TRUTH label is also Orange/Red (i.e., within the true alarm window).
+      - timing_error_min = minutes between event_time and the FIRST ground-truth
+        Orange/Red snapshot, regardless of what the fold model predicted.
+        This gives the best-case lead time the dataset can demonstrate --
+        if the model called it at a Yellow snapshot, detected=False.
+
+    This avoids the artefact where fold models (missing this event's own rows)
+    fire one snapshot too early, giving a spuriously large lead time.
+    """
     if df_event.empty:
         return {
             "detected": False, "crossing_tier": None,
@@ -152,10 +164,27 @@ def score_event_timesteps(
         pass
     df_event = df_event.sort_values("snapshot_timestamp")
 
-    first_detection_time = None
-    crossing_tier        = None
-
+    # Find the first snapshot where GROUND TRUTH is Orange or Red
+    ALARM_TIERS = set(DETECTION_TIERS)  # {"Orange", "Red"}
+    first_label_crossing_time = None
+    first_label_crossing_tier = None
     for _, row in df_event.iterrows():
+        if str(row.get("tier", "Green")) in ALARM_TIERS:
+            ts = row["snapshot_timestamp"]
+            if first_label_crossing_time is None or ts < first_label_crossing_time:
+                first_label_crossing_time = ts
+                first_label_crossing_tier = str(row["tier"])
+            break  # sorted ascending, first match is earliest
+
+    # Check whether model predicts Orange/Red on the alarm window rows
+    model_detected_in_window = False
+    model_crossing_tier      = None
+    model_crossing_time      = None
+    for _, row in df_event.iterrows():
+        # Only score within the label-alarm window (snapshot >= first_label_crossing)
+        if first_label_crossing_time is not None:
+            if row["snapshot_timestamp"] < first_label_crossing_time:
+                continue
         feat_dict = {col: row.get(col) for col in ALL_FEATURE_COLS}
         try:
             pred = model.predict_one(feat_dict)
@@ -163,44 +192,49 @@ def score_event_timesteps(
             continue
         tier = pred.get("tier", "Green")
         ts   = row["snapshot_timestamp"]
-        # Only count if at or before event time (1h tolerance for hour-precision data)
-        if tier in DETECTION_TIERS and ts <= event_time + timedelta(hours=1):
-            if first_detection_time is None or ts < first_detection_time:
-                first_detection_time = ts
-                crossing_tier        = tier
+        if tier in ALARM_TIERS and ts <= event_time + timedelta(hours=1):
+            model_detected_in_window = True
+            model_crossing_tier = tier
+            model_crossing_time = ts
+            break  # first alarm within the window
 
-    detected = first_detection_time is not None
+    detected = model_detected_in_window and first_label_crossing_time is not None
+
     timing_error_min  = None
     crossing_time_str = None
-    if detected and first_detection_time is not None:
-        delta = event_time - first_detection_time
+    if detected and first_label_crossing_time is not None:
+        # Lead time = event_time - first LABEL crossing (not model crossing)
+        # This is the honest lead time: how early the data starts showing alarm signal
+        delta = event_time - first_label_crossing_time
         timing_error_min  = round(delta.total_seconds() / 60, 1)
-        crossing_time_str = first_detection_time.isoformat()
+        crossing_time_str = first_label_crossing_time.isoformat()
 
     notes = ""
     if not detected:
-        tier_order = {"Green": 0, "Yellow": 1, "Orange": 2, "Red": 3}
-        tiers_seen = []
-        for _, row in df_event.iterrows():
-            feat_dict = {col: row.get(col) for col in ALL_FEATURE_COLS}
-            try:
-                tiers_seen.append(model.predict_one(feat_dict).get("tier", "Green"))
-            except Exception:
-                pass
-        if tiers_seen:
-            highest = max(tiers_seen, key=lambda t: tier_order.get(t, 0))
-            notes = f"highest tier reached: {highest}"
+        if first_label_crossing_time is None:
+            notes = "no Orange/Red label snapshots in held-out rows"
         else:
-            notes = "no valid predictions produced"
+            # Model did not predict alarm on any label-alarm snapshot
+            tier_order = {"Green": 0, "Yellow": 1, "Orange": 2, "Red": 3}
+            tiers_seen = []
+            for _, row in df_event.iterrows():
+                feat_dict = {col: row.get(col) for col in ALL_FEATURE_COLS}
+                try:
+                    tiers_seen.append(model.predict_one(feat_dict).get("tier", "Green"))
+                except Exception:
+                    pass
+            highest = max(tiers_seen, key=lambda t: tier_order.get(t, 0)) if tiers_seen else "?"
+            notes = f"model highest tier in window: {highest} (label crossing was {first_label_crossing_tier})"
 
     return {
         "detected":          detected,
-        "crossing_tier":     crossing_tier,
+        "crossing_tier":     model_crossing_tier or first_label_crossing_tier,
         "timing_error_min":  timing_error_min,
         "crossing_time":     crossing_time_str,
         "snapshots_scored":  len(df_event),
         "notes":             notes,
     }
+
 
 
 def compute_false_positive_rate(model: FusionModel, df: pd.DataFrame) -> float | None:
@@ -338,12 +372,13 @@ def run_loeo(
     )[:5]
 
     fp_rate = None
-    try:
-        final_model = retrain_without(df_all)
-        if final_model:
-            fp_rate = compute_false_positive_rate(final_model, df_all)
-    except Exception as exc:
-        print(f"\n[loeo] WARNING: FP rate computation failed ({exc})")
+    fp_rate_note = (
+        "NOT COMPUTED per-fold -- requires out-of-fold negative rows. "
+        "In-sample FPR (on training negatives seen by the final model) is "
+        "trivially 0% and was removed to avoid a misleading metric. "
+        "Per-fold FPR requires negative samples from other events' non-alarm "
+        "windows, which are not currently split into the held-out sets."
+    )
 
     summary = {
         "loeo_n_events":      n_events,
@@ -351,7 +386,7 @@ def run_loeo(
         "loeo_n_skipped":     n_skipped,
         "detection_rate":     det_rate,
         "false_positive_rate": fp_rate,
-        "false_positive_rate_note": "approximate -- computed on full dataset, not per-fold",
+        "false_positive_rate_note": fp_rate_note,
         "timing_error":       timing_summary,
         "worst_5_events_by_lead_time": [
             {"event_id": r["event_id"], "village": r["village"],
@@ -359,10 +394,17 @@ def run_loeo(
             for r in worst_events
         ],
         "data_completeness_note": (
-            "rainfall features non-null ~65pct of positive rows; "
-            "factor_of_safety 0pct non-null (Phase 3 DEM rasters not run). "
-            "Detection rate improves once Phase 3 terrain + historical backfill exist. "
-            "Harness is structurally correct -- results are data-limited, not harness-limited."
+            "LOEO detection semantics (corrected v2): 'detected' means fold model "
+            "predicts Orange/Red on a snapshot whose ground-truth label is also "
+            "Orange/Red (within the true alarm window). timing_error_min is "
+            "event_time minus first ground-truth Orange/Red snapshot -- this is "
+            "the maximum demonstrable lead time from the current dataset, not "
+            "the model's forecast horizon. "
+            "FPR removed: previous in-sample FPR on training negatives was trivially "
+            "0% and not meaningful. Per-fold FPR requires explicit negative test windows."
+            "Static terrain (slope/TWI/elevation) still 100% NaN pending Phase 3 DEM run. "
+            "rainfall_72h_antecedent ~22% NaN (backfill landed, negative samples have no rainfall). "
+            "Detection results are data-limited; harness logic is correct."
         ),
         "run_timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "n_sample_rows":     len(df_all),
