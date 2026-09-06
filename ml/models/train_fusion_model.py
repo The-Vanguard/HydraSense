@@ -531,24 +531,26 @@ def join_dynamic_features(
     # Load static features from Phase 3 parquet if available
     static_map: dict[str, dict[str, Any]] = {}   # {hex_id: {col: val}}
     if static_features_path is None:
-        # Phase 3 writes to data/processed/; data/features/ is a legacy alias — check both
-        _sf_primary = ROOT / "data" / "processed" / "static_features.parquet"
-        _sf_alt     = ROOT / "data" / "features"  / "static_features.parquet"
-        static_features_path = _sf_primary if _sf_primary.exists() else _sf_alt
+        # Phase 3 writes exclusively to data/processed/static_features.parquet.
+        # (static_features.py L133: OUT_DIR = BASE_DIR / "data" / "processed")
+        static_features_path = ROOT / "data" / "processed" / "static_features.parquet"
     if static_features_path.exists():
         try:
             sf = pd.read_parquet(static_features_path)
             for _, row in sf.iterrows():
                 hid = str(row["hex_id"])
                 static_map[hid] = {c: row.get(c) for c in STATIC_FEATURE_COLS}
-            print(f"[train_fusion] Loaded Phase 3 static features for {len(static_map)} hexes")
+            print(f"[train_fusion] Loaded Phase 3 static features for {len(static_map)} hexes"
+                  f" from {static_features_path}")
         except Exception as exc:
-            print(f"[train_fusion] WARNING: Could not load Phase 3 parquet ({exc}); static features remain None")
+            print(f"[train_fusion] WARNING: Could not load Phase 3 parquet ({exc}); static features remain NaN")
     else:
         print(
-            f"[train_fusion] NOTE: Phase 3 static_features.parquet not found at "
-            f"{static_features_path}\n"
-            f"  slope_deg, aspect, TWI, TRI, elevation, etc. will be NaN for all rows."
+            f"[train_fusion] NOTE: Phase 3 static_features.parquet not found.\n"
+            f"  Expected: {static_features_path}\n"
+            f"  Run: python ml/features/static_features.py  (requires DEM + landcover rasters)\n"
+            f"  Until then: slope_deg, aspect, TWI, TRI, elevation, etc. will be NaN for all rows.\n"
+            f"  factor_of_safety will also be NaN (needs slope_deg)."
         )
 
     # Join dynamic features row by row
