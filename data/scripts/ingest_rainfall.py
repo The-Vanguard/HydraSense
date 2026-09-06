@@ -84,14 +84,20 @@ def fetch_rainfall_for_location(lat: float, lon: float, name: str) -> dict:
         # At past_days=92 (~2200h), all negative samples drawn from the
         # current monsoon season and any events within the last 3 months will
         # have real rainfall values. Events older than 92 days from run date
-        # will still have NaN rainfall windows -- those require a separate
-        # historical bulk pull (out of scope for Phase 1, flagged for Phase 4).
+        # still need a separate historical bulk pull -- handled by
+        # ingest_rainfall_historical.py which uses the ERA5 archive endpoint.
         # Changing back to past_days=3 here would make rainfall_* and
         # antecedent_precipitation_index NaN for almost the entire training
         # set -- do not revert without understanding that consequence.
         "past_days": 92,
         "forecast_days": 2,   # 48h forward for lead-time horizons up to t+24h
-        "timezone": "Asia/Kolkata",
+        # MUST be UTC: ingest_rainfall_historical.py also uses UTC, and
+        # get_rainfall_at() in event_centered_sampling.py formats lookup keys
+        # as UTC strings ("%Y-%m-%dT%H:00" on a UTC-aware datetime).
+        # If this is set to Asia/Kolkata, live-data keys will be IST-offset
+        # and the merge with archive data will produce double-keyed dicts --
+        # the UTC lookup will silently always hit archive, never live.
+        "timezone": "UTC",
         "timeformat": "iso8601",
     }
 
