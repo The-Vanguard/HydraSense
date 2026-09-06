@@ -237,7 +237,7 @@ def load_soil_lookup() -> dict[str, dict[str, Optional[float]]]:
         )
         return {}
 
-    with open(SOIL_JSON) as f:
+    with open(SOIL_JSON, encoding="utf-8", errors="replace") as f:
         data = json.load(f)
 
     lookup: dict[str, dict[str, Optional[float]]] = {}
