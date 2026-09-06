@@ -149,18 +149,8 @@ export default function App() {
           {/* Location selector panel: Custom Pin vs Hex */}
           {isPinMode && pinData ? (
             <div className="panel pin-control-panel">
-              <div className="panel-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div className="panel-title">
                 <span>📍 Analyzed Location</span>
-                {hexes.length > 0 && (
-                  <button
-                    type="button"
-                    className="pin-action-btn back-btn"
-                    style={{ padding: '3px 10px', fontSize: 11 }}
-                    onClick={() => handleSelectHex(hexes[0].hex_id)}
-                  >
-                    ↩ Wayanad Hex
-                  </button>
-                )}
               </div>
 
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
