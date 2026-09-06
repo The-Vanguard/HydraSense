@@ -8,9 +8,9 @@ Tests:
   1. Hand-computed reference value at known inputs (β=35°, m=0.7, central params)
   2. min ≤ mid ≤ max for all pilot-range (slope, m) combinations
   3. Physical plausibility: FS in [0.5, 2.0] for high-saturation Wayanad conditions
-  4. Flat slope (slope_deg ≤ 0) → FS = 999.0 for all three values
+  4. Flat slope (slope_deg ≤ 0) -> FS = 999.0 for all three values
   5. FS < 1.0 at steep fully-saturated slope — verified failure condition
-  6. Missing inputs → missing_inputs list populated, FS = None
+  6. Missing inputs -> missing_inputs list populated, FS = None
   7. Punjirimattom hexes: no silent default — if slope_deg missing, FS = None
   8. Integration against real Phase 1 GWETROOT data (soil_moisture.json present check)
 """
@@ -152,7 +152,7 @@ else:
     )
 
 # ---------------------------------------------------------------------------
-# Test 4 — Flat slope → FS = FS_FLAT = 999.0 for all three values
+# Test 4 — Flat slope -> FS = FS_FLAT = 999.0 for all three values
 # ---------------------------------------------------------------------------
 for flat_slope in [0.0, -1.0, -5.0]:
     r = compute_factor_of_safety(slope_deg=flat_slope, soil_saturation_ratio=0.7)
@@ -167,7 +167,7 @@ for flat_slope in [0.0, -1.0, -5.0]:
         )
     elif r["fs_band_straddles_one"]:
         errors.append(f"FAIL Test 4: flat slope should not straddle FS=1.0")
-print("[OK] Test 4: slope ≤ 0° → FS = FS_min = FS_max = 999.0, straddles_one = False")
+print("[OK] Test 4: slope ≤ 0° -> FS = FS_min = FS_max = 999.0, straddles_one = False")
 
 # ---------------------------------------------------------------------------
 # Test 5 — FS < 1.0 at steep saturated slope (verified failure condition)
@@ -178,7 +178,7 @@ print("[OK] Test 4: slope ≤ 0° → FS = FS_min = FS_max = 999.0, straddles_on
 #                = 8.0 + 8.69 × 2.0 × 0.5 × 0.5317
 #                = 8.0 + 4.621 = 12.621  -- wait this gives > 1
 #            Actually need to check: den = 18.5 × 2.0 × sin(45)×cos(45) = 18.5×2.0×0.5 = 18.5
-#            FS = 12.621 / 18.5 ≈ 0.682  → < 1.0 ✓ (failure predicted)
+#            FS = 12.621 / 18.5 ≈ 0.682  -> < 1.0 ✓ (failure predicted)
 # ---------------------------------------------------------------------------
 r_steep = compute_factor_of_safety(slope_deg=45.0, soil_saturation_ratio=1.0)
 fmid_steep = r_steep["factor_of_safety"]
@@ -189,7 +189,7 @@ if fmid_steep >= 1.0:
     )
 else:
     print(
-        f"[OK] Test 5: slope=45°, m=1.0 → FS_mid={fmid_steep:.4f} < 1.0 "
+        f"[OK] Test 5: slope=45°, m=1.0 -> FS_mid={fmid_steep:.4f} < 1.0 "
         f"(slope failure predicted — matches July 2024 Mundakkai event conditions)"
     )
 
@@ -201,7 +201,7 @@ else:
     print(f"[OK] Test 5b: 1/FS = {fs_inverse:.4f} > 1.0 (correct fusion-model input for failure case)")
 
 # ---------------------------------------------------------------------------
-# Test 6 — Missing inputs → missing_inputs list populated, FS values = None
+# Test 6 — Missing inputs -> missing_inputs list populated, FS values = None
 # ---------------------------------------------------------------------------
 cases_missing = [
     (None,  0.7,  ["slope_deg"]),
@@ -212,17 +212,17 @@ for slope, m, expected_missing in cases_missing:
     r = compute_factor_of_safety(slope_deg=slope, soil_saturation_ratio=m)
     if sorted(r["missing_inputs"]) != sorted(expected_missing):
         errors.append(
-            f"FAIL Test 6: slope={slope}, m={m} → missing_inputs={r['missing_inputs']}, "
+            f"FAIL Test 6: slope={slope}, m={m} -> missing_inputs={r['missing_inputs']}, "
             f"expected {expected_missing}"
         )
     elif r["factor_of_safety"] is not None:
         errors.append(
-            f"FAIL Test 6: slope={slope}, m={m} → FS should be None when input missing"
+            f"FAIL Test 6: slope={slope}, m={m} -> FS should be None when input missing"
         )
 print("[OK] Test 6: Missing inputs correctly flagged; FS=None; never silently defaulted")
 
 # ---------------------------------------------------------------------------
-# Test 7 — Punjirimattom hexes: slope_deg=None → FS=None, not a silent zero
+# Test 7 — Punjirimattom hexes: slope_deg=None -> FS=None, not a silent zero
 #          (Simulates the case where Phase 3 has not run and slope is unavailable.)
 # ---------------------------------------------------------------------------
 PUNJI_HEXES_9 = [
@@ -248,7 +248,7 @@ for hid in PUNJI_HEXES_9:
         )
 if not any_silent_zero:
     print(
-        f"[OK] Test 7: All {len(PUNJI_HEXES_9)} Punjirimattom hexes with slope_deg=None → "
+        f"[OK] Test 7: All {len(PUNJI_HEXES_9)} Punjirimattom hexes with slope_deg=None -> "
         f"FS=None, missing_inputs=['slope_deg'] (no silent default)"
     )
 
@@ -327,8 +327,8 @@ else:
     print("  - Hand-computed FS matches formula exactly")
     print("  - min ≤ mid ≤ max for all pilot-range inputs")
     print("  - FS physically plausible (0.5–2.0) for Wayanad conditions")
-    print("  - Flat slopes → 999.0, no division by zero")
-    print("  - Steep saturated slope → FS < 1.0 (failure predicted)")
+    print("  - Flat slopes -> 999.0, no division by zero")
+    print("  - Steep saturated slope -> FS < 1.0 (failure predicted)")
     print("  - Missing inputs: FS=None, flagged in missing_inputs list")
     print("  - Punjirimattom hexes: no silent default when Phase 3 missing")
     print("  - Phase 1 GWETROOT: real data readable and in valid [0,1] range")

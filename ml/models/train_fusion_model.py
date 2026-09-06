@@ -92,7 +92,7 @@ INT_TO_TIER: dict[int, str] = {v: k for k, v in TIER_TO_INT.items()}
 TIER_MIDPOINTS: dict[int, float] = {0: 15.0, 1: 42.0, 2: 64.0, 3: 88.0}
 
 # Tier thresholds from risk_score (SRS §10.4 frozen)
-# risk_score → tier: Green 0-29 | Yellow 30-54 | Orange 55-74 | Red 75-100
+# risk_score -> tier: Green 0-29 | Yellow 30-54 | Orange 55-74 | Red 75-100
 TIER_THRESHOLDS: list[tuple[float, str]] = [
     (75.0, "Red"),
     (55.0, "Orange"),
@@ -198,7 +198,7 @@ def _encode_categoricals(df: pd.DataFrame) -> pd.DataFrame:
       Low=0, Moderate=1, High=2, Very High=3, unknown=-1
     land_use_class: ordinal encode by landslide susceptibility proxy
       (Water=0, Urban=1, Cropland=2, Grassland=3, Shrubland=4, Forest=5, unknown=2)
-    simulated_ffgs_signal / simulated_gsi_signal / iot_anomaly_flag: bool → int (0/1)
+    simulated_ffgs_signal / simulated_gsi_signal / iot_anomaly_flag: bool -> int (0/1)
     """
     df = df.copy()
 
@@ -311,7 +311,7 @@ class FusionModel:
         Run inference for a single hex-timestep.
 
         Arguments:
-            features             : dict of feature name → value (all 25 features)
+            features             : dict of feature name -> value (all 25 features)
             fs_band_width_penalty: from dynamic_features._compute_fs_band_penalty()
 
         Returns dict with:
@@ -412,7 +412,7 @@ class FusionModel:
         path.parent.mkdir(parents=True, exist_ok=True)
         with open(path, "wb") as f:
             pickle.dump(self, f)
-        print(f"[train_fusion] Model saved → {path}")
+        print(f"[train_fusion] Model saved -> {path}")
 
     @classmethod
     def load(cls, path: Path = _MODEL_PATH) -> "FusionModel":
@@ -444,7 +444,7 @@ def load_sample_set(path: Path = _SAMPLES_PATH) -> pd.DataFrame:
     """
     if path.exists():
         df = pd.read_parquet(path)
-        print(f"[train_fusion] Loaded {len(df)} samples from Phase 4 → {path}")
+        print(f"[train_fusion] Loaded {len(df)} samples from Phase 4 -> {path}")
         return df
 
     # ── Synthetic fallback (Phase 4 not run) ─────────────────────────────
@@ -811,7 +811,7 @@ if __name__ == "__main__":
 
     # Check 7: model file saved
     assert _MODEL_PATH.exists(), f"FAIL: model not saved at {_MODEL_PATH}"
-    print(f"  [OK] Model persisted → {_MODEL_PATH}")
+    print(f"  [OK] Model persisted -> {_MODEL_PATH}")
 
     # Check 8: antecedent_precipitation_index never api_score
     assert "antecedent_precipitation_index" in ALL_FEATURE_COLS, "FAIL: wrong field name"
