@@ -2,7 +2,7 @@
 ingest_rainfall.py — Pull current + hourly forecast rainfall from Open-Meteo API.
 
 Implements: SRS.md Section 8 (Data Sources), Section 13 (Live/Demo Fallback).
-Owner: Dev A (Phase 1)
+Owner: guru-elight (Phase 1)
 
 Open-Meteo is free, requires no API key, and provides hourly observed + forecast rainfall
 for any lat/lon. This script pulls both series for the Wayanad pilot cluster bounding box

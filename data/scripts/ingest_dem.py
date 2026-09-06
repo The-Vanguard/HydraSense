@@ -2,7 +2,7 @@
 ingest_dem.py — Pull SRTM 30m DEM tiles from OpenTopography API.
 
 Implements: SRS.md Section 8 (Data Sources — DEM row).
-Owner: Dev A (Phase 1)
+Owner: guru-elight (Phase 1)
 
 OpenTopography provides free SRTM 30m (SRTMGL1) DEM access via REST API.
 A free API key is required — sign up at https://opentopography.org/ (instant, no approval wait).

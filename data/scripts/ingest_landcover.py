@@ -2,7 +2,7 @@
 ingest_landcover.py — Pull ESA WorldCover 10m land cover + NDVI from public S3 bucket.
 
 Implements: SRS.md Section 8 (Data Sources — land cover and NDVI rows).
-Owner: Dev A (Phase 1)
+Owner: guru-elight (Phase 1)
 
 ESA WorldCover 2021 is available free, no signup, no API key from the public S3 bucket:
   s3://esa-worldcover/v200/2021/map/

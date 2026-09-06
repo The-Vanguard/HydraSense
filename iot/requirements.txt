@@ -4,4 +4,5 @@
 # No LoRaWAN hardware. No real sensor integration (CLAUDE.md).
 
 paho-mqtt==2.1.0
+httpx>=0.27.0
 python-dotenv==1.0.1
