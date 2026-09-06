@@ -10,8 +10,8 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:8001',   // stub server (npm run stub)
-        // target: 'http://localhost:8000', // Phase 8 backend — swap when ready
+        target: 'http://localhost:8000',   // Phase 8 backend (Guhan-10)
+        // target: 'http://localhost:8001', // stub server (npm run stub)
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
       },

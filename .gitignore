@@ -49,6 +49,15 @@ Thumbs.db
 *.model
 *.xgb
 
+# Database
+*.db
+data/hydrasense.db
+
+# Weather runtime cache
+data/weather/rainfall_current.json
+data/weather/rainfall_forecast.json
+
 # Logs
 *.log
 logs/
+

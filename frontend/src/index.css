@@ -262,4 +262,261 @@ html, body, #root {
 
 /* Leaflet overrides */
 .leaflet-container { background: #0d1520 !important; }
-.leaflet-tile-pane { filter: brightness(0.65) saturate(0.7); }
+.leaflet-tile-pane { filter: brightness(0.70) saturate(0.75); }
+
+/* Data source banner pin simulation badge */
+.datasource-pin-sim {
+  color: #a371f7;
+  background: rgba(163, 113, 247, 0.12);
+  border: 1px solid rgba(163, 113, 247, 0.4);
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-weight: 600;
+  font-size: 11px;
+}
+
+/* Custom Pin Sidebar Control Panel */
+.pin-control-panel {
+  border-color: rgba(163, 113, 247, 0.35);
+  background: linear-gradient(180deg, #1b1c26 0%, #161b22 100%);
+}
+
+.pin-mode-pill {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: rgba(163, 113, 247, 0.15);
+  color: #d2a8ff;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+}
+
+.tier-button-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.pin-tier-btn {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.pin-tier-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+  border-color: var(--btn-c, var(--accent));
+}
+
+.pin-tier-btn.active {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border-color: var(--btn-c);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5), inset 0 0 8px var(--btn-c);
+}
+
+.pin-action-btn {
+  flex: 1;
+  padding: 6px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pin-action-btn.rand-btn {
+  background: rgba(88, 166, 255, 0.15);
+  border: 1px solid rgba(88, 166, 255, 0.4);
+  color: #79c0ff;
+}
+.pin-action-btn.rand-btn:hover {
+  background: rgba(88, 166, 255, 0.25);
+  border-color: #58a6ff;
+  color: #fff;
+}
+
+.pin-action-btn.back-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+.pin-action-btn.back-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+/* Custom Pin Map Icon */
+.hydra-pin-icon-wrap {
+  background: transparent !important;
+  border: none !important;
+}
+
+.hydra-pin-marker {
+  position: relative;
+  width: 28px;
+  height: 38px;
+}
+
+.hydra-pin-head {
+  position: absolute;
+  top: 0;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  background: var(--pin-color, #22c55e);
+  border: 2.5px solid #ffffff;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.65);
+  transition: background 0.2s ease;
+}
+
+.hydra-pin-pulse {
+  position: absolute;
+  bottom: 0;
+  left: 4px;
+  width: 20px;
+  height: 8px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, var(--pin-color, #22c55e) 0%, transparent 70%);
+  opacity: 0.8;
+  animation: pinPulse 2s infinite ease-in-out;
+}
+
+@keyframes pinPulse {
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.6); opacity: 0.25; }
+}
+
+/* Leaflet Popup Styling */
+.hydra-leaflet-popup .leaflet-popup-content-wrapper {
+  background: #161b22;
+  color: #e6edf3;
+  border: 1px solid #30363d;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  padding: 0;
+}
+
+.hydra-leaflet-popup .leaflet-popup-content {
+  margin: 10px 12px;
+  line-height: 1.4;
+}
+
+.hydra-leaflet-popup .leaflet-popup-tip {
+  background: #161b22;
+  border: 1px solid #30363d;
+}
+
+.hydra-popup-card {
+  font-family: inherit;
+}
+
+.popup-header {
+  border-bottom: 1px solid #21262d;
+  padding-bottom: 6px;
+  margin-bottom: 8px;
+}
+
+.popup-surface {
+  display: block;
+  font-weight: 700;
+  font-size: 12px;
+  color: #e6edf3;
+}
+
+.popup-coords {
+  display: block;
+  font-size: 10px;
+  color: #8b949e;
+  font-family: monospace;
+}
+
+.popup-score-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.popup-score {
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.popup-max {
+  font-size: 10px;
+  color: #8b949e;
+  margin-left: 3px;
+}
+
+.popup-section-title {
+  font-size: 9px;
+  text-transform: uppercase;
+  color: #8b949e;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+
+.popup-btn-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.pin-rand-btn {
+  width: 100%;
+  padding: 5px;
+  background: rgba(88, 166, 255, 0.12);
+  border: 1px solid rgba(88, 166, 255, 0.35);
+  color: #79c0ff;
+  border-radius: 5px;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pin-rand-btn:hover {
+  background: rgba(88, 166, 255, 0.25);
+  color: #fff;
+}
+
+.pin-preset-btn {
+  padding: 5px 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  color: #c9d1d9;
+  border-radius: 5px;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pin-preset-btn:hover {
+  background: rgba(88, 166, 255, 0.15);
+  border-color: #58a6ff;
+  color: #fff;
+}
+
+

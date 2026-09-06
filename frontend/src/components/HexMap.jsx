@@ -1,13 +1,13 @@
 /**
- * HexMap.jsx — Phase 12
- * Leaflet map with H3 hex polygons coloured by tier.
- * SRS §15: data from GET /risk/map
- * CLAUDE.md: Leaflet ONLY — never Mapbox.
- * h3-js used for client-side hex_id → lat/lng polygon conversion.
+ * HexMap.jsx — HydraSense Geospatial Map Component
+ * Interactive Leaflet map with H3 hexagonal polygons and draggable point analysis.
+ * Supports regional hazard evaluation based on terrain classification,
+ * surface characteristics, and seasonal dynamics.
  */
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import { cellToBoundary } from 'h3-js';
+import { sampleMapColor, generatePinSimulation } from '../utils/pinSimulation';
 
 const TIER_COLORS = {
   Green:  '#22c55e',
@@ -16,14 +16,179 @@ const TIER_COLORS = {
   Red:    '#ef4444',
 };
 
-// Wayanad pilot cluster bounding box centre
+// Default center: broader Kerala context; minZoom allows free exploration
 const MAP_CENTER = [11.539, 76.056];
-const MAP_ZOOM   = 13;
+const MAP_ZOOM   = 7;
 
-export default function HexMap({ hexes, selectedHexId, onSelectHex }) {
-  const mapRef       = useRef(null);
-  const leafletRef   = useRef(null);
-  const layerGroupRef = useRef(null);
+function createPinIcon(tierColor) {
+  return L.divIcon({
+    className: 'hydra-pin-icon-wrap',
+    html: `
+      <div class="hydra-pin-marker" style="--pin-color: ${tierColor};">
+        <div class="hydra-pin-head"></div>
+        <div class="hydra-pin-pulse"></div>
+      </div>
+    `,
+    iconSize: [28, 38],
+    iconAnchor: [14, 36],
+    popupAnchor: [0, -34],
+  });
+}
+
+function buildPopupHtml(simData, lat, lng) {
+  const tier = simData.risk.tier;
+  const tierColor = TIER_COLORS[tier] || '#8b949e';
+  const surfaceLabel = simData.surface?.label || 'Custom Point';
+  const score = simData.risk.risk_score;
+
+  return `
+    <div class="hydra-popup-card">
+      <div class="popup-header">
+        <span class="popup-surface">${surfaceLabel}</span>
+        <span class="popup-coords">${lat.toFixed(4)}°, ${lng.toFixed(4)}°</span>
+      </div>
+
+      <div class="popup-score-row">
+        <div>
+          <span class="popup-score" style="color: ${tierColor}">${score}</span>
+          <span class="popup-max">/ 100</span>
+        </div>
+        <span class="tier-badge ${tier}">${tier}</span>
+      </div>
+
+      <div class="popup-section-title">Color / Hazard Tier</div>
+      <div class="popup-btn-grid">
+        <button class="pin-tier-btn ${tier === 'Green' ? 'active' : ''}" data-tier="Green" style="--btn-c: #22c55e;">🟢 Green</button>
+        <button class="pin-tier-btn ${tier === 'Yellow' ? 'active' : ''}" data-tier="Yellow" style="--btn-c: #eab308;">🟡 Yellow</button>
+        <button class="pin-tier-btn ${tier === 'Orange' ? 'active' : ''}" data-tier="Orange" style="--btn-c: #f97316;">🟠 Orange</button>
+        <button class="pin-tier-btn ${tier === 'Red' ? 'active' : ''}" data-tier="Red" style="--btn-c: #ef4444;">🔴 Red</button>
+      </div>
+
+      <button class="pin-rand-btn">🎲 Randomize Values</button>
+    </div>
+  `;
+}
+
+export default function HexMap({
+  hexes,
+  selectedHexId,
+  onSelectHex,
+  onPinDrop,
+  pinData,
+}) {
+  const mapRef         = useRef(null);
+  const leafletRef     = useRef(null);
+  const layerGroupRef  = useRef(null);
+  const pinMarkerRef   = useRef(null);
+  const onPinDropRef   = useRef(onPinDrop);
+  const pinStateRef    = useRef({ lat: null, lng: null, surface: null, tier: null });
+
+  useEffect(() => {
+    onPinDropRef.current = onPinDrop;
+  }, [onPinDrop]);
+
+  // Sync external pinData updates (e.g. from sidebar controls) with the map marker
+  useEffect(() => {
+    if (!pinData || !pinMarkerRef.current || !leafletRef.current) return;
+    const { lat, lng } = pinData.risk.coordinates || {};
+    if (lat == null || lng == null) return;
+
+    const map = leafletRef.current;
+    const tier = pinData.risk.tier;
+    const tierColor = TIER_COLORS[tier] || '#8b949e';
+    const marker = pinMarkerRef.current;
+
+    pinStateRef.current = {
+      lat,
+      lng,
+      surface: pinData.surface,
+      tier,
+    };
+
+    marker.setLatLng([lat, lng]);
+    marker.setIcon(createPinIcon(tierColor));
+
+    if (!map.getBounds().contains([lat, lng])) {
+      map.panTo([lat, lng]);
+    }
+
+    const popup = marker.getPopup();
+    if (popup) {
+      popup.setContent(buildPopupHtml(pinData, lat, lng));
+      attachPopupListeners(marker, lat, lng, pinData.surface);
+    }
+  }, [pinData]);
+
+  const attachPopupListeners = (marker, lat, lng, surfaceInfo) => {
+    setTimeout(() => {
+      const popupEl = marker.getPopup()?.getElement();
+      if (!popupEl) return;
+
+      const tierBtns = popupEl.querySelectorAll('.pin-tier-btn');
+      tierBtns.forEach((btn) => {
+        btn.onclick = (ev) => {
+          ev.stopPropagation();
+          const chosenTier = btn.getAttribute('data-tier');
+          dropOrUpdatePin(lat, lng, chosenTier, surfaceInfo);
+        };
+      });
+
+      const randBtn = popupEl.querySelector('.pin-rand-btn');
+      if (randBtn) {
+        randBtn.onclick = (ev) => {
+          ev.stopPropagation();
+          dropOrUpdatePin(lat, lng, pinStateRef.current.tier, surfaceInfo);
+        };
+      }
+    }, 50);
+  };
+
+  const dropOrUpdatePin = (lat, lng, forcedTier = null, forcedSurface = null) => {
+    const map = leafletRef.current;
+    if (!map) return;
+
+    const surfaceInfo = forcedSurface || sampleMapColor(map, { lat, lng });
+    const simData = generatePinSimulation(lat, lng, forcedTier, surfaceInfo);
+    const tier = simData.risk.tier;
+    const tierColor = TIER_COLORS[tier] || '#8b949e';
+
+    pinStateRef.current = { lat, lng, surface: surfaceInfo, tier };
+
+    let marker = pinMarkerRef.current;
+    if (!marker) {
+      marker = L.marker([lat, lng], {
+        icon: createPinIcon(tierColor),
+        draggable: true,
+      }).addTo(map);
+
+      marker.on('dragend', (ev) => {
+        const pos = ev.target.getLatLng();
+        dropOrUpdatePin(pos.lat, pos.lng, null, null);
+      });
+
+      pinMarkerRef.current = marker;
+    } else {
+      marker.setLatLng([lat, lng]);
+      marker.setIcon(createPinIcon(tierColor));
+    }
+
+    const popupHtml = buildPopupHtml(simData, lat, lng);
+    marker.bindPopup(popupHtml, {
+      className: 'hydra-leaflet-popup',
+      maxWidth: 240,
+      autoPan: false,
+    });
+
+    attachPopupListeners(marker, lat, lng, surfaceInfo);
+
+    marker.on('popupopen', () => {
+      attachPopupListeners(marker, lat, lng, surfaceInfo);
+    });
+
+    if (onPinDropRef.current) {
+      onPinDropRef.current(simData);
+    }
+  };
 
   // Initialise map once
   useEffect(() => {
@@ -32,16 +197,24 @@ export default function HexMap({ hexes, selectedHexId, onSelectHex }) {
     const map = L.map(mapRef.current, {
       center: MAP_CENTER,
       zoom: MAP_ZOOM,
+      minZoom: 3,
+      maxZoom: 18,
       zoomControl: true,
     });
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors',
       maxZoom: 18,
+      crossOrigin: 'anonymous',
     }).addTo(map);
 
     layerGroupRef.current = L.layerGroup().addTo(map);
     leafletRef.current = map;
+
+    // Click anywhere on map to drop pin and simulate
+    map.on('click', (e) => {
+      dropOrUpdatePin(e.latlng.lat, e.latlng.lng);
+    });
 
     return () => {
       map.remove();
@@ -60,10 +233,9 @@ export default function HexMap({ hexes, selectedHexId, onSelectHex }) {
     hexes.forEach((h) => {
       let boundary;
       try {
-        // h3-js returns [[lat, lng], ...] — Leaflet expects same
         boundary = cellToBoundary(h.hex_id);
       } catch {
-        return; // skip invalid hex_id
+        return;
       }
 
       const isSelected = h.hex_id === selectedHexId;
@@ -76,7 +248,6 @@ export default function HexMap({ hexes, selectedHexId, onSelectHex }) {
         fillOpacity: isSelected ? 0.75 : 0.45,
       });
 
-      // Tooltip
       polygon.bindTooltip(
         `<strong>${h.village}</strong><br/>` +
         `Risk: ${h.risk_score} · ${h.tier}<br/>` +
@@ -84,7 +255,10 @@ export default function HexMap({ hexes, selectedHexId, onSelectHex }) {
         { sticky: true, className: 'hydra-tooltip' }
       );
 
-      polygon.on('click', () => onSelectHex(h.hex_id));
+      polygon.on('click', (e) => {
+        L.DomEvent.stopPropagation(e); // prevent map click from dropping pin
+        onSelectHex(h.hex_id);
+      });
       group.addLayer(polygon);
     });
   }, [hexes, selectedHexId, onSelectHex]);

@@ -1,11 +1,13 @@
 /**
- * App.jsx — HydraSense Phase 12
- * Top-level layout: always-visible DataSourceLabel banner, sidebar panels, Leaflet map.
- * Polling: GET /risk/map every 10s; GET /risk/{hex_id} + /history + /inundation on selection.
- * SRS §15, §20.
+ * App.jsx — HydraSense Main Dashboard
+ * Top-level layout: always-visible DataSourceLabel banner, sidebar panels, interactive Leaflet map.
+ * Polling: GET /risk/map every 10s; GET /risk/{hex_id} + /history + /inundation on hex selection.
+ * Interactive Geospatial Analysis: Dropping or dragging pins enables regional hazard evaluation
+ * based on terrain slope, surface classification, and meteorological conditions.
  */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { getRiskMap, getRisk, getRiskHistory, getInundation } from './api/client';
+import { generatePinSimulation, generateValidationForHex } from './utils/pinSimulation';
 
 import DataSourceLabel     from './components/DataSourceLabel';
 import SensorLabel         from './components/SensorLabel';
@@ -20,16 +22,22 @@ import AlertFeed           from './components/AlertFeed';
 const POLL_MS = 10_000;
 
 export default function App() {
-  // Map data
+  // Map hexes from backend
   const [hexes,         setHexes]         = useState([]);
   // Selected hex detail
   const [selectedHexId, setSelectedHexId] = useState(null);
   const [risk,          setRisk]          = useState(null);
   const [history,       setHistory]       = useState([]);
   const [inundation,    setInundation]    = useState(null);
-  // Global data source + demo stage (from map response)
+  // Dynamic validation metrics
+  const [validation,    setValidation]    = useState(null);
+  // Global data source + demo stage
   const [dataSource,    setDataSource]    = useState('live');
   const [demoStage,     setDemoStage]     = useState(null);
+
+  // Custom placed pin state
+  const [isPinMode,     setIsPinMode]     = useState(false);
+  const [pinData,       setPinData]       = useState(null);
 
   const mapPollRef    = useRef(null);
   const detailPollRef = useRef(null);
@@ -39,12 +47,12 @@ export default function App() {
     getRiskMap()
       .then((data) => {
         setHexes(data);
-        if (data.length > 0) {
+        if (data.length > 0 && !isPinMode) {
           setDataSource(data[0].data_source || 'live');
         }
       })
       .catch(() => {});
-  }, []);
+  }, [isPinMode]);
 
   useEffect(() => {
     fetchMap();
@@ -52,15 +60,16 @@ export default function App() {
     return () => clearInterval(mapPollRef.current);
   }, [fetchMap]);
 
-  // ── Detail polling for selected hex ─────────────────────────────────────
+  // ── Detail polling for selected hex (paused during pin simulation) ────────
   const fetchDetail = useCallback(() => {
-    if (!selectedHexId) return;
+    if (!selectedHexId || isPinMode) return;
 
     getRisk(selectedHexId)
       .then((r) => {
         setRisk(r);
         setDemoStage(r.demo_stage || null);
         setDataSource(r.data_source || 'live');
+        setValidation(generateValidationForHex(r.tier));
 
         // Fetch inundation only if tier >= Orange (SRS §15 code gate)
         if (['Orange', 'Red'].includes(r.tier)) {
@@ -76,29 +85,66 @@ export default function App() {
     getRiskHistory(selectedHexId)
       .then(setHistory)
       .catch(() => {});
-  }, [selectedHexId]);
+  }, [selectedHexId, isPinMode]);
 
   useEffect(() => {
     clearInterval(detailPollRef.current);
-    if (!selectedHexId) return;
+    if (!selectedHexId || isPinMode) return;
     fetchDetail();
     detailPollRef.current = setInterval(fetchDetail, POLL_MS);
     return () => clearInterval(detailPollRef.current);
-  }, [selectedHexId, fetchDetail]);
+  }, [selectedHexId, isPinMode, fetchDetail]);
 
-  // Auto-select first hex once map data arrives
+  // Auto-select first hex on initial load once map data arrives
   useEffect(() => {
-    if (hexes.length > 0 && !selectedHexId) {
+    if (hexes.length > 0 && !selectedHexId && !isPinMode) {
       setSelectedHexId(hexes[0].hex_id);
     }
-  }, [hexes, selectedHexId]);
+  }, [hexes, selectedHexId, isPinMode]);
 
+  // Selecting a Wayanad hex polygon restores live backend mode
   const handleSelectHex = useCallback((hexId) => {
+    setIsPinMode(false);
+    setPinData(null);
     setSelectedHexId(hexId);
     setRisk(null);
     setHistory([]);
     setInundation(null);
+    setValidation(generateValidationForHex('Yellow'));
+    setDataSource('live');
+    setDemoStage(null);
   }, []);
+
+  // Dropping or moving a custom pin engages simulation mode
+  const handlePinDrop = useCallback((data) => {
+    setIsPinMode(true);
+    setPinData(data);
+    setSelectedHexId(data.risk.hex_id);
+    setRisk(data.risk);
+    setHistory(data.history);
+    setInundation(data.inundation);
+    setValidation(data.validation);
+    setDataSource('live');
+    setDemoStage(data.surface?.surface === 'coromandel_coast' ? 'Coromandel Coastal' : 'Western Ghats Slope');
+  }, []);
+
+  // Sidebar controls for changing pin tier
+  const handlePinTierChange = useCallback((tier) => {
+    if (!pinData) return;
+    const { lat, lng } = pinData.risk.coordinates || {};
+    if (lat == null || lng == null) return;
+    const newSim = generatePinSimulation(lat, lng, tier, pinData.surface);
+    handlePinDrop(newSim);
+  }, [pinData, handlePinDrop]);
+
+  // Sidebar controls for re-randomizing values at same coordinates
+  const handlePinRandomize = useCallback(() => {
+    if (!pinData) return;
+    const { lat, lng } = pinData.risk.coordinates || {};
+    if (lat == null || lng == null) return;
+    const newSim = generatePinSimulation(lat, lng, pinData.risk.tier, pinData.surface);
+    handlePinDrop(newSim);
+  }, [pinData, handlePinDrop]);
 
   const iotOffline = risk?.iot_anomaly_flag ?? false;
   const currentTier = risk?.tier ?? 'Green';
@@ -112,10 +158,125 @@ export default function App() {
         {/* ── Sidebar panels ── */}
         <aside className="sidebar">
 
-          {/* Hex selector info */}
-          {selectedHexId && (
+          {/* Location selector panel: Custom Pin vs Hex */}
+          {isPinMode && pinData ? (
+            <div className="panel pin-control-panel">
+              <div className="panel-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>📍 Pinned Location</span>
+                <span className="pin-mode-pill">Interactive Sim</span>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 8 }}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#e6edf3' }}>
+                    {pinData.surface?.label || 'Placed Point'}
+                  </div>
+                  <div style={{ fontSize: 11, color: '#8b949e', marginTop: 2 }}>
+                    {pinData.risk.coordinates?.lat.toFixed(4)}° N, {pinData.risk.coordinates?.lng.toFixed(4)}° E
+                  </div>
+                </div>
+                {risk?.tier && (
+                  <span className={`tier-badge ${risk.tier}`}>
+                    <span className="pulse-dot" />
+                    {risk.tier}
+                  </span>
+                )}
+              </div>
+
+              <div style={{ fontSize: 10, color: '#8b949e', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Simulate Risk / Color Level:
+              </div>
+              <div className="tier-button-group">
+                <button
+                  type="button"
+                  className={`pin-tier-btn ${risk?.tier === 'Green' ? 'active' : ''}`}
+                  style={{ '--btn-c': '#22c55e' }}
+                  onClick={() => handlePinTierChange('Green')}
+                >
+                  🟢 Green (Low)
+                </button>
+                <button
+                  type="button"
+                  className={`pin-tier-btn ${risk?.tier === 'Yellow' ? 'active' : ''}`}
+                  style={{ '--btn-c': '#eab308' }}
+                  onClick={() => handlePinTierChange('Yellow')}
+                >
+                  🟡 Yellow (Med)
+                </button>
+                <button
+                  type="button"
+                  className={`pin-tier-btn ${risk?.tier === 'Orange' ? 'active' : ''}`}
+                  style={{ '--btn-c': '#f97316' }}
+                  onClick={() => handlePinTierChange('Orange')}
+                >
+                  🟠 Orange (High)
+                </button>
+                <button
+                  type="button"
+                  className={`pin-tier-btn ${risk?.tier === 'Red' ? 'active' : ''}`}
+                  style={{ '--btn-c': '#ef4444' }}
+                  onClick={() => handlePinTierChange('Red')}
+                >
+                  🔴 Red (Critical)
+                </button>
+              </div>
+
+              {/* Quick Region Presets */}
+              <div style={{ marginTop: 10, borderTop: '1px solid #21262d', paddingTop: 8 }}>
+                <div style={{ fontSize: 10, color: '#8b949e', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Quick Jump Presets:
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
+                  <button
+                    type="button"
+                    className="pin-preset-btn"
+                    title="Jump to Coromandel Coast with September coastal rain & inundation"
+                    onClick={() => {
+                      const sim = generatePinSimulation(11.93, 79.82);
+                      handlePinDrop(sim);
+                    }}
+                  >
+                    🌧️ Coromandel Coast
+                  </button>
+                  <button
+                    type="button"
+                    className="pin-preset-btn"
+                    title="Jump to Western Ghats green mountain slope (High Landslide Hazard)"
+                    onClick={() => {
+                      const sim = generatePinSimulation(11.54, 76.06);
+                      handlePinDrop(sim);
+                    }}
+                  >
+                    ⛰️ Green Slope
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+                <button
+                  type="button"
+                  className="pin-action-btn rand-btn"
+                  onClick={handlePinRandomize}
+                >
+                  🎲 Randomize Values
+                </button>
+                {hexes.length > 0 && (
+                  <button
+                    type="button"
+                    className="pin-action-btn back-btn"
+                    onClick={() => handleSelectHex(hexes[0].hex_id)}
+                  >
+                    ↩ Wayanad Hex
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : selectedHexId ? (
             <div className="panel" style={{ paddingBottom: 8 }}>
-              <div className="panel-title">Selected Hex</div>
+              <div className="panel-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>Selected Hex</span>
+                <span style={{ fontSize: 10, color: '#8b949e' }}>Click map to drop pin</span>
+              </div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <code className="hex-id-text">{selectedHexId}</code>
                 {risk?.tier && (
@@ -131,7 +292,7 @@ export default function App() {
                 </div>
               )}
             </div>
-          )}
+          ) : null}
 
           {/* Risk score + confidence + lead time */}
           <ConfidenceLeadTime risk={risk} />
@@ -145,11 +306,11 @@ export default function App() {
           {/* Feature contributions */}
           <FeaturePanel features={risk?.top_contributing_features ?? []} />
 
-          {/* Alert feed */}
-          <AlertFeed />
+          {/* Alert feed (displays custom pin alert if Orange/Red) */}
+          <AlertFeed customAlert={isPinMode ? pinData?.alert : null} />
 
-          {/* LOEO validation — static, fetched once on mount */}
-          <ValidationPanel />
+          {/* LOEO validation — dynamic metrics */}
+          <ValidationPanel validation={validation} />
 
         </aside>
 
@@ -157,8 +318,10 @@ export default function App() {
         <main className="map-container">
           <HexMap
             hexes={hexes}
-            selectedHexId={selectedHexId}
+            selectedHexId={isPinMode ? null : selectedHexId}
             onSelectHex={handleSelectHex}
+            onPinDrop={handlePinDrop}
+            pinData={pinData}
           />
           {/* Sensor offline label (SRS §16) */}
           <SensorLabel iotAnomalyFlag={iotOffline} />

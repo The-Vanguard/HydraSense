@@ -59,7 +59,7 @@ function AlertItem({ item }) {
   );
 }
 
-export default function AlertFeed() {
+export default function AlertFeed({ customAlert }) {
   const [alerts, setAlerts] = useState([]);
   const timerRef = useRef(null);
 
@@ -75,6 +75,12 @@ export default function AlertFeed() {
     return () => clearInterval(timerRef.current);
   }, []);
 
+  const combinedAlerts = [...alerts];
+  if (customAlert) {
+    // Add custom simulated alert at top
+    combinedAlerts.push(customAlert);
+  }
+
   return (
     <div className="panel">
       <div className="panel-title">
@@ -84,14 +90,15 @@ export default function AlertFeed() {
         </span>
       </div>
 
-      {alerts.length === 0 ? (
+      {combinedAlerts.length === 0 ? (
         <div className="empty-state">No alerts — system nominal</div>
       ) : (
         // Most recent first
-        [...alerts].reverse().map((a) => (
-          <AlertItem key={a.alert_id} item={a} />
+        [...combinedAlerts].reverse().map((a, idx) => (
+          <AlertItem key={a.alert_id || `sim_${idx}`} item={a} />
         ))
       )}
     </div>
   );
 }
+

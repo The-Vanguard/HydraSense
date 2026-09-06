@@ -28,5 +28,8 @@
   },
   "notes": {
     "map_library": "Leaflet only — CLAUDE.md hard constraint. Never switch to Mapbox."
+  },
+  "allowScripts": {
+    "esbuild@0.21.5": true
   }
 }
