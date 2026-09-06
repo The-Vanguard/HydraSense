@@ -2,12 +2,12 @@
 load_gsi_susceptibility.py — Load GSI NLSM susceptibility classes into hexes.static_features.
 
 h3 library version note: this script targets h3==3.7.7 (SRS.md Section 7 frozen stack).
-  h3 v3 API:  h3.geo_to_h3(lat, lng, res)   ← NOT latlng_to_cell (h3 v4)
-               h3.k_ring(hex, k)              ← NOT grid_disk (h3 v4)
+  h3 v3 API:  h3.geo_to_h3(lat, lng, res)   <- NOT latlng_to_cell (h3 v4)
+               h3.k_ring(hex, k)              <- NOT grid_disk (h3 v4)
   The ml/requirements.txt pins h3==3.7.7 — do not upgrade without team sign-off.
 
 Implements: SRS.md Section 8 (gsi_susceptibility_class row), Phase 2.
-Owner: Dev B (Phase 2)
+Owner: Guhan-10 (Phase 2)
 
 DATA SOURCE — MANUALLY SOURCED (SRS.md Section 8 constraint):
   GSI National Landslide Susceptibility Mapping (NLSM), 2015-16 field season,
@@ -21,7 +21,7 @@ DATA SOURCE — MANUALLY SOURCED (SRS.md Section 8 constraint):
 DO NOT query or scrape the Bhukosh portal programmatically (SRS.md Section 8).
 This is a permanently manual, bounded operation.
 
-Hex classification logic (provided by Dev B per sourced report):
+Hex classification logic (provided by Guhan-10 per sourced report):
   k=0 centroid hex  -> Moderate   (village-core, settlement-level, per NLSM MSZ)
   k=1 ring hexes    -> High       (inner slope — transition zone, per NLSM hilly note)
   k=2 ring hexes    -> High       (upper slope — hilly terrain per NLSM)

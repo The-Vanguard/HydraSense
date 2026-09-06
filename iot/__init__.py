@@ -1,1 +1,1 @@
-"""HydraSense IoT — MQTT simulator (SRS.md Section 16). Owner: Dev B (Phase 10)."""
+"""HydraSense IoT — MQTT simulator (SRS.md Section 16). Owner: Guhan-10 (Phase 10)."""
