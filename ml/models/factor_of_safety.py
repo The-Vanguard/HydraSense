@@ -320,7 +320,12 @@ def compute_for_all_hexes(
     if static_features_path is not None:
         sf_path = Path(static_features_path)
     else:
-        sf_path = ROOT / "data" / "features" / "static_features.parquet"
+        # Phase 3 canonical output is data/processed/; data/features/ is a legacy alias.
+        # Check both — same pattern as train_fusion_model.py and dynamic_features.py.
+        _sf_primary = ROOT / "data" / "processed" / "static_features.parquet"
+        _sf_alt     = ROOT / "data" / "features"  / "static_features.parquet"
+        sf_path = _sf_primary if _sf_primary.exists() else _sf_alt
+
 
     slope_by_hex: dict[str, float | None] = {}
     village_by_hex: dict[str, str] = {}
