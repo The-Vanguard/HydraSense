@@ -280,9 +280,10 @@ class FusionModel:
     """
 
     def __init__(self) -> None:
-        self.clf       = XGBClassifier(**XGBOOST_PARAMS)
-        self.is_fitted = False
+        self.clf        = XGBClassifier(**XGBOOST_PARAMS)
+        self.is_fitted  = False
         self.feature_cols = ALL_FEATURE_COLS
+        self._xgb_params  = XGBOOST_PARAMS
         self.training_meta: dict[str, Any] = {}
 
     def fit(self, X: pd.DataFrame, y: pd.Series) -> None:
@@ -408,24 +409,56 @@ class FusionModel:
         return out
 
     def save(self, path: Path = _MODEL_PATH) -> None:
-        """Pickle the fitted model to path for reuse by Phase 7 and Phase 9."""
+        """Save model state as a portable dict (JSON booster + metadata).
+        Avoids pickle class-resolution issues when loading from non-__main__ contexts.
+        """
         path.parent.mkdir(parents=True, exist_ok=True)
+        import tempfile, os
+        # Save XGBoost booster to JSON string
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tmp:
+            tmp_path = tmp.name
+        try:
+            self.clf.save_model(tmp_path)
+            with open(tmp_path, "r", encoding="utf-8") as f:
+                booster_json = f.read()
+        finally:
+            os.unlink(tmp_path)
+        state = {
+            "booster_json": booster_json,
+            "feature_cols": ALL_FEATURE_COLS,
+            "xgb_params":   XGBOOST_PARAMS,
+        }
         with open(path, "wb") as f:
-            pickle.dump(self, f)
+            pickle.dump(state, f)
         print(f"[train_fusion] Model saved -> {path}")
 
     @classmethod
     def load(cls, path: Path = _MODEL_PATH) -> "FusionModel":
-        """Load a previously saved FusionModel from path."""
+        """Load model from state dict. No class-resolution required -- state is primitive types."""
         if not path.exists():
             raise FileNotFoundError(
                 f"[FusionModel] Model not found at {path}. "
                 "Run train_fusion_model.py first."
             )
         with open(path, "rb") as f:
-            model = pickle.load(f)
-        print(f"[train_fusion] Model loaded ← {path}")
+            state = pickle.load(f)
+        # state is a plain dict -- no FusionModel class needed to unpickle
+        import tempfile, os
+        import xgboost as xgb
+        model = cls()
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False, mode="w", encoding="utf-8") as tmp:
+            tmp.write(state["booster_json"])
+            tmp_path = tmp.name
+        try:
+            model.clf = xgb.XGBClassifier()
+            model.clf.load_model(tmp_path)
+        finally:
+            os.unlink(tmp_path)
+        model._xgb_params = state.get("xgb_params", XGBOOST_PARAMS)
+        model.is_fitted   = True   # booster restored -- model is ready for inference
+        print(f"[train_fusion] Model loaded <- {path}")
         return model
+
 
 
 # ---------------------------------------------------------------------------
