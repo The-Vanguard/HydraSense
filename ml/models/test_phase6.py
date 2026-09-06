@@ -176,7 +176,7 @@ class TestSoilSaturation:
     """soil_saturation_ratio = GWETROOT directly — no derivation."""
 
     def test_soil_saturation_non_null(self, computed_features):
-        """Phase 1 data available → soil_saturation_ratio must not be None."""
+        """Phase 1 data available -> soil_saturation_ratio must not be None."""
         assert computed_features["soil_saturation_ratio"] is not None, (
             "soil_saturation_ratio is None — check GWETROOT data coverage or latest-available fallback"
         )
@@ -424,7 +424,7 @@ class TestFrozenFormulas:
         assert abs(conf - expected) < 0.01, f"confidence_score={conf}, expected {expected}"
 
     def test_confidence_zero_at_max_penalty(self):
-        """Penalty = 1.0 → confidence_score = 0."""
+        """Penalty = 1.0 -> confidence_score = 0."""
         conf = compute_confidence_score(1.0, 1.0)
         assert conf == 0.0
 

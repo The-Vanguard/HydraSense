@@ -89,8 +89,8 @@ from ml.models.factor_of_safety import compute_factor_of_safety
 
 # simulated_ffgs_signal thresholds (proxy for SAsiaFFGS — explicitly NOT the real signal)
 # Source: IMD heavy rain classification + typical South-Asia FFG guidance levels
-FFGS_1H_THRESHOLD_MM: float  = 25.0   # >= 25 mm/1h → simulated flash-flood guidance exceedance
-FFGS_3H_THRESHOLD_MM: float  = 40.0   # >= 40 mm/3h → simulated flash-flood guidance exceedance
+FFGS_1H_THRESHOLD_MM: float  = 25.0   # >= 25 mm/1h -> simulated flash-flood guidance exceedance
+FFGS_3H_THRESHOLD_MM: float  = 40.0   # >= 40 mm/3h -> simulated flash-flood guidance exceedance
 
 # simulated_gsi_signal thresholds (proxy for GSI RLFS — explicitly NOT the real signal)
 # Source: Wayanad GSI FIR thresholds, Achu et al. 2025 empirical analysis

@@ -19,17 +19,17 @@ CRITICAL DISTINCTION (SRS.md §11.2, must never be confused):
   independent validation sample size, which is always the event count.
 
 Escalating tier labels (SRS.md §11.2, frozen):
-  72h before event → Yellow
-  48h before event → Yellow
-  24h before event → Orange
-  12h before event → Orange
-   6h before event → Red
-    Event time     → Red
+  72h before event -> Yellow
+  48h before event -> Yellow
+  24h before event -> Orange
+  12h before event -> Orange
+   6h before event -> Red
+    Event time     -> Red
 
 Negative sampling (SRS.md §11.4, frozen):
   - 4:1 negative:positive ratio (capped)
-  - Pool A: same pilot hexes, dates ≥30 days from any recorded event → Green
-  - Pool B: other pilot hexes during real storm periods with no reported failure → Green
+  - Pool A: same pilot hexes, dates ≥30 days from any recorded event -> Green
+  - Pool B: other pilot hexes during real storm periods with no reported failure -> Green
   - Exclude any timestep within 7 days of a labeled positive event
 
 CLAUDE.md hard constraints that apply here:
@@ -108,7 +108,7 @@ H3_RESOLUTION = 8
 # ---------------------------------------------------------------------------
 # Escalating tier label scheme — SRS.md §11.2, frozen
 # ---------------------------------------------------------------------------
-# Maps hours-before-event → tier label
+# Maps hours-before-event -> tier label
 LABEL_SCHEME = [
     (-72, "Yellow"),
     (-48, "Yellow"),
@@ -118,7 +118,7 @@ LABEL_SCHEME = [
     (0,   "Red"),   # event time itself
 ]
 
-# Tier → integer label for XGBoost multiclass
+# Tier -> integer label for XGBoost multiclass
 TIER_TO_INT = {"Green": 0, "Yellow": 1, "Orange": 2, "Red": 3}
 INT_TO_TIER = {v: k for k, v in TIER_TO_INT.items()}
 
@@ -152,7 +152,7 @@ def get_village_hexes(village_name: str, coords: dict, resolution: int = H3_RESO
     This gives 7 hexes total, roughly covering a ~1–2 km radius area at res=8.
     """
     centroid_hex = h3.latlng_to_cell(coords["lat"], coords["lon"], resolution)
-    # k-ring of 1 = centroid + 6 immediate neighbours → approximates village polygon
+    # k-ring of 1 = centroid + 6 immediate neighbours -> approximates village polygon
     ring = h3.grid_disk(centroid_hex, 1)
     return sorted(ring)
 
@@ -375,8 +375,8 @@ def build_hex_event_assignments(events_df: pd.DataFrame) -> pd.DataFrame:
         coord_prec = event["coordinate_precision"]
         # Map event to the affected village (all our events are village-level)
         # We assign to the nearest village name from the event_id range:
-        # E001-E005 → Mundakkai/Chooralmala/Attamala/Punjirimattom (July 30 2024)
-        # Others → assigned by time period proximity; default to all 4 for broad events
+        # E001-E005 -> Mundakkai/Chooralmala/Attamala/Punjirimattom (July 30 2024)
+        # Others -> assigned by time period proximity; default to all 4 for broad events
         affected_villages = _get_affected_villages(event)
 
         for village_name in affected_villages:
@@ -428,7 +428,7 @@ def _get_affected_villages(event: pd.Series) -> list[str]:
     if eid in specific_map:
         return specific_map[eid]
     # For all other events: village-level precision from news/bulletin sources
-    # → assign all 4 villages (conservative; coordinate_precision = village-level)
+    # -> assign all 4 villages (conservative; coordinate_precision = village-level)
     return list(VILLAGES.keys())
 
 
@@ -468,7 +468,7 @@ def expand_positive_samples(
         for (offset_h, tier) in LABEL_SCHEME:
             snap_dt = event_ts + timedelta(hours=offset_h)
             # Index into the 72h-back series: offset 0 = index 72, offset -6 = index 66, etc.
-            series_idx = 72 + offset_h   # offset_h is negative (e.g. -72 → idx 0)
+            series_idx = 72 + offset_h   # offset_h is negative (e.g. -72 -> idx 0)
 
             # Rainfall windows (use rolling sums from the series where available)
             r1h   = _sum_window(rainfall_72h, series_idx, 1)
@@ -710,7 +710,7 @@ def main() -> None:
     # -------------------------------------------------------------------------
     all_hexes = get_all_pilot_hexes(H3_RESOLUTION)
     print(
-        f"[sampling] Pilot cluster: {len(VILLAGES)} villages → "
+        f"[sampling] Pilot cluster: {len(VILLAGES)} villages -> "
         f"{len(all_hexes)} unique H3 res-{H3_RESOLUTION} hexes"
     )
 
@@ -721,7 +721,7 @@ def main() -> None:
     print("\n[sampling] Building hex-event assignment table (SRS.md §11.5) ...")
     assignments = build_hex_event_assignments(events_df)
     assignments.to_csv(HEX_ASSIGNMENT_CSV, index=False)
-    print(f"[sampling]   → Saved: {HEX_ASSIGNMENT_CSV}")
+    print(f"[sampling]   -> Saved: {HEX_ASSIGNMENT_CSV}")
 
     # -------------------------------------------------------------------------
     # 4. Load Phase 1 observed data (rainfall + soil)
@@ -752,7 +752,7 @@ def main() -> None:
 
     EVENTS_DIR.mkdir(parents=True, exist_ok=True)
     combined_df.to_parquet(SAMPLES_PARQUET, index=False)
-    print(f"\n[sampling] Combined sample set saved → {SAMPLES_PARQUET}")
+    print(f"\n[sampling] Combined sample set saved -> {SAMPLES_PARQUET}")
     print(f"  Total rows:    {len(combined_df)}")
     print(f"  Positive rows: {len(positive_df)}")
     print(f"  Negative rows: {len(negative_df)}")
@@ -792,7 +792,7 @@ def main() -> None:
         },
     }
     SUMMARY_JSON.write_text(json.dumps(summary, indent=2))
-    print(f"[sampling] Audit summary → {SUMMARY_JSON}")
+    print(f"[sampling] Audit summary -> {SUMMARY_JSON}")
 
     # -------------------------------------------------------------------------
     # 9. Final counts printout (keep event count front-and-centre)

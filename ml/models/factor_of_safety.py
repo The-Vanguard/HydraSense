@@ -35,7 +35,7 @@ EQUATION (SRS.md Section 10.1):
     beta  = slope angle in radians (converted from slope_deg)
     m     = soil_saturation_ratio = GWETROOT (0-1, NASA POWER)
     c'    = effective cohesion (kPa)
-    phi'  = effective friction angle (degrees → radians)
+    phi'  = effective friction angle (degrees -> radians)
     z     = failure-plane depth (m)
     gamma = bulk unit weight of soil (kN/m³)
     gamma_w = unit weight of water = 9.81 kN/m³ (physical constant, not a parameter)
@@ -49,7 +49,7 @@ PARAMETER TABLE (Scientific Reports 2025 + Kerala laterite supplement):
   │ phi' (°)   │ 28.0   │ 22.0 (low)   │ 34.0 (high)  │ Sci Rep 2025; Kerala laterite       │
   │             │        │              │              │ range 20°-36° (CGWB 2017)           │
   │ z   (m)    │  2.0   │  1.5 (shal.) │  3.0 (deep)  │ Sci Rep 2025 failure-plane depth;   │
-  │             │        │              │              │ shallow z → lower FS (worst-case)   │
+  │             │        │              │              │ shallow z -> lower FS (worst-case)   │
   │ gamma(kN/m³)│ 18.5   │ 19.5 (heavy) │ 17.5 (light) │ Sci Rep 2025 bulk unit weight;      │
   │             │        │              │              │ heavier = more driving force        │
   └─────────────┴────────┴──────────────┴──────────────┴─────────────────────────────────────┘
@@ -65,13 +65,13 @@ UNCERTAINTY BAND SEMANTICS:
   SRS.md Section 10.3 uses the band width as a confidence-score penalty.
 
 SLOPE EDGE CASES:
-  slope_deg <= 0   → FS = FS_FLAT = 999.0 (flat — unconditionally stable)
-  slope_deg >= 89  → clamped to 88.9° (avoids division by zero in denominator sin·cos)
+  slope_deg <= 0   -> FS = FS_FLAT = 999.0 (flat — unconditionally stable)
+  slope_deg >= 89  -> clamped to 88.9° (avoids division by zero in denominator sin·cos)
   FS clipped to [FS_MIN_CLIP, FS_MAX_CLIP] = [0.05, 20.0] before returning.
   1/FS for fusion-model input: computed and clipped to [0.05, 20.0].
 
 FUSION MODEL INPUT:
-  SRS.md Section 10.1: "FS < 1.0 → slope failure predicted; feed 1/FS (clipped) into the
+  SRS.md Section 10.1: "FS < 1.0 -> slope failure predicted; feed 1/FS (clipped) into the
   fusion model."  The raw FS values are stored in dynamic_features; the caller (Phase 6)
   is responsible for inverting FS < 1.0 cases before passing to XGBoost.
 
@@ -80,10 +80,10 @@ OUTPUT (per hex per cycle):
     "factor_of_safety":     float,   # central estimate
     "factor_of_safety_min": float,   # worst-case (should be ≤ mid)
     "factor_of_safety_max": float,   # best-case  (should be ≥ mid)
-    "fs_band_straddles_one": bool,   # min < 1.0 <= max  → informative uncertainty
+    "fs_band_straddles_one": bool,   # min < 1.0 <= max  -> informative uncertainty
     "slope_deg_used":        float,  # echoed for audit
     "soil_saturation_ratio_used": float,  # echoed for audit
-    "missing_inputs":        list,   # non-empty → caller must flag this hex, not use FS
+    "missing_inputs":        list,   # non-empty -> caller must flag this hex, not use FS
   }
 """
 
@@ -117,15 +117,15 @@ _PARAMS_MID: dict[str, float] = {
 _PARAMS_WORST: dict[str, float] = {
     "c_prime":  4.0,   # kPa  — lowest cohesion (Kerala laterite lower bound)
     "phi_deg": 22.0,   # °    — lowest friction angle (Kerala laterite lower bound)
-    "z":        1.5,   # m    — shallowest depth → less resisting mass
-    "gamma":   19.5,   # kN/m³ — heaviest bulk density → more driving force
+    "z":        1.5,   # m    — shallowest depth -> less resisting mass
+    "gamma":   19.5,   # kN/m³ — heaviest bulk density -> more driving force
 }
 
 _PARAMS_BEST: dict[str, float] = {
     "c_prime": 14.0,   # kPa  — highest cohesion (Kerala laterite upper bound)
     "phi_deg": 34.0,   # °    — highest friction angle (Kerala laterite upper bound)
-    "z":        3.0,   # m    — deepest failure plane → more resisting mass
-    "gamma":   17.5,   # kN/m³ — lightest bulk density → less driving force
+    "z":        3.0,   # m    — deepest failure plane -> more resisting mass
+    "gamma":   17.5,   # kN/m³ — lightest bulk density -> less driving force
 }
 
 # ---------------------------------------------------------------------------
@@ -308,7 +308,7 @@ def compute_for_all_hexes(
                                If None or not found, uses latest non-null entry.
 
     Returns:
-        dict  hex_id → compute_factor_of_safety() result dict
+        dict  hex_id -> compute_factor_of_safety() result dict
         Hexes with missing_inputs non-empty are included (caller must flag them).
 
     Side-effects:
