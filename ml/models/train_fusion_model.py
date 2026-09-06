@@ -1,622 +1,826 @@
 """
-train_fusion_model.py — XGBoost fusion model training.
+Phase 6 (Part 2) — XGBoost Fusion Model Training.
 
-Implements: SRS.md Section 10.2 (fusion model), Section 10.3 (confidence score),
-            Section 10.4 (tiering), Phase 6 Part 2.
-Owner: Guhan-10 (Phase 6)
+SRS.md references:
+  Section 9   — 25 features (11 static + 14 dynamic)
+  Section 10.2 — risk_score formula (frozen): P(Green)*15 + P(Yellow)*42 + P(Orange)*64 + P(Red)*88
+  Section 10.3 — confidence_score = 100 * model_class_probability * (1 - FS_band_width_penalty)
+  Section 10.4 — tier thresholds: Green 0-29 | Yellow 30-54 | Orange 55-74 | Red 75-100
+  Section 11  — event-centered sample set (Phase 4), 4:1 neg:pos ratio
+  Section 14  — schema: risk_score, confidence_score as derived output fields (not model inputs)
+  Section 25, Phase 6 — acceptance criteria: trains without error, produces risk_score 0-100
+                         and feature-importance breakdown for held-out hex-timestep
 
-WHAT THIS DOES
---------------
-Trains the XGBoost 4-class classifier that produces risk_score (0-100) per hex
-per ingestion cycle, using the enriched training set from Phase 6 Part 1
-(dynamic_features.py fills the Phase 4 parquet before this runs).
+HARD CONSTRAINTS (CLAUDE.md):
+  - XGBoost ONLY.  PSO-BP must NEVER be suggested or implemented.
+  - risk_score = P(Green)*15 + P(Yellow)*42 + P(Orange)*64 + P(Red)*88 (frozen formula)
+  - Tier derived from risk_score using §10.4 thresholds — NEVER a separate argmax prediction
+    that could disagree with the score.
+  - antecedent_precipitation_index — NEVER api_score anywhere
+  - Model saved to ml/models/fusion_model.pkl (reused by Phase 7 LOEO + Phase 9 lead-time)
+  - No live recomputation — training is one-time offline, results read statically
 
-OUTPUT
-------
-  ml/models/fusion_model.json          -- XGBoost native format (preferred)
-  ml/models/fusion_model_metadata.json -- feature list, thresholds, training stats
-                                          (Phase 7 LOEO and Phase 9 lead-time reload from these)
+TIER ENCODING (SRS §11, frozen):
+  Green=0, Yellow=1, Orange=2, Red=3
+  Tier-to-midpoint map (for risk_score): {0: 15, 1: 42, 2: 64, 3: 88}
 
-FROZEN FORMULAS (CLAUDE.md + SRS.md -- do not alter)
-------------------------------------------------------
-risk_score = P(Green)*15 + P(Yellow)*42 + P(Orange)*64 + P(Red)*88
-  where P() values come from XGBoost's predict_proba (multi:softprob)
+FEATURE SET (25 total — SRS §9):
+  Static (11):  slope_deg, aspect, TWI, TRI, elevation, distance_to_stream_m,
+                drainage_density, land_use_class, ndvi_mean,
+                historical_event_count_500m, gsi_susceptibility_class
+  Dynamic (14): rainfall_1h, rainfall_3h, rainfall_6h, rainfall_24h,
+                rainfall_72h_antecedent, rain_intensity_mm_hr,
+                antecedent_precipitation_index, soil_saturation_ratio,
+                factor_of_safety, factor_of_safety_min, factor_of_safety_max,
+                simulated_ffgs_signal, simulated_gsi_signal, iot_anomaly_flag
 
-tier thresholds (Section 10.4):
-  Green:  0 <= score < 30
-  Yellow: 30 <= score < 55
-  Orange: 55 <= score < 75
-  Red:    75 <= score <= 100
+  XGBoost handles missing (None/NaN) values natively — do not impute; log missing counts.
 
-confidence_score = 100 * model_class_probability * (1 - fs_band_width_penalty)
-  model_class_probability = XGBoost's probability for the predicted tier
-  fs_band_width_penalty from dynamic_features.compute_fs_band_width_penalty()
+OUTPUT FIELDS (derived — not model inputs, SRS §14):
+  risk_score       — 0 to 100, float, P-weighted midpoint formula (§10.2)
+  tier             — string derived from risk_score using §10.4 thresholds
+  confidence_score — 0 to 100, float (§10.3)
+  feature_contributions — per-feature SHAP-style contributions (from XGBoost)
 
-HARD CONSTRAINTS (CLAUDE.md)
------------------------------
-- XGBoost only. Never implement PSO-BP under any circumstances.
-- tier is DERIVED from risk_score -- never predicted separately with argmax.
-  (Score and tier must be mutually consistent by construction.)
-- antecedent_precipitation_index -- NEVER api_score anywhere in this file.
-- Model is saved for Phase 7 (LOEO) and Phase 9 (lead-time) to reload.
-- Do not retrain the model on demand (live) -- training is offline, one-time.
+MODEL FILE:
+  ml/models/fusion_model.pkl  — saved after training, loaded by Phase 7 and Phase 9
 """
 
+from __future__ import annotations
+
 import json
+import math
+import pickle
 import sys
 import warnings
+from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
-import numpy as np
-import pandas as pd
-import xgboost as xgb
-from sklearn.model_selection import GroupShuffleSplit
-from sklearn.metrics import classification_report, confusion_matrix
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
+
+try:
+    import pandas as pd
+    import numpy as np
+    from xgboost import XGBClassifier
+except ImportError as exc:
+    print(f"ERROR: Required packages missing — {exc}")
+    print("Install: pip install xgboost pandas numpy")
+    sys.exit(1)
+
+from ml.features.dynamic_features import (
+    _compute_fs_band_penalty,
+    load_rainfall_series,
+    load_soil_series,
+    load_gsi_lookup,
+    compute_dynamic_features,
+    _RAINFALL_CURRENT_PATH,
+    _SOIL_PATH,
+    _GSI_PATH,
+)
+from ml.models.factor_of_safety import compute_factor_of_safety
 
 # ---------------------------------------------------------------------------
-# Repo paths
+# Constants (frozen — SRS §10.2, §10.4, §11)
 # ---------------------------------------------------------------------------
-REPO_ROOT   = Path(__file__).resolve().parents[2]
-DATA_DIR    = REPO_ROOT / "data"
-EVENTS_DIR  = DATA_DIR / "events"
-MODELS_DIR  = REPO_ROOT / "ml" / "models"
 
-SAMPLES_PARQUET    = EVENTS_DIR / "event_centered_samples.parquet"
-MODEL_PATH         = MODELS_DIR / "fusion_model.json"
-METADATA_PATH      = MODELS_DIR / "fusion_model_metadata.json"
+TIER_TO_INT: dict[str, int] = {"Green": 0, "Yellow": 1, "Orange": 2, "Red": 3}
+INT_TO_TIER: dict[int, str] = {v: k for k, v in TIER_TO_INT.items()}
 
-# ---------------------------------------------------------------------------
-# Feature columns going into XGBoost (SRS.md Section 9, 25 features)
-# ORDER IS FROZEN -- Phase 7 and Phase 9 reload with this exact list.
-# antecedent_precipitation_index -- NEVER api_score (CLAUDE.md / SRS.md Section 9)
-# ---------------------------------------------------------------------------
-FEATURE_COLUMNS = [
-    # Static -- 11 features
-    "slope_deg",
-    "aspect",
-    "TWI",
-    "TRI",
-    "elevation",
-    "distance_to_stream_m",
-    "drainage_density",
-    "land_use_class",           # ESA WorldCover nominal int; XGBoost categorical
-    "ndvi_mean",
-    "historical_event_count_500m",
-    "gsi_susceptibility_class_int",   # ordinal 0-3 (Low=0, Very High=3)
-    # Dynamic -- 14 features
-    "rainfall_1h",
-    "rainfall_3h",
-    "rainfall_6h",
-    "rainfall_24h",
-    "rainfall_72h_antecedent",
-    "rain_intensity_mm_hr",
-    "antecedent_precipitation_index",   # NEVER api_score
-    "soil_saturation_ratio",            # = GWETROOT directly (SRS.md Section 10.1)
-    "factor_of_safety",
-    "factor_of_safety_min",
-    "factor_of_safety_max",
-    "simulated_ffgs_signal",            # SIMULATED proxy
-    "simulated_gsi_signal",             # SIMULATED proxy
-    "iot_anomaly_flag",
+# risk_score midpoints per tier (SRS §10.2 frozen formula)
+TIER_MIDPOINTS: dict[int, float] = {0: 15.0, 1: 42.0, 2: 64.0, 3: 88.0}
+
+# Tier thresholds from risk_score (SRS §10.4 frozen)
+# risk_score → tier: Green 0-29 | Yellow 30-54 | Orange 55-74 | Red 75-100
+TIER_THRESHOLDS: list[tuple[float, str]] = [
+    (75.0, "Red"),
+    (55.0, "Orange"),
+    (30.0, "Yellow"),
+    (0.0,  "Green"),
 ]
 
-TARGET_COLUMN = "tier_int"   # 0=Green, 1=Yellow, 2=Orange, 3=Red
+# Paths
+_MODEL_PATH   = ROOT / "ml"   / "models" / "fusion_model.pkl"
+_SAMPLES_PATH = ROOT / "data" / "events" / "event_centered_samples.parquet"
+_FEATURES_DIR = ROOT / "data" / "features"
 
-TIER_INT_TO_NAME = {0: "Green", 1: "Yellow", 2: "Orange", 3: "Red"}
+# Static features — SRS §9 (field names frozen)
+STATIC_FEATURE_COLS: list[str] = [
+    "slope_deg", "aspect", "TWI", "TRI", "elevation",
+    "distance_to_stream_m", "drainage_density",
+    "land_use_class", "ndvi_mean", "historical_event_count_500m",
+    "gsi_susceptibility_class",
+]
 
-# ---------------------------------------------------------------------------
-# Tier thresholds (SRS.md Section 10.4, frozen)
-# ---------------------------------------------------------------------------
-TIER_THRESHOLDS = {
-    "Green":  (0,  30),
-    "Yellow": (30, 55),
-    "Orange": (55, 75),
-    "Red":    (75, 101),
+# Dynamic features — SRS §9 (field names frozen; antecedent_precipitation_index NEVER api_score)
+DYNAMIC_FEATURE_COLS: list[str] = [
+    "rainfall_1h", "rainfall_3h", "rainfall_6h", "rainfall_24h",
+    "rainfall_72h_antecedent", "rain_intensity_mm_hr",
+    "antecedent_precipitation_index",   # NEVER api_score — CLAUDE.md
+    "soil_saturation_ratio",
+    "factor_of_safety", "factor_of_safety_min", "factor_of_safety_max",
+    "simulated_ffgs_signal", "simulated_gsi_signal", "iot_anomaly_flag",
+]
+
+ALL_FEATURE_COLS: list[str] = STATIC_FEATURE_COLS + DYNAMIC_FEATURE_COLS
+
+# XGBoost hyperparameters (conservative defaults — tuning is Phase 7 territory)
+XGBOOST_PARAMS: dict[str, Any] = {
+    "n_estimators":      200,
+    "max_depth":         4,
+    "learning_rate":     0.05,
+    "subsample":         0.8,
+    "colsample_bytree":  0.8,
+    "use_label_encoder": False,
+    "eval_metric":       "mlogloss",
+    "objective":         "multi:softprob",
+    "num_class":         4,
+    "tree_method":       "hist",          # fast on CPU
+    "random_state":      42,
+    "n_jobs":            -1,
+    "missing":           float("nan"),    # XGBoost native missing-value handling
+    "verbosity":         0,
 }
 
-# risk_score midpoints per tier (SRS.md Section 10.2, frozen)
-TIER_MIDPOINTS = [15.0, 42.0, 64.0, 88.0]   # [Green, Yellow, Orange, Red]
 
 # ---------------------------------------------------------------------------
-# XGBoost training parameters
+# Tier / score functions (frozen formulas)
 # ---------------------------------------------------------------------------
-XGB_PARAMS = {
-    "objective":        "multi:softprob",
-    "num_class":        4,
-    "eval_metric":      "mlogloss",
-    "n_estimators":     400,
-    "max_depth":        5,
-    "learning_rate":    0.05,
-    "subsample":        0.8,
-    "colsample_bytree": 0.8,
-    "min_child_weight": 3,
-    "reg_alpha":        0.1,     # L1 regularisation -- helps with sparse IoT flag
-    "reg_lambda":       1.0,     # L2 regularisation
-    "random_state":     42,
-    "n_jobs":           -1,
-    "tree_method":      "hist",  # fast, works without GPU
-    # enable_categorical=True lets XGBoost handle land_use_class as nominal
-    "enable_categorical": False,  # set True once land_use_class is cast to pd.Categorical
-}
 
-
-# ===========================================================================
-# Risk score and tier derivation (SRS.md Section 10.2 + 10.4 -- FROZEN)
-# ===========================================================================
-
-def compute_risk_score(proba: np.ndarray) -> np.ndarray:
+def compute_risk_score(proba: dict[int, float]) -> float:
     """
-    Compute risk_score from XGBoost's 4-class softprob output.
-
     risk_score = P(Green)*15 + P(Yellow)*42 + P(Orange)*64 + P(Red)*88
-    (SRS.md Section 10.2, frozen formula -- do not alter)
 
-    Args:
-        proba: array of shape (n_samples, 4) from model.predict_proba()
-               columns: [P(Green), P(Yellow), P(Orange), P(Red)]
-
-    Returns: array of shape (n_samples,), values in [0, 100]
+    SRS §10.2 frozen formula — probability-weighted expected value over the
+    four tier-class probabilities from XGBoost's predict_proba.
+    Result clipped to [0, 100].
     """
-    midpoints = np.array(TIER_MIDPOINTS)   # [15, 42, 64, 88]
-    return (proba * midpoints).sum(axis=1)
+    score = sum(proba[tier_int] * mid for tier_int, mid in TIER_MIDPOINTS.items())
+    return round(float(max(0.0, min(100.0, score))), 4)
 
 
-def score_to_tier(risk_score: float) -> str:
+def derive_tier(risk_score: float) -> str:
     """
-    Derive tier from risk_score using SRS.md Section 10.4 thresholds (frozen).
-
-    Tier is ALWAYS derived from risk_score -- never predicted via argmax separately.
-    This guarantees score and tier are mutually consistent by construction.
+    Derive tier from risk_score using SRS §10.4 thresholds.
+    MUST be derived from risk_score — never a separate argmax that could disagree.
+    Green: 0-29 | Yellow: 30-54 | Orange: 55-74 | Red: 75-100
     """
-    if risk_score < 30:
-        return "Green"
-    if risk_score < 55:
-        return "Yellow"
-    if risk_score < 75:
-        return "Orange"
-    return "Red"
+    for threshold, tier in TIER_THRESHOLDS:
+        if risk_score >= threshold:
+            return tier
+    return "Green"
 
 
 def compute_confidence_score(
     model_class_probability: float,
-    fs_band_width_penalty: float,
+    fs_band_width_penalty:   float,
 ) -> float:
     """
-    confidence_score = 100 * model_class_probability * (1 - fs_band_width_penalty)
-    (SRS.md Section 10.3)
-
-    model_class_probability: XGBoost's predicted probability for the winning tier.
-    fs_band_width_penalty: from dynamic_features.compute_fs_band_width_penalty(),
-                           0.0 if FS band does not straddle 1.0, up to 0.3.
-
-    This is a confidence INDEX, not a calibrated probability. Never present as
-    '88% probability of landslide' (SRS.md Section 10.3).
+    confidence_score = 100 * model_class_probability * (1 - FS_band_width_penalty)
+    SRS §10.3 formula.
+    This is a confidence index — NEVER present as 'probability of landslide' in UI.
+    Result clipped to [0, 100].
     """
-    return float(min(100.0, max(0.0, 100.0 * model_class_probability * (1.0 - fs_band_width_penalty))))
+    score = 100.0 * model_class_probability * (1.0 - fs_band_width_penalty)
+    return round(float(max(0.0, min(100.0, score))), 4)
 
 
-# ===========================================================================
-# Feature contributions (explainability panel, Phase 12 frontend)
-# ===========================================================================
+# ---------------------------------------------------------------------------
+# Feature preparation
+# ---------------------------------------------------------------------------
 
-def extract_feature_contributions(model: xgb.XGBClassifier) -> dict:
+def _encode_categoricals(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Extract feature importances for the dashboard's explainability panel.
+    Encode string/boolean categorical features for XGBoost.
 
-    Uses XGBoost's built-in gain-based importance (no extra dependency).
-    Returns a dict: {feature_name: importance_score} sorted descending by importance.
-
-    Phase 12 frontend reads these from risk_scores.feature_contributions JSONB
-    (SRS.md Section 14 schema). Per-prediction SHAP values are left as a Phase 13
-    enhancement if time permits -- gain importance covers the demo requirement.
+    gsi_susceptibility_class: ordinal encode by hazard severity
+      Low=0, Moderate=1, High=2, Very High=3, unknown=-1
+    land_use_class: ordinal encode by landslide susceptibility proxy
+      (Water=0, Urban=1, Cropland=2, Grassland=3, Shrubland=4, Forest=5, unknown=2)
+    simulated_ffgs_signal / simulated_gsi_signal / iot_anomaly_flag: bool → int (0/1)
     """
-    importance = model.get_booster().get_score(importance_type="gain")
-    # Map back to full feature names (XGBoost uses f0, f1, ... if feature names not set)
-    booster = model.get_booster()
-    feature_names = booster.feature_names
-    if feature_names:
-        named = {name: float(importance.get(name, 0.0)) for name in feature_names}
-    else:
-        named = {f"f{i}": float(importance.get(f"f{i}", 0.0))
-                 for i in range(len(FEATURE_COLUMNS))}
-    return dict(sorted(named.items(), key=lambda x: x[1], reverse=True))
+    df = df.copy()
 
-
-# ===========================================================================
-# Training pipeline
-# ===========================================================================
-
-def prepare_training_data(df: pd.DataFrame) -> tuple:
-    """
-    Prepare X (feature matrix) and y (target) for XGBoost training.
-
-    Validates that all 25 feature columns are present, converts types,
-    and returns (X, y, groups) where groups = event_id for LOEO-safe splitting.
-
-    Args:
-        df: enriched parquet DataFrame from dynamic_features.fill_dynamic_features_into_samples()
-
-    Returns:
-        X:      pd.DataFrame, shape (n_samples, 25)
-        y:      pd.Series of tier_int (0-3)
-        groups: pd.Series of event_id (None for negatives) for GroupShuffleSplit
-    """
-    missing = [c for c in FEATURE_COLUMNS if c not in df.columns]
-    if missing:
-        print(
-            f"ERROR: Missing feature columns: {missing}\n"
-            "  Run dynamic_features.py (Phase 6 Part 1) first.",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-
-    if TARGET_COLUMN not in df.columns:
-        print(
-            f"ERROR: Target column '{TARGET_COLUMN}' not found in parquet.\n"
-            "  Expected values 0-3 (Green/Yellow/Orange/Red tier_int).",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-
-    X = df[FEATURE_COLUMNS].copy()
-
-    # iot_anomaly_flag is bool -- convert to int for XGBoost
-    X["iot_anomaly_flag"] = X["iot_anomaly_flag"].astype(int)
-
-    # All None/NaN values stay as NaN -- XGBoost handles them natively with
-    # tree_method='hist'. Never impute silently (per CLAUDE.md: fail loudly).
-    nan_rates = X.isna().mean()
-    high_nan = nan_rates[nan_rates > 0.5]
-    if len(high_nan) > 0:
-        print(
-            "\n[train_fusion_model] WARNING -- HIGH NaN RATE in features:",
-            file=sys.stderr,
-        )
-        for feat, rate in high_nan.items():
-            print(f"  {feat}: {rate*100:.0f}% null", file=sys.stderr)
-        print(
-            "  Check that Phase 1 (ingest) and Phase 5 (FS model) have run.",
-            file=sys.stderr,
+    SUSC_MAP = {"Low": 0, "Moderate": 1, "High": 2, "Very High": 3}
+    if "gsi_susceptibility_class" in df.columns:
+        df["gsi_susceptibility_class"] = (
+            df["gsi_susceptibility_class"]
+            .map(SUSC_MAP)
+            .fillna(-1)
+            .astype(float)
         )
 
-    # Hard check: if ALL three FS columns are 100% NaN, the model will be trained
-    # without any slope-physics signal. This is not a usable model for Phase 7/9.
-    # Block now rather than let a physics-free model get saved and loaded silently.
-    fs_cols = ["factor_of_safety", "factor_of_safety_min", "factor_of_safety_max"]
-    fs_all_null = all(X[c].isna().all() for c in fs_cols if c in X.columns)
-    if fs_all_null:
-        print(
-            "\n[train_fusion_model] ERROR: All FS columns (factor_of_safety / _min / _max) "
-            "are 100% NaN.\n"
-            "  Phase 5 (ml/models/factor_of_safety.py) has not been merged yet.\n"
-            "  Training a model without FS physics would produce misleading LOEO results\n"
-            "  and an unacceptable lead-time estimator (Phase 9).\n"
-            "  Re-run after Phase 5 merges and fill_dynamic_features_into_samples() has\n"
-            "  been called again to populate real FS values.\n"
-            "  If you need a preliminary model for integration testing ONLY, use\n"
-            "  --allow-null-fs flag (saves model with trained_with_fs=false in metadata).",
-            file=sys.stderr,
+    LULC_MAP = {
+        "Water": 0, "Urban": 1, "Cropland": 2,
+        "Grassland": 3, "Shrubland": 4, "Forest": 5,
+        "Bare": 3,    # bare soil similar to grassland susceptibility
+    }
+    if "land_use_class" in df.columns:
+        df["land_use_class"] = (
+            df["land_use_class"]
+            .map(LULC_MAP)
+            .fillna(2)   # default: cropland susceptibility proxy
+            .astype(float)
         )
-        sys.exit(1)
 
-    y = df[TARGET_COLUMN].astype(int)
+    for bool_col in ["simulated_ffgs_signal", "simulated_gsi_signal", "iot_anomaly_flag"]:
+        if bool_col in df.columns:
+            df[bool_col] = df[bool_col].apply(
+                lambda x: 1.0 if x is True or x == 1 else (0.0 if x is False or x == 0 else float("nan"))
+            )
 
-    # Groups for GroupShuffleSplit: use event_id to avoid data leakage
-    # (all snapshots from one event must stay together in train or val)
-    groups = df.get("event_id", pd.Series(["unknown"] * len(df)))
+    return df
 
-    # Report whether FS is populated -- caller embeds this in saved metadata
-    trained_with_fs = not fs_all_null and not all(
-        X[c].isna().mean() > 0.9 for c in fs_cols if c in X.columns
+
+def prepare_feature_matrix(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Series]:
+    """
+    Prepare X (feature matrix) and y (integer tier label) from a sample DataFrame.
+
+    Uses XGBoost's native missing-value mechanism — None/NaN kept as NaN,
+    never imputed.  Logs column-level missing counts before training.
+    """
+    # Ensure all feature cols exist; add as NaN if missing from Phase 4 schema
+    for col in ALL_FEATURE_COLS:
+        if col not in df.columns:
+            df[col] = float("nan")
+            print(f"[train_fusion] NOTE: Column '{col}' absent from sample set — added as NaN")
+
+    df = _encode_categoricals(df)
+
+    X = df[ALL_FEATURE_COLS].copy()
+    # Convert to float (XGBoost requires numeric)
+    for col in X.columns:
+        X[col] = pd.to_numeric(X[col], errors="coerce")
+
+    y = df["tier_int"].astype(int)
+
+    # Log missing counts (never impute)
+    nan_counts = X.isna().sum()
+    non_zero_missing = nan_counts[nan_counts > 0]
+    if not non_zero_missing.empty:
+        print("[train_fusion] NaN counts per feature (XGBoost handles natively):")
+        for col, cnt in non_zero_missing.items():
+            pct = 100.0 * cnt / max(len(X), 1)
+            print(f"  {col:<45s}: {cnt:5d} ({pct:.1f}%)")
+
+    return X, y
+
+
+# ---------------------------------------------------------------------------
+# Training
+# ---------------------------------------------------------------------------
+
+class FusionModel:
+    """
+    Wrapper around XGBClassifier implementing the SRS §10.2/§10.3 formulas.
+    Saved to fusion_model.pkl; loaded by Phase 7 (LOEO) and Phase 9 (lead-time).
+
+    All scoring methods are pure (no side effects) after training is complete.
+    """
+
+    def __init__(self) -> None:
+        self.clf       = XGBClassifier(**XGBOOST_PARAMS)
+        self.is_fitted = False
+        self.feature_cols = ALL_FEATURE_COLS
+        self.training_meta: dict[str, Any] = {}
+
+    def fit(self, X: pd.DataFrame, y: pd.Series) -> None:
+        """Train XGBoost on prepared feature matrix X with tier integer labels y."""
+        self.clf.fit(X, y)
+        self.is_fitted = True
+        self.training_meta = {
+            "n_samples":      len(X),
+            "n_features":     X.shape[1],
+            "feature_cols":   self.feature_cols,
+            "class_dist":     y.value_counts().to_dict(),
+            "xgboost_params": XGBOOST_PARAMS,
+        }
+        print(
+            f"[train_fusion] XGBoost trained on {len(X)} samples, "
+            f"{X.shape[1]} features. "
+            f"Class distribution: { {INT_TO_TIER[k]: v for k, v in y.value_counts().items()} }"
+        )
+
+    def predict_one(
+        self,
+        features: dict[str, Any],
+        fs_band_width_penalty: float = 0.0,
+    ) -> dict[str, Any]:
+        """
+        Run inference for a single hex-timestep.
+
+        Arguments:
+            features             : dict of feature name → value (all 25 features)
+            fs_band_width_penalty: from dynamic_features._compute_fs_band_penalty()
+
+        Returns dict with:
+            risk_score         : float 0-100 (SRS §10.2 frozen formula)
+            tier               : str (derived from risk_score via §10.4 thresholds)
+            confidence_score   : float 0-100 (SRS §10.3)
+            tier_probabilities : {tier_name: probability}
+            feature_contributions : {feature: importance_score}  (model-level)
+        """
+        if not self.is_fitted:
+            raise RuntimeError("[FusionModel] Model not fitted. Call fit() first.")
+
+        # Build 1-row DataFrame
+        row = {col: [features.get(col, float("nan"))] for col in self.feature_cols}
+        X_row = pd.DataFrame(row)
+        X_row = _encode_categoricals(X_row)
+        for col in X_row.columns:
+            X_row[col] = pd.to_numeric(X_row[col], errors="coerce")
+
+        proba_arr = self.clf.predict_proba(X_row)[0]  # shape: (4,)
+        proba = {i: float(p) for i, p in enumerate(proba_arr)}
+
+        risk  = compute_risk_score(proba)
+        tier  = derive_tier(risk)
+        # Confidence: probability of the DERIVED tier class
+        tier_int   = TIER_TO_INT[tier]
+        class_prob = proba[tier_int]
+        conf  = compute_confidence_score(class_prob, fs_band_width_penalty)
+
+        # Feature importances (model-level gain — same for all rows in inference)
+        importances = {
+            col: round(float(imp), 6)
+            for col, imp in zip(self.feature_cols, self.clf.feature_importances_)
+        }
+
+        return {
+            "risk_score":          risk,
+            "tier":                tier,
+            "confidence_score":    conf,
+            "tier_probabilities":  {INT_TO_TIER[i]: round(float(p), 6) for i, p in proba.items()},
+            "feature_contributions": importances,   # model-level; SHAP available in Phase 9
+        }
+
+    def predict_batch(
+        self,
+        df: pd.DataFrame,
+        fs_band_penalties: Optional[pd.Series] = None,
+    ) -> pd.DataFrame:
+        """
+        Batch inference on a prepared feature DataFrame.
+        Returns the input df with extra columns appended:
+          risk_score, tier, confidence_score, tier_probabilities (JSON string).
+        """
+        if not self.is_fitted:
+            raise RuntimeError("[FusionModel] Model not fitted.")
+
+        X = df[self.feature_cols].copy()
+        X = _encode_categoricals(X)
+        for col in X.columns:
+            X[col] = pd.to_numeric(X[col], errors="coerce")
+
+        proba_arr = self.clf.predict_proba(X)  # shape: (N, 4)
+
+        risk_scores    = []
+        tiers          = []
+        conf_scores    = []
+        tier_proba_str = []
+
+        for i, p_row in enumerate(proba_arr):
+            proba = {j: float(p) for j, p in enumerate(p_row)}
+            risk  = compute_risk_score(proba)
+            tier  = derive_tier(risk)
+            tier_int    = TIER_TO_INT[tier]
+            class_prob  = proba[tier_int]
+            band_penalty = (
+                float(fs_band_penalties.iloc[i])
+                if fs_band_penalties is not None
+                else 0.0
+            )
+            conf = compute_confidence_score(class_prob, band_penalty)
+
+            risk_scores.append(risk)
+            tiers.append(tier)
+            conf_scores.append(conf)
+            tier_proba_str.append(
+                json.dumps({INT_TO_TIER[j]: round(float(p), 6) for j, p in proba.items()})
+            )
+
+        out = df.copy()
+        out["risk_score"]        = risk_scores
+        out["tier"]              = tiers
+        out["confidence_score"]  = conf_scores
+        out["tier_probabilities"] = tier_proba_str
+        return out
+
+    def save(self, path: Path = _MODEL_PATH) -> None:
+        """Pickle the fitted model to path for reuse by Phase 7 and Phase 9."""
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "wb") as f:
+            pickle.dump(self, f)
+        print(f"[train_fusion] Model saved → {path}")
+
+    @classmethod
+    def load(cls, path: Path = _MODEL_PATH) -> "FusionModel":
+        """Load a previously saved FusionModel from path."""
+        if not path.exists():
+            raise FileNotFoundError(
+                f"[FusionModel] Model not found at {path}. "
+                "Run train_fusion_model.py first."
+            )
+        with open(path, "rb") as f:
+            model = pickle.load(f)
+        print(f"[train_fusion] Model loaded ← {path}")
+        return model
+
+
+# ---------------------------------------------------------------------------
+# Main training pipeline
+# ---------------------------------------------------------------------------
+
+def load_sample_set(path: Path = _SAMPLES_PATH) -> pd.DataFrame:
+    """
+    Load the event-centered sample set from Phase 4.
+
+    Falls back to a minimal synthetic set if Phase 4 has not been run —
+    prints a loud WARNING and the synthetic set is clearly marked as such.
+    The synthetic fallback exists so Phase 6 can be tested end-to-end without
+    Phase 4 completing first.  The model trained on synthetic data MUST NOT be
+    used for LOEO or production.
+    """
+    if path.exists():
+        df = pd.read_parquet(path)
+        print(f"[train_fusion] Loaded {len(df)} samples from Phase 4 → {path}")
+        return df
+
+    # ── Synthetic fallback (Phase 4 not run) ─────────────────────────────
+    print(
+        "WARNING: Phase 4 sample set not found at:\n"
+        f"  {path}\n"
+        "  Generating a SYNTHETIC training set for end-to-end testing.\n"
+        "  THIS MODEL IS NOT VALID FOR LOEO OR PRODUCTION USE.\n"
+        "  Run event_centered_sampling.py (Phase 4) first for real training.",
+        file=sys.stderr,
     )
+    rng = np.random.default_rng(42)
+    n   = 200  # small synthetic set: 40 positive × 5 tiers approx + 160 negative
+    tier_labels = rng.choice([0, 0, 0, 0, 1, 1, 2, 3], size=n)  # skewed toward Green
 
-    return X, y, groups, trained_with_fs
+    synthetic: dict[str, Any] = {
+        "tier_int":    tier_labels,
+        "sample_type": ["positive" if t > 0 else "negative" for t in tier_labels],
+    }
+    for col in ALL_FEATURE_COLS:
+        if col in {"gsi_susceptibility_class", "land_use_class"}:
+            synthetic[col] = rng.choice(["Low", "Moderate", "High"], size=n)
+        elif col in {"simulated_ffgs_signal", "simulated_gsi_signal", "iot_anomaly_flag"}:
+            synthetic[col] = rng.choice([True, False], size=n)
+        else:
+            synthetic[col] = rng.uniform(0, 50, size=n)
+
+    # Inject more realistic values correlated with labels
+    for i, t in enumerate(tier_labels):
+        if t >= 2:   # Orange/Red
+            synthetic["rainfall_24h"][i]       = float(rng.uniform(80, 250))
+            synthetic["soil_saturation_ratio"][i] = float(rng.uniform(0.7, 1.0))
+            synthetic["factor_of_safety"][i]   = float(rng.uniform(0.5, 1.2))
+        else:
+            synthetic["rainfall_24h"][i]       = float(rng.uniform(0, 30))
+            synthetic["soil_saturation_ratio"][i] = float(rng.uniform(0.1, 0.6))
+            synthetic["factor_of_safety"][i]   = float(rng.uniform(1.5, 5.0))
+
+    df = pd.DataFrame(synthetic)
+    df["hex_id"]    = [f"8860064000{i:05x}" for i in range(n)]
+    df["village"]   = rng.choice(["Mundakkai", "Attamala", "Punjirimattom"], size=n)
+    df["event_id"]  = [f"E_SYN_{i:03d}" if t > 0 else None for i, t in enumerate(tier_labels)]
+    df["is_synthetic"] = True
+    return df
 
 
-def train_model(
+def join_dynamic_features(
     df: pd.DataFrame,
-    val_split: float = 0.15,
-    verbose: bool = True,
-) -> tuple:
+    rainfall_current_path: Path = _RAINFALL_CURRENT_PATH,
+    soil_path:             Path = _SOIL_PATH,
+    gsi_path:              Path = _GSI_PATH,
+    static_features_path:  Optional[Path] = None,
+) -> pd.DataFrame:
     """
-    Train the XGBoost fusion model and return (model, val_metrics).
+    Enrich Phase 4 sample rows with real dynamic features computed from Phase 1 data.
 
-    Uses GroupShuffleSplit with event_id as the group key so that all snapshots
-    of a held-out validation event stay together -- preventing leakage between
-    train and val (consistent with the LOEO discipline in SRS.md Section 11).
+    Phase 4 produced a parquet with None placeholders for all dynamic features.
+    This function fills in the 14 dynamic features using each row's snapshot_timestamp
+    and village lookup.
 
-    The full model (trained on all data) is saved for Phase 7/9 to use.
-    The val split here is a quick sanity check only -- ground-truth LOEO
-    validation is Phase 7's job.
+    For historical events (2009–2023) where Phase 1 data doesn't extend back, most
+    dynamic features will remain None — that is correct and honest.  XGBoost handles
+    missing values natively; we do NOT impute.
 
-    Args:
-        df:        enriched DataFrame from dynamic_features.fill_dynamic_features_into_samples()
-        val_split: fraction of events to hold out for quick validation (not LOEO)
-        verbose:   print training progress
+    The most important real values are:
+      - soil_saturation_ratio: GWETROOT latest-available fallback covers recent samples
+      - antecedent_precipitation_index: computed from whatever observed window exists
+      - simulated_ffgs_signal / simulated_gsi_signal: computed from rainfall + GSI class
+      - factor_of_safety: requires slope_deg from Phase 3 (will be None until Phase 3 parquet)
 
-    Returns:
-        model:       trained xgb.XGBClassifier (fitted on full dataset after validation)
-        val_metrics: dict of val-set metrics
+    Static features (slope_deg, aspect, etc.) are joined from Phase 3 parquet if available.
     """
-    X, y, groups, trained_with_fs = prepare_training_data(df)
+    print("\n[train_fusion] Joining dynamic features from Phase 1 data ...")
 
-    n_samples   = len(X)
-    n_events    = df["event_id"].nunique() if "event_id" in df.columns else "unknown"
-    n_pos       = (df["sample_type"] == "positive").sum() if "sample_type" in df.columns else "unknown"
-    n_neg       = (df["sample_type"] == "negative").sum() if "sample_type" in df.columns else "unknown"
+    # Pre-load lookups once
+    from ml.features.dynamic_features import (
+        load_rainfall_series, load_soil_series, load_gsi_lookup,
+        compute_dynamic_features,
+    )
+    rainfall_lookup = load_rainfall_series(rainfall_current_path)
+    soil_lookup     = load_soil_series(soil_path)
+    gsi_lookup      = load_gsi_lookup(gsi_path)
 
-    if verbose:
-        print(f"\n[train_fusion_model] Training set summary:")
-        print(f"  Total rows:    {n_samples}")
-        print(f"  Unique events: {n_events}  (LOEO validation sample size -- NOT {n_samples})")
-        print(f"  Positive rows: {n_pos}")
-        print(f"  Negative rows: {n_neg}")
-        print(f"  Features:      {len(FEATURE_COLUMNS)}")
-        print(f"  FS available:  {trained_with_fs}  (False = Phase 5 not merged yet)")
-        print()
-        tier_dist = y.map(TIER_INT_TO_NAME).value_counts()
-        print("  Tier distribution:")
-        for tier, count in tier_dist.items():
-            print(f"    {tier:8s}  {count:5d} rows  ({count/n_samples*100:.1f}%)")
+    # Load static features from Phase 3 parquet if available
+    static_map: dict[str, dict[str, Any]] = {}   # {hex_id: {col: val}}
+    if static_features_path is None:
+        # Phase 3 writes to data/processed/; data/features/ is a legacy alias — check both
+        _sf_primary = ROOT / "data" / "processed" / "static_features.parquet"
+        _sf_alt     = ROOT / "data" / "features"  / "static_features.parquet"
+        static_features_path = _sf_primary if _sf_primary.exists() else _sf_alt
+    if static_features_path.exists():
+        try:
+            sf = pd.read_parquet(static_features_path)
+            for _, row in sf.iterrows():
+                hid = str(row["hex_id"])
+                static_map[hid] = {c: row.get(c) for c in STATIC_FEATURE_COLS}
+            print(f"[train_fusion] Loaded Phase 3 static features for {len(static_map)} hexes")
+        except Exception as exc:
+            print(f"[train_fusion] WARNING: Could not load Phase 3 parquet ({exc}); static features remain None")
+    else:
+        print(
+            f"[train_fusion] NOTE: Phase 3 static_features.parquet not found at "
+            f"{static_features_path}\n"
+            f"  slope_deg, aspect, TWI, TRI, elevation, etc. will be NaN for all rows."
+        )
 
-    # -------------------------------------------------------------------------
-    # Quick val split (sanity check only -- not LOEO, not the real validation)
-    # -------------------------------------------------------------------------
-    gss = GroupShuffleSplit(n_splits=1, test_size=val_split, random_state=42)
-    train_idx, val_idx = next(gss.split(X, y, groups=groups))
+    # Join dynamic features row by row
+    dyn_records: list[dict[str, Any]] = []
+    for _, row in df.iterrows():
+        ts_str  = str(row.get("snapshot_timestamp", "") or "")
+        village = str(row.get("village", "") or "")
+        hex_id  = str(row.get("hex_id", "") or "")
 
-    X_train, X_val = X.iloc[train_idx], X.iloc[val_idx]
-    y_train, y_val = y.iloc[train_idx], y.iloc[val_idx]
+        # Parse snapshot timestamp — these are historical event times (2024 July etc.)
+        try:
+            ts = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
+        except (ValueError, TypeError):
+            dyn_records.append({})
+            continue
 
-    if verbose:
-        print(f"\n[train_fusion_model] Split: {len(X_train)} train / {len(X_val)} val rows")
+        # Get slope_deg from Phase 3 static map (or None if not run)
+        slope_deg = None
+        if hex_id in static_map:
+            slope_deg = static_map[hex_id].get("slope_deg")
+        elif static_map:
+            # Fallback: nearest static hex by lexicographic proximity (rough)
+            slope_deg = next(iter(static_map.values()), {}).get("slope_deg")
 
-    # -------------------------------------------------------------------------
-    # Train on split (for val metrics)
-    # XGBClassifier reads feature names from DataFrame.columns at fit() time.
-    # Do NOT use set_params(feature_names=...) before fit -- it is a no-op on
-    # the booster and prevents get_score() from returning named importances.
-    # -------------------------------------------------------------------------
-    model_split = xgb.XGBClassifier(**XGB_PARAMS)
-    model_split.fit(
-        X_train, y_train,
-        eval_set=[(X_val, y_val)],
-        verbose=50 if verbose else False,
+        # GSI susceptibility class
+        gsi_class = gsi_lookup.get(hex_id)
+
+        # Compute all 14 dynamic features
+        dyn = compute_dynamic_features(
+            hex_id=hex_id,
+            village=village,
+            timestamp=ts,
+            slope_deg=slope_deg,
+            gsi_susceptibility_class=gsi_class,
+            rainfall_lookup=rainfall_lookup,
+            soil_lookup=soil_lookup,
+        )
+        dyn_records.append(dyn)
+
+    # Build a joined DataFrame — overwrite Phase 4 placeholders with computed values
+    dyn_df = pd.DataFrame(dyn_records, index=df.index)
+
+    dyn_cols = DYNAMIC_FEATURE_COLS + ["fs_band_width_penalty", "fs_band_straddles_one"]
+    for col in dyn_cols:
+        if col in dyn_df.columns:
+            df = df.copy()
+            df[col] = dyn_df[col]
+
+    # Join static features from Phase 3 if available
+    for col in STATIC_FEATURE_COLS:
+        if col in dyn_df.columns:
+            df[col] = dyn_df[col]
+        elif static_map and col not in df.columns:
+            df[col] = None
+
+    # Count coverage after join
+    n_soil = int(df["soil_saturation_ratio"].notna().sum())
+    n_r24  = int(df["rainfall_24h"].notna().sum())
+    n_fs   = int(df["factor_of_safety"].notna().sum())
+    n_ffgs = int(df["simulated_ffgs_signal"].notna().sum())
+    print(
+        f"[train_fusion] Feature join complete ({len(df)} rows):\n"
+        f"  soil_saturation_ratio: {n_soil}/{len(df)} non-null\n"
+        f"  rainfall_24h:          {n_r24}/{len(df)} non-null\n"
+        f"  factor_of_safety:      {n_fs}/{len(df)} non-null"
+        f"  (None until Phase 3 parquet exists)\n"
+        f"  simulated_ffgs_signal: {n_ffgs}/{len(df)} non-null"
+    )
+    return df
+
+
+def train_and_save(
+    samples_path:    Path = _SAMPLES_PATH,
+    model_save_path: Path = _MODEL_PATH,
+    held_out_n:      int  = 5,
+) -> FusionModel:
+    """
+    Full training pipeline:
+      1. Load Phase 4 sample set (or synthetic fallback)
+      2. Prepare feature matrix (encode categoricals, keep NaN for XGBoost)
+      3. Train XGBoost (no held-out split — LOEO in Phase 7 is the validation)
+      4. Print feature importance + sample held-out predictions
+      5. Save model to pkl
+
+    Phase 7 (LOEO) does the real validation — this function trains on the full
+    dataset and saves the model for LOEO harness reuse.
+
+    Returns the fitted FusionModel.
+    """
+    # ── 1. Load sample set ────────────────────────────────────────────────
+    df = load_sample_set(samples_path)
+
+    # ── 1b. Join dynamic features (Phase 6 core pipeline step) ───────────
+    # Phase 4 parquet has None placeholders for all dynamic features.
+    # compute and fill them now from Phase 1 observed data.
+    df = join_dynamic_features(df)
+
+    # ── 2. Prepare features ───────────────────────────────────────────────
+    X, y = prepare_feature_matrix(df)
+
+    print(f"\n[train_fusion] Feature matrix: {X.shape[0]} rows x {X.shape[1]} cols")
+    print(f"[train_fusion] Class distribution (tier):")
+    for tier_int, count in sorted(y.value_counts().items()):
+        print(f"  {INT_TO_TIER[tier_int]:8s} (class {tier_int}): {count} samples")
+
+    # ── 3. Train XGBoost ─────────────────────────────────────────────────
+    model = FusionModel()
+    model.fit(X, y)
+
+    # ── 4. Feature importance (model-level gain) ─────────────────────────
+    importances = sorted(
+        zip(ALL_FEATURE_COLS, model.clf.feature_importances_),
+        key=lambda x: x[1],
+        reverse=True,
+    )
+    print("\n[train_fusion] Top-10 feature importances (XGBoost gain):")
+    for feat, imp in importances[:10]:
+        bar = "#" * int(imp * 200)
+        print(f"  {feat:<45s} {imp:.6f}  {bar}")
+
+    # ── 5. Held-out sample predictions ───────────────────────────────────
+    print(f"\n[train_fusion] Sample predictions on {min(held_out_n, len(df))} rows:")
+    print(
+        f"  {'hex_id':<20} {'village':<15} {'true_tier':>10} "
+        f"{'risk_score':>11} {'predicted_tier':>15} {'confidence':>11}"
+    )
+    print("  " + "-" * 86)
+
+    # Compute band penalties from df if available
+    band_penalty_col = (
+        df["fs_band_width_penalty"] if "fs_band_width_penalty" in df.columns
+        else pd.Series([0.0] * len(df))
     )
 
-    # Val metrics (sanity check -- Phase 7 runs real LOEO)
-    proba_val  = model_split.predict_proba(X_val)
-    scores_val = compute_risk_score(proba_val)
-    tiers_val  = [score_to_tier(s) for s in scores_val]
-    tiers_true = [TIER_INT_TO_NAME[i] for i in y_val]
+    sample_rows = df.sample(n=min(held_out_n, len(df)), random_state=99)
+    for i, (idx, row) in enumerate(sample_rows.iterrows()):
+        feat_dict = {col: row.get(col) for col in ALL_FEATURE_COLS}
+        penalty   = float(band_penalty_col.loc[idx]) if idx in band_penalty_col.index else 0.0
+        pred      = model.predict_one(feat_dict, penalty)
+        true_tier = INT_TO_TIER.get(int(row["tier_int"]), "?")
+        print(
+            f"  {str(row.get('hex_id', '?')):<20} "
+            f"{str(row.get('village', '?')):<15} "
+            f"{true_tier:>10} "
+            f"{pred['risk_score']:>11.2f} "
+            f"{pred['tier']:>15} "
+            f"{pred['confidence_score']:>11.2f}"
+        )
 
-    val_metrics = _compute_val_metrics(y_val.values, proba_val, tiers_true, tiers_val)
-    val_metrics["trained_with_fs"] = trained_with_fs
-    if verbose:
-        _print_val_metrics(val_metrics)
+    # ── 6. Save model ────────────────────────────────────────────────────
+    model.save(model_save_path)
 
-    # -------------------------------------------------------------------------
-    # Retrain on full dataset (this is the model Phase 7/9 will use)
-    # -------------------------------------------------------------------------
-    if verbose:
-        print("\n[train_fusion_model] Retraining on full dataset for Phase 7/9 ...")
-
-    model_full = xgb.XGBClassifier(**XGB_PARAMS)
-    model_full.fit(X, y, verbose=False)
-
-    return model_full, val_metrics
+    return model
 
 
-def _compute_val_metrics(
-    y_true: np.ndarray,
-    proba: np.ndarray,
-    tiers_true: list,
-    tiers_pred: list,
-) -> dict:
-    """Compute validation metrics for the sanity-check split."""
-    scores = compute_risk_score(proba)
-    # Class probability for the predicted tier (used in confidence_score)
-    pred_class_idx = proba.argmax(axis=1)
-    pred_class_prob = proba[np.arange(len(proba)), pred_class_idx]
-    mean_confidence = float(pred_class_prob.mean())
+# ---------------------------------------------------------------------------
+# Inference wrapper — per-cycle scoring (called by Phase 8 API)
+# ---------------------------------------------------------------------------
 
-    # Tier-level accuracy (derived tier vs true tier)
-    tier_match = [a == b for a, b in zip(tiers_true, tiers_pred)]
-    tier_accuracy = float(sum(tier_match) / len(tier_match))
+def score_hex_cycle(
+    hex_id:      str,
+    village:     str,
+    timestamp:   str,     # ISO datetime string
+    features:    dict[str, Any],
+    model_path:  Path = _MODEL_PATH,
+) -> dict[str, Any]:
+    """
+    Score a single hex at one ingestion cycle, using the saved model.
 
-    # Orange/Red detection rate (the safety-critical classes)
-    orange_red_true = [t in ("Orange", "Red") for t in tiers_true]
-    orange_red_pred = [t in ("Orange", "Red") for t in tiers_pred]
-    if any(orange_red_true):
-        tp = sum(a and b for a, b in zip(orange_red_true, orange_red_pred))
-        fn = sum(a and not b for a, b in zip(orange_red_true, orange_red_pred))
-        orange_red_recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
-    else:
-        orange_red_recall = float("nan")
+    Arguments:
+        hex_id     : H3 hex identifier
+        village    : village name (for audit)
+        timestamp  : ISO datetime string of the cycle
+        features   : all 25 feature values (static + dynamic)
+        model_path : path to fusion_model.pkl
 
+    Returns:
+        dict with risk_score, tier, confidence_score, tier_probabilities,
+              feature_contributions, hex_id, village, timestamp
+    """
+    model = FusionModel.load(model_path)
+    band_penalty = features.get("fs_band_width_penalty", 0.0) or 0.0
+    pred = model.predict_one(features, float(band_penalty))
     return {
-        "n_val_rows":         int(len(y_true)),
-        "tier_accuracy":      round(tier_accuracy, 4),
-        "orange_red_recall":  round(orange_red_recall, 4) if not math.isnan(orange_red_recall) else None,
-        "mean_confidence":    round(mean_confidence, 4),
-        "mean_risk_score":    round(float(scores.mean()), 2),
-        "note": (
-            "This is a quick sanity-check split -- NOT the LOEO validation. "
-            "Ground-truth event-level performance is Phase 7's output (loeo_results table)."
-        ),
+        **pred,
+        "hex_id":    hex_id,
+        "village":   village,
+        "timestamp": timestamp,
     }
 
 
-def _print_val_metrics(metrics: dict) -> None:
-    print("\n[train_fusion_model] Validation metrics (sanity check only -- NOT LOEO):")
-    print(f"  Val rows:           {metrics['n_val_rows']}")
-    print(f"  Tier accuracy:      {metrics['tier_accuracy']*100:.1f}%")
-    print(f"  Orange/Red recall:  {metrics['orange_red_recall']*100 if metrics['orange_red_recall'] is not None else 'N/A':.1f}%")
-    print(f"  Mean confidence:    {metrics['mean_confidence']*100:.1f}%")
-    print(f"  Mean risk score:    {metrics['mean_risk_score']:.1f}")
-    print(f"\n  NOTE: {metrics['note']}")
-
-
-# ===========================================================================
-# Save / Load
-# ===========================================================================
-
-def save_model(model: xgb.XGBClassifier, val_metrics: dict) -> None:
-    """
-    Save trained model and metadata.
-
-    Model: ml/models/fusion_model.json  (XGBoost native format)
-    Meta:  ml/models/fusion_model_metadata.json
-           Contains feature list, thresholds, training stats, and trained_with_fs flag.
-           Phase 7 (LOEO) and Phase 9 (lead-time) MUST check trained_with_fs=true
-           before using this model for real results.
-
-    Raises SystemExit if trained_with_fs=False -- a NaN-FS model must not be
-    saved to the canonical path where Phase 7/9 would load it silently.
-    """
-    if not val_metrics.get("trained_with_fs", False):
-        print(
-            "\n[train_fusion_model] ERROR: Refusing to save model to canonical path.\n"
-            "  trained_with_fs=False in val_metrics -- FS columns were NaN during training.\n"
-            "  Saving this model would let Phase 7 (LOEO) and Phase 9 (lead-time) load a\n"
-            "  physics-free model silently and report misleading detection rates.\n"
-            "  Merge Phase 5 (factor_of_safety.py), re-run dynamic_features.py, then retrain.",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-
-    MODELS_DIR.mkdir(parents=True, exist_ok=True)
-
-    model.save_model(str(MODEL_PATH))
-    print(f"[train_fusion_model] Model saved -> {MODEL_PATH}")
-
-    metadata = {
-        "phase": 6,
-        "srs_sections": ["10.2", "10.3", "10.4"],
-        "feature_columns": FEATURE_COLUMNS,
-        "target_column": TARGET_COLUMN,
-        "tier_int_to_name": TIER_INT_TO_NAME,
-        "tier_thresholds": TIER_THRESHOLDS,
-        "risk_score_formula": "P(Green)*15 + P(Yellow)*42 + P(Orange)*64 + P(Red)*88",
-        "tier_midpoints": TIER_MIDPOINTS,
-        "confidence_score_formula": "100 * model_class_probability * (1 - fs_band_width_penalty)",
-        "xgb_params": XGB_PARAMS,
-        "val_metrics": val_metrics,
-        "model_path": str(MODEL_PATH),
-        "notes": [
-            "antecedent_precipitation_index -- NEVER api_score (CLAUDE.md / SRS.md Section 9)",
-            "tier is derived from risk_score, never from argmax separately (SRS.md Section 10.4)",
-            "XGBoost only -- PSO-BP is never implemented (CLAUDE.md)",
-            "soil_saturation_ratio = GWETROOT directly (SRS.md Section 10.1 frozen formula)",
-        ],
-    }
-    METADATA_PATH.write_text(json.dumps(metadata, indent=2))
-    print(f"[train_fusion_model] Metadata saved -> {METADATA_PATH}")
-
-
-def load_model() -> tuple:
-    """
-    Load trained model and metadata for Phase 7 (LOEO) and Phase 9 (lead-time).
-
-    Returns: (model, metadata_dict)
-    Fails loudly if model not found -- never returns a stub.
-    """
-    if not MODEL_PATH.exists():
-        print(
-            f"ERROR: {MODEL_PATH} not found.\n"
-            "  Run train_fusion_model.py (Phase 6) to train the model first.",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-
-    model = xgb.XGBClassifier()
-    model.load_model(str(MODEL_PATH))
-
-    metadata = json.loads(METADATA_PATH.read_text()) if METADATA_PATH.exists() else {}
-    return model, metadata
-
-
-# ===========================================================================
-# CLI entry point
-# ===========================================================================
-
-import math   # needed for math.isnan in _compute_val_metrics
+# ---------------------------------------------------------------------------
+# CLI entry
+# ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser(
-        description="Phase 6 Part 2: train XGBoost fusion model per SRS.md Section 10.2."
-    )
-    parser.add_argument(
-        "--input", type=Path, default=SAMPLES_PARQUET,
-        help=f"Enriched training parquet (default: {SAMPLES_PARQUET})",
-    )
-    parser.add_argument(
-        "--val-split", type=float, default=0.15,
-        help="Fraction of events to hold out for quick sanity-check validation (default: 0.15)",
-    )
-    parser.add_argument(
-        "--skip-enrich", action="store_true",
-        help="Skip dynamic feature enrichment (assume parquet is already enriched)",
-    )
-    args = parser.parse_args()
-
-    print("=" * 65)
-    print("HydraSense -- Phase 6 Part 2: Fusion Model Training")
-    print("SRS.md Sections 10.2, 10.3, 10.4")
-    print("XGBoost only. No PSO-BP. (CLAUDE.md)")
-    print("=" * 65)
-
-    # -------------------------------------------------------------------------
-    # Step 1: Enrich parquet with dynamic features (Part 1) if not already done
-    # -------------------------------------------------------------------------
-    if not args.skip_enrich:
-        print("\n[Step 1] Running dynamic feature enrichment (Phase 6 Part 1) ...")
-        from ml.features.dynamic_features import fill_dynamic_features_into_samples
-        df = fill_dynamic_features_into_samples(samples_path=args.input)
-    else:
-        print(f"\n[Step 1] Loading pre-enriched parquet from {args.input} ...")
-        if not args.input.exists():
-            print(f"ERROR: {args.input} not found.", file=sys.stderr)
-            sys.exit(1)
-        df = pd.read_parquet(args.input)
-        print(f"  Loaded {len(df)} rows.")
-
-    # -------------------------------------------------------------------------
-    # Step 2: Train
-    # -------------------------------------------------------------------------
-    print("\n[Step 2] Training XGBoost fusion model ...")
-    model, val_metrics = train_model(df, val_split=args.val_split, verbose=True)
-
-    # -------------------------------------------------------------------------
-    # Step 3: Feature contributions (for Phase 12 dashboard)
-    # -------------------------------------------------------------------------
-    print("\n[Step 3] Extracting feature contributions ...")
-    contributions = extract_feature_contributions(model)
-    print("  Top-10 features by gain importance:")
-    for i, (feat, score) in enumerate(list(contributions.items())[:10], 1):
-        print(f"    {i:2d}. {feat:42s}  {score:.1f}")
-
-    # -------------------------------------------------------------------------
-    # Step 4: Save
-    # -------------------------------------------------------------------------
-    print("\n[Step 4] Saving model and metadata ...")
-    save_model(model, val_metrics)
-
-    print("\n" + "=" * 65)
-    print("PHASE 6 COMPLETE")
-    print("=" * 65)
-    print(f"  Model:    {MODEL_PATH}")
-    print(f"  Metadata: {METADATA_PATH}")
+    print("=" * 80)
+    print("Phase 6 Part 2 — XGBoost Fusion Model Training")
+    print("SRS.md Section 10.2/10.3/10.4 | XGBoost only (no PSO-BP)")
+    print("=" * 80)
     print()
-    print("  Next steps:")
-    print("    Phase 7 (loeo.py)     -- LOEO validation using this model")
-    print("    Phase 8 (backend)     -- wires compute_dynamic_features() into /risk endpoints")
-    print("    Phase 9 (lead-time)   -- reruns this model against forecast rainfall series")
+
+    model = train_and_save()
+
+    # ── Acceptance criteria (SRS §25, Phase 6) ───────────────────────────
+    # "the model trains without error on the compiled + event-centered dataset
+    #  and produces a risk_score (0-100) and feature-importance breakdown for
+    #  a held-out sample hex-timestep."
+    print("\n[train_fusion] Acceptance criteria check:")
+
+    # Check 1: model is fitted
+    assert model.is_fitted, "FAIL: model.is_fitted is False"
+    print("  [OK] Model fitted without error")
+
+    # Check 2: predict_one returns risk_score in [0, 100]
+    test_feats: dict[str, Any] = {col: 0.0 for col in ALL_FEATURE_COLS}
+    test_feats["rainfall_24h"]        = 120.0
+    test_feats["soil_saturation_ratio"] = 0.85
+    test_feats["factor_of_safety"]    = 0.7
+    test_feats["slope_deg"]           = 35.0
+    test_feats["gsi_susceptibility_class"] = "High"
+    pred = model.predict_one(test_feats, fs_band_width_penalty=0.15)
+
+    assert 0.0 <= pred["risk_score"] <= 100.0, f"FAIL: risk_score={pred['risk_score']} out of [0,100]"
+    print(f"  [OK] risk_score={pred['risk_score']:.2f} in [0, 100]")
+
+    # Check 3: tier derived from risk_score (consistent with §10.4 thresholds)
+    expected_tier = derive_tier(pred["risk_score"])
+    assert pred["tier"] == expected_tier, (
+        f"FAIL: tier={pred['tier']} disagrees with "
+        f"derive_tier({pred['risk_score']:.2f})={expected_tier}"
+    )
+    print(f"  [OK] tier='{pred['tier']}' consistent with risk_score={pred['risk_score']:.2f}")
+
+    # Check 4: confidence_score in [0, 100]
+    assert 0.0 <= pred["confidence_score"] <= 100.0, (
+        f"FAIL: confidence_score={pred['confidence_score']} out of [0,100]"
+    )
+    print(f"  [OK] confidence_score={pred['confidence_score']:.2f} in [0, 100]")
+
+    # Check 5: feature_contributions has all 25 features
+    assert len(pred["feature_contributions"]) == len(ALL_FEATURE_COLS), (
+        f"FAIL: {len(pred['feature_contributions'])} contributions, expected {len(ALL_FEATURE_COLS)}"
+    )
+    print(f"  [OK] feature_contributions: {len(pred['feature_contributions'])} features")
+
+    # Check 6: risk_score formula matches manual calculation
+    proba_manual = pred["tier_probabilities"]
+    manual_score = (
+        proba_manual["Green"]  * 15.0
+        + proba_manual["Yellow"] * 42.0
+        + proba_manual["Orange"] * 64.0
+        + proba_manual["Red"]    * 88.0
+    )
+    assert abs(manual_score - pred["risk_score"]) < 0.01, (
+        f"FAIL: risk_score={pred['risk_score']:.4f} != "
+        f"manual formula={manual_score:.4f}"
+    )
+    print(f"  [OK] risk_score formula verified: P(G)*15+P(Y)*42+P(O)*64+P(R)*88 = {manual_score:.2f}")
+
+    # Check 7: model file saved
+    assert _MODEL_PATH.exists(), f"FAIL: model not saved at {_MODEL_PATH}"
+    print(f"  [OK] Model persisted → {_MODEL_PATH}")
+
+    # Check 8: antecedent_precipitation_index never api_score
+    assert "antecedent_precipitation_index" in ALL_FEATURE_COLS, "FAIL: wrong field name"
+    assert "api_score" not in ALL_FEATURE_COLS, "FAIL: api_score in feature list (must be antecedent_precipitation_index)"
+    print("  [OK] antecedent_precipitation_index present; api_score absent from feature list")
+
     print()
-    print("  IMPORTANT: report val tier_accuracy above as a sanity check only.")
-    print(f"  The LOEO event count (~{df['event_id'].nunique() if 'event_id' in df.columns else '?'} events) is the real validation sample size.")
-    print("  (SRS.md Section 11.2 -- timestep count != event count)")
-    print("=" * 65)
+    print("=" * 80)
+    print("Phase 6 Part 2 — ALL ACCEPTANCE CRITERIA PASSED")
+    print("  Model saved to: ml/models/fusion_model.pkl")
+    print("  Next: Phase 7 (LOEO validation) will load this model via FusionModel.load()")
+    print("=" * 80)

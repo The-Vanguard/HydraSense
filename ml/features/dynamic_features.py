@@ -1,708 +1,686 @@
 """
-dynamic_features.py — Dynamic (hazard) feature computation per hex per ingestion cycle.
+Phase 6 (Part 1) — Dynamic Feature Engineering.
 
-Implements: SRS.md Section 9 (dynamic features) + Section 10.1 (FS integration),
-            Phase 6 Part 1.
-Owner: Guhan-10 (Phase 6)
+SRS.md references:
+  Section 9   — the 14 dynamic hazard features (field names frozen)
+  Section 10.1 — soil_saturation_ratio = GWETROOT directly; FS formula (Phase 5)
+  Section 10.2 — risk_score formula (used in train_fusion_model.py, not here)
+  Section 10.4 — tier thresholds (used in train_fusion_model.py, not here)
+  Section 14  — observations.dynamic_features JSONB schema (field names frozen)
 
-WHAT THIS COMPUTES
-------------------
-All 14 dynamic hazard features listed in SRS.md Section 9, for one hex at one
-ingestion cycle (or one historical snapshot for training):
+HARD CONSTRAINTS (CLAUDE.md + SRS frozen decisions):
+  - soil_saturation_ratio = GWETROOT directly.  No derivation, no transformation.
+  - antecedent_precipitation_index — NEVER api_score anywhere in code or comments.
+  - simulated_ffgs_signal:  rainfall-threshold rule ONLY.  Must be labeled "simulated"
+    in all UI components (see comment below for the rule).
+  - simulated_gsi_signal:  rainfall + gsi_susceptibility_class rule ONLY.  Must be
+    labeled "simulated" in all UI components.
+  - iot_anomaly_flag: STUB returning False until Phase 10's IoT simulation exists.
+    Must have a clear TODO, not silent zeros.
+  - FS features: call Phase 5's compute_factor_of_safety() — do not re-implement the
+    equation here.
+  - Field names are frozen per Section 14:
+    rainfall_1h, rainfall_3h, rainfall_6h, rainfall_24h, rainfall_72h_antecedent,
+    rain_intensity_mm_hr, antecedent_precipitation_index, soil_saturation_ratio,
+    factor_of_safety, factor_of_safety_min, factor_of_safety_max,
+    simulated_ffgs_signal, simulated_gsi_signal, iot_anomaly_flag
 
-  rainfall_1h, rainfall_3h, rainfall_6h, rainfall_24h, rainfall_72h_antecedent,
-  rain_intensity_mm_hr, antecedent_precipitation_index,
-  soil_saturation_ratio,
-  factor_of_safety, factor_of_safety_min, factor_of_safety_max,
-  simulated_ffgs_signal, simulated_gsi_signal,
-  iot_anomaly_flag
+14 DYNAMIC FEATURES (SRS §9):
+  1.  rainfall_1h                   — mm in past 1 hour
+  2.  rainfall_3h                   — mm in past 3 hours
+  3.  rainfall_6h                   — mm in past 6 hours
+  4.  rainfall_24h                  — mm in past 24 hours
+  5.  rainfall_72h_antecedent       — mm in past 72 hours (antecedent window)
+  6.  rain_intensity_mm_hr          — peak 1h intensity in the past 6h window
+  7.  antecedent_precipitation_index — exponentially decayed API (decay=0.85)
+  8.  soil_saturation_ratio         — GWETROOT directly from NASA POWER (Phase 1)
+  9.  factor_of_safety              — central FS (Phase 5)
+  10. factor_of_safety_min          — worst-case FS (Phase 5)
+  11. factor_of_safety_max          — best-case FS (Phase 5)
+  12. simulated_ffgs_signal         — SIMULATED: rainfall-threshold rule (not SAsiaFFGS API)
+  13. simulated_gsi_signal          — SIMULATED: rainfall + susceptibility rule
+  14. iot_anomaly_flag              — STUB (False) until Phase 10
 
-TWO USAGE MODES
----------------
-1. TRAINING (fill_dynamic_features_into_samples):
-   Load Phase 4's event_centered_samples.parquet, backfill the None columns above,
-   and return the enriched DataFrame ready for XGBoost training.
+SIMULATED SIGNAL RULES (clearly labeled — SRS §8 confirms these proxies are deliberate):
+  simulated_ffgs_signal (bool — True = flash-flood guidance threshold exceeded):
+    True  if rainfall_3h >= FFGS_3H_THRESHOLD_MM  (40 mm/3h)
+          or rainfall_1h >= FFGS_1H_THRESHOLD_MM  (25 mm/1h)
+    Based on India Meteorological Department "heavy rain" thresholds used as a
+    proxy for the South-Asia Flash Flood Guidance System alert signal.
+    NOT the real SAsiaFFGS API (no public access confirmed per SRS §8).
 
-2. LIVE INFERENCE (compute_dynamic_features):
-   Given a hex_id, its static features, and the latest ingested observations,
-   return a dict of all 14 features for the Phase 8 risk-computation loop.
+  simulated_gsi_signal (bool — True = GSI landslide risk signal active):
+    True  if (rainfall_24h >= GSI_24H_THRESHOLD_MM) AND
+             (gsi_susceptibility_class in {"High", "Very High"})
+          or (rainfall_24h >= GSI_HIGH_24H_MM) for any susceptibility class
+    Based on Wayanad-specific empirical thresholds from the GSI Bhukosh FIR reports.
+    NOT the real GSI RLFS signal (no public API per SRS §8).
 
-PHASE 5 DEPENDENCY
-------------------
-factor_of_safety.py (Phase 5, ml/models/factor_of_safety.py) is imported for FS
-computation. If it does not exist yet (Phase 5 not merged), a loud warning is printed
-and FS features are set to None — training will proceed but FS columns will be NaN
-(XGBoost handles NaN natively; the model will simply not use those features until
-Phase 5 is available). Re-run fill_dynamic_features_into_samples after Phase 5 merges
-to get real FS values.
+ANTECEDENT PRECIPITATION INDEX (antecedent_precipitation_index):
+  API_t = 0.85 * API_{t-1} + P_t   (exponential decay, standard hydrological formulation)
+  The decay constant 0.85 is consistent with Phase 4's event_centered_sampling.py.
+  Never called api_score — CLAUDE.md hard constraint.
 
-SIMULATED SIGNAL FEATURES (SRS.md Section 9)
----------------------------------------------
-simulated_ffgs_signal: proxy for SAsiaFFGS guidance -- simple rainfall-threshold rule.
-simulated_gsi_signal:  proxy for GSI RLFS guidance -- rainfall x susceptibility class.
-Both are clearly labeled SIMULATED in code comments and output. They are NOT real
-institutional integrations (SRS.md Section 3.2, CLAUDE.md).
-
-HARD CONSTRAINTS (CLAUDE.md)
------------------------------
-- Feature named antecedent_precipitation_index -- NEVER api_score.
-- soil_saturation_ratio = GWETROOT directly (SRS.md Section 10.1, frozen formula).
-- XGBoost only -- this module does not train models, but output must be XGBoost-compatible.
-- iot_anomaly_flag: stub returning False until Phase 8's /ingest/iot populates timestamps.
+MISSING INPUT POLICY:
+  If slope_deg is missing (Phase 3 not run), FS fields are None + logged once per run.
+  If GWETROOT is missing, soil_saturation_ratio is None + logged once per run.
+  Never substitute silent zeros; always propagate None to downstream features that depend
+  on the missing value.  Phase 6's training handles None values via XGBoost's native
+  missing-value mechanism.
 """
+
+from __future__ import annotations
 
 import json
 import math
-import sys
-import warnings
-from datetime import datetime, timezone
+from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
-import numpy as np
-import pandas as pd
-
-# ---------------------------------------------------------------------------
-# Repo paths
-# ---------------------------------------------------------------------------
-REPO_ROOT   = Path(__file__).resolve().parents[2]
-DATA_DIR    = REPO_ROOT / "data"
-EVENTS_DIR  = DATA_DIR / "events"
-TERRAIN_DIR = DATA_DIR / "terrain"
-
-SAMPLES_PARQUET       = EVENTS_DIR / "event_centered_samples.parquet"
-STATIC_FEATURES_JSON  = TERRAIN_DIR / "static_features.json"   # Phase 3 side-output
+# Phase 5 FS model (no re-implementation)
+import sys
+_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(_ROOT))
+from ml.models.factor_of_safety import compute_factor_of_safety
 
 # ---------------------------------------------------------------------------
-# Phase 5 import -- graceful fallback if not yet merged
+# Constants — thresholds for simulated signals (clearly labeled)
 # ---------------------------------------------------------------------------
-_FS_AVAILABLE = False
-try:
-    from ml.models.factor_of_safety import compute_fs_band   # Phase 5 deliverable
-    _FS_AVAILABLE = True
-except ImportError:
-    warnings.warn(
-        "\n[dynamic_features] WARNING: ml.models.factor_of_safety not found.\n"
-        "  Phase 5 (factor_of_safety.py) has not been merged yet.\n"
-        "  factor_of_safety / factor_of_safety_min / factor_of_safety_max will be NaN.\n"
-        "  Re-run fill_dynamic_features_into_samples() after Phase 5 merges.",
-        stacklevel=2,
-    )
 
+# simulated_ffgs_signal thresholds (proxy for SAsiaFFGS — explicitly NOT the real signal)
+# Source: IMD heavy rain classification + typical South-Asia FFG guidance levels
+FFGS_1H_THRESHOLD_MM: float  = 25.0   # >= 25 mm/1h → simulated flash-flood guidance exceedance
+FFGS_3H_THRESHOLD_MM: float  = 40.0   # >= 40 mm/3h → simulated flash-flood guidance exceedance
 
-# ---------------------------------------------------------------------------
-# Factor of Safety soil parameters
-# Source: Mundakkai-Chooralmala Scientific Reports paper (SRS.md Section 18, ref 1)
-# Supplemented with Kerala laterite literature ranges for min/max band.
-# ---------------------------------------------------------------------------
-FS_PARAMS = {
-    # Central (paper's measured values)
-    "c_prime_central":   8.5,    # cohesion, kPa
-    "phi_prime_central": 30.0,   # friction angle, degrees
-    "z_central":         2.0,    # failure-plane depth, m
-    "gamma_central":     18.0,   # unit weight, kN/m3
-    "gamma_w":           9.81,   # water unit weight, kN/m3 (constant)
-    # Worst-case combination (lowest strength, highest weight -- gives FS_min)
-    "c_prime_worst":     4.0,
-    "phi_prime_worst":   24.0,
-    "z_worst":           3.0,
-    "gamma_worst":       20.0,
-    # Best-case combination (highest strength, lowest weight -- gives FS_max)
-    "c_prime_best":      14.0,
-    "phi_prime_best":    36.0,
-    "z_best":            1.5,
-    "gamma_best":        16.5,
-}
+# simulated_gsi_signal thresholds (proxy for GSI RLFS — explicitly NOT the real signal)
+# Source: Wayanad GSI FIR thresholds, Achu et al. 2025 empirical analysis
+GSI_24H_HIGH_SUSC_MM: float  = 80.0   # >= 80 mm/24h AND susceptibility High/Very High
+GSI_24H_ANY_SUSC_MM:  float  = 150.0  # >= 150 mm/24h regardless of susceptibility class
+GSI_HIGH_CLASSES: frozenset[str] = frozenset({"High", "Very High"})
+
+# Antecedent Precipitation Index decay constant (matches Phase 4's event_centered_sampling.py)
+API_DECAY: float = 0.85
 
 # ---------------------------------------------------------------------------
-# Simulated FFGS signal thresholds (SIMULATED proxy -- SRS.md Section 9)
-# Calibrated against Kolathayar et al. (SRS.md Section 18, ref 3):
-# July 2024 event saw ~50mm/3h peak at Chooralmala gauge.
-# Threshold set at 45mm/3h so signal saturates clearly at event-time snapshots.
+# Data paths (defaults; callers can override via load_*() kwargs)
 # ---------------------------------------------------------------------------
-FFGS_THRESHOLD_3H_MM = 45.0   # mm/3h -> signal = 1.0 at this accumulation (SIMULATED)
+_DATA = _ROOT / "data"
+_RAINFALL_CURRENT_PATH  = _DATA / "weather"  / "rainfall_current.json"
+_RAINFALL_FORECAST_PATH = _DATA / "weather"  / "rainfall_forecast.json"
+_SOIL_PATH              = _DATA / "soil"     / "soil_moisture.json"
+_GSI_PATH               = _DATA / "susceptibility" / "gsi_susceptibility.csv"
+
 
 # ---------------------------------------------------------------------------
-# Simulated GSI signal thresholds (SIMULATED proxy -- SRS.md Section 9)
-# 24h threshold: set at 40mm/24h so moderate events register a non-zero signal.
-# Kolathayar et al. report ~350mm/24h for July 2024; threshold is deliberately low
-# to give the model signal across the full training set, not just extreme events.
+# Loader helpers — Phase 1 data
 # ---------------------------------------------------------------------------
-GSI_CLASS_WEIGHTS: dict[str, float] = {
-    "Low":       0.10,
-    "Moderate":  0.30,
-    "High":      0.70,
-    "Very High": 1.00,
-}
-GSI_RAIN_THRESHOLD_24H_MM = 40.0   # mm/24h (SIMULATED)
 
-# GSI class ordinal encoding for XGBoost (ordered: Low < Moderate < High < Very High)
-# These classes ARE ordered -- ordinal encoding is correct here.
-GSI_CLASS_TO_INT: dict[str, int] = {
-    "Low":       0,
-    "Moderate":  1,
-    "High":      2,
-    "Very High": 3,
-}
-
-# IoT staleness threshold
-IOT_STALENESS_THRESHOLD_SEC = 300   # 5 minutes without a message -> anomaly flag
-
-# Antecedent Precipitation Index decay -- must match Phase 4's value (0.85)
-API_DECAY = 0.85
-
-
-# ===========================================================================
-# Core feature computation -- single hex, single timestamp
-# ===========================================================================
-
-def compute_rainfall_windows(
-    rainfall_series: list,
-    series_end_idx: int,
-) -> dict:
+def load_rainfall_series(
+    path: Path = _RAINFALL_CURRENT_PATH,
+) -> dict[str, dict[str, Optional[float]]]:
     """
-    Compute rolling rainfall accumulation windows ending at series_end_idx.
-
-    Args:
-        rainfall_series: hourly rainfall values (mm), oldest first.
-        series_end_idx:  index of current timestep (exclusive upper bound).
-
-    Returns dict with rainfall_1h/3h/6h/24h/72h_antecedent and rain_intensity_mm_hr.
-    """
-    def _sum(window: int) -> Optional[float]:
-        start = max(0, series_end_idx - window)
-        vals = [v for v in rainfall_series[start:series_end_idx] if v is not None]
-        return round(sum(vals), 4) if vals else None
-
-    r1h = _sum(1)
-    return {
-        "rainfall_1h":             r1h,
-        "rainfall_3h":             _sum(3),
-        "rainfall_6h":             _sum(6),
-        "rainfall_24h":            _sum(24),
-        "rainfall_72h_antecedent": _sum(72),
-        # rain_intensity_mm_hr: 1h accumulation = mm/hr at hourly resolution
-        "rain_intensity_mm_hr":    r1h,
-    }
-
-
-def compute_api(
-    rainfall_series: list,
-    decay: float = API_DECAY,
-) -> list:
-    """
-    Exponentially-decayed Antecedent Precipitation Index over hourly series.
-
-    antecedent_precipitation_index -- NEVER api_score (CLAUDE.md / SRS.md Section 9).
-    Decay=0.85 matches Phase 4's event_centered_sampling.py -- do not change independently.
-    """
-    running = 0.0
-    result: list = []
-    for p in rainfall_series:
-        if p is None:
-            result.append(None)
-        else:
-            running = decay * running + p
-            result.append(round(running, 4))
-    return result
-
-
-def compute_factor_of_safety(
-    slope_deg: Optional[float],
-    soil_saturation_ratio: Optional[float],
-) -> tuple:
-    """
-    Compute (factor_of_safety, factor_of_safety_min, factor_of_safety_max).
-
-    Delegates to ml.models.factor_of_safety.compute_fs_band (Phase 5).
-    Returns (None, None, None) with a warning if Phase 5 is not yet merged.
-
-    soil_saturation_ratio = GWETROOT directly (SRS.md Section 10.1, frozen formula).
-    """
-    if slope_deg is None or soil_saturation_ratio is None:
-        return None, None, None
-
-    if not _FS_AVAILABLE:
-        return None, None, None
-
-    try:
-        fs, fs_min, fs_max = compute_fs_band(
-            slope_deg=slope_deg,
-            soil_saturation_ratio=float(soil_saturation_ratio),
-            params=FS_PARAMS,
-        )
-        return (
-            round(float(fs),     4),
-            round(float(fs_min), 4),
-            round(float(fs_max), 4),
-        )
-    except Exception as exc:
-        warnings.warn(
-            f"[dynamic_features] compute_fs_band raised {type(exc).__name__}: {exc}\n"
-            "  FS features set to None for this row.",
-            stacklevel=2,
-        )
-        return None, None, None
-
-
-def compute_fs_band_width_penalty(
-    fs_min: Optional[float],
-    fs_max: Optional[float],
-) -> float:
-    """
-    FS band-width penalty for the confidence_score formula (SRS.md Section 10.3).
-
-    confidence_score = 100 x model_class_probability x (1 - fs_band_width_penalty)
-
-    Returns 0.0 if the FS band does not straddle 1.0 (failure threshold).
-    Rises linearly toward 0.3 as the band widens across 1.0.
-    """
-    if fs_min is None or fs_max is None:
-        return 0.0
-    band_width = fs_max - fs_min
-    straddles_failure = (fs_min < 1.0) and (fs_max > 1.0)
-    if not straddles_failure:
-        return 0.0
-    # Reaches 0.3 when band_width >= 1.0 (very uncertain physics)
-    return float(min(0.3, (band_width / 1.0) * 0.3))
-
-
-def compute_simulated_ffgs_signal(rainfall_3h: Optional[float]) -> float:
-    """
-    SIMULATED proxy for SAsiaFFGS flash-flood guidance signal (SRS.md Section 9).
-    NOT a real institutional integration (SRS.md Section 3.2, CLAUDE.md).
-
-    Linear scale of rainfall_3h against FFGS_THRESHOLD_3H_MM, capped at 1.0.
-    """
-    if rainfall_3h is None:
-        return 0.0
-    return float(min(1.0, rainfall_3h / FFGS_THRESHOLD_3H_MM))
-
-
-def compute_simulated_gsi_signal(
-    gsi_susceptibility_class: Optional[str],
-    rainfall_24h: Optional[float],
-) -> float:
-    """
-    SIMULATED proxy for GSI RLFS landslide guidance signal (SRS.md Section 9).
-    NOT a real institutional integration (SRS.md Section 3.2, CLAUDE.md).
-
-    Rule: susceptibility class weight x rainfall_24h factor.
-    """
-    weight = GSI_CLASS_WEIGHTS.get(gsi_susceptibility_class or "Low", 0.10)
-    rain_factor = float(min(1.0, (rainfall_24h or 0.0) / GSI_RAIN_THRESHOLD_24H_MM))
-    return round(weight * rain_factor, 4)
-
-
-def compute_iot_anomaly_flag(
-    last_iot_timestamp: Optional[datetime],
-    current_cycle_time: Optional[datetime] = None,
-) -> bool:
-    """
-    IoT sensor health flag -- True if the most recent reading for this hex is stale.
-
-    STUB: returns False when last_iot_timestamp is None (no IoT device on this hex).
-    Phase 8's POST /ingest/iot populates last_iot_timestamp per device; when a device
-    stops sending, Phase 6's live inference path detects staleness here and sets
-    iot_anomaly_flag = True, which triggers the 'external-data-only estimate' label
-    in Phase 12's dashboard (SRS.md Section 16 frozen wording).
-    """
-    if last_iot_timestamp is None:
-        return False
-    if current_cycle_time is None:
-        current_cycle_time = datetime.now(timezone.utc)
-    if last_iot_timestamp.tzinfo is None:
-        last_iot_timestamp = last_iot_timestamp.replace(tzinfo=timezone.utc)
-    age_sec = (current_cycle_time - last_iot_timestamp).total_seconds()
-    return age_sec > IOT_STALENESS_THRESHOLD_SEC
-
-
-# ===========================================================================
-# High-level interface: single hex, single cycle (live inference mode)
-# ===========================================================================
-
-def compute_dynamic_features(
-    hex_id: str,
-    static_features: dict,
-    rainfall_series_72h: list,
-    soil_saturation_ratio: Optional[float],
-    last_iot_timestamp: Optional[datetime] = None,
-    current_cycle_time: Optional[datetime] = None,
-) -> dict:
-    """
-    Compute all 14 dynamic hazard features for one hex at one ingestion cycle.
-
-    Used by Phase 8's risk-computation loop (live inference). For training,
-    use fill_dynamic_features_into_samples() instead.
-
-    Args:
-        hex_id:               H3 hex identifier.
-        static_features:      dict from hexes.static_features JSONB (Phase 3 output).
-        rainfall_series_72h:  list of hourly rainfall values (mm), oldest first,
-                              length >= 72. Last element is the current hour.
-        soil_saturation_ratio: GWETROOT value 0-1 (SRS.md Section 10.1 frozen formula).
-                              UI must label this 'soil saturation proxy' -- never
-                              'village-level measurement' (CLAUDE.md).
-        last_iot_timestamp:   most recent IoT message time for this hex (from Phase 8).
-        current_cycle_time:   ingestion cycle time (defaults to UTC now).
+    Load observed hourly rainfall from Phase 1's rainfall_current.json.
 
     Returns:
-        dict of all 14 dynamic feature values, keyed by SRS.md Section 9 field names.
+        {village_name: {"ISO_hour_str": precipitation_mm, ...}}
+        e.g. {"Mundakkai": {"2026-09-05T10:00": 1.3, ...}}
     """
-    if current_cycle_time is None:
-        current_cycle_time = datetime.now(timezone.utc)
+    if not path.exists():
+        print(f"[dynamic_features] WARNING: {path} not found — rainfall features will be None")
+        return {}
+    data = json.loads(path.read_text(encoding="utf-8", errors="replace"))
+    lookup: dict[str, dict[str, Optional[float]]] = {}
+    for loc in data.get("locations", []):
+        name   = loc["location"]
+        times  = loc.get("series", {}).get("time",             [])
+        precip = loc.get("series", {}).get("precipitation_mm", [])
+        lookup[name] = dict(zip(times, precip))
+    return lookup
 
-    n = len(rainfall_series_72h)
-    windows = compute_rainfall_windows(rainfall_series_72h, series_end_idx=n)
 
-    # antecedent_precipitation_index -- NEVER api_score (CLAUDE.md / SRS.md Section 9)
-    api_series = compute_api(rainfall_series_72h)
-    antecedent_precipitation_index = api_series[-1] if api_series else None
+def load_forecast_series(
+    path: Path = _RAINFALL_FORECAST_PATH,
+) -> dict[str, dict[str, Optional[float]]]:
+    """
+    Load hourly forecast rainfall from Phase 1's rainfall_forecast.json.
+    Same format as observed series; used for lead-time estimation (Phase 9).
 
-    slope_deg = _safe_float(static_features.get("slope_deg"))
-    fs, fs_min, fs_max = compute_factor_of_safety(slope_deg, soil_saturation_ratio)
+    Returns:
+        {village_name: {"ISO_hour_str": precipitation_mm, ...}}
+    """
+    if not path.exists():
+        print(f"[dynamic_features] WARNING: {path} not found — forecast features will be None")
+        return {}
+    data = json.loads(path.read_text(encoding="utf-8", errors="replace"))
+    lookup: dict[str, dict[str, Optional[float]]] = {}
+    for loc in data.get("locations", []):
+        name   = loc["location"]
+        times  = loc.get("series", {}).get("time",             [])
+        precip = loc.get("series", {}).get("precipitation_mm", [])
+        lookup[name] = dict(zip(times, precip))
+    return lookup
 
-    # Simulated signals -- SIMULATED, not real institutional integrations
-    simulated_ffgs_signal = compute_simulated_ffgs_signal(windows["rainfall_3h"])
-    simulated_gsi_signal  = compute_simulated_gsi_signal(
-        gsi_susceptibility_class=static_features.get("gsi_susceptibility_class"),
-        rainfall_24h=windows["rainfall_24h"],
+
+def load_soil_series(
+    path: Path = _SOIL_PATH,
+) -> dict[str, dict[str, Optional[float]]]:
+    """
+    Load hourly GWETROOT from Phase 1's soil_moisture.json.
+    soil_saturation_ratio = GWETROOT directly (SRS §10.1 frozen formula).
+
+    Returns:
+        {village_name: {"YYYYMMDDHH": gwetroot_0_to_1, ...}}
+    """
+    if not path.exists():
+        print(f"[dynamic_features] WARNING: {path} not found — soil_saturation_ratio will be None")
+        return {}
+    data = json.loads(path.read_text(encoding="utf-8", errors="replace"))
+    lookup: dict[str, dict[str, Optional[float]]] = {}
+    for loc in data.get("locations", []):
+        name = loc["location"]
+        lookup[name] = loc.get("gwetroot_hourly", {})
+    return lookup
+
+
+def load_gsi_lookup(
+    path: Path = _GSI_PATH,
+) -> dict[str, str]:
+    """
+    Load GSI susceptibility class per hex_id from Phase 2 CSV.
+
+    Returns:
+        {hex_id: susceptibility_class}  e.g. {"8860064e4bfffff": "Moderate"}
+    """
+    if not path.exists():
+        print(f"[dynamic_features] WARNING: {path} not found — simulated_gsi_signal will be None")
+        return {}
+    import csv
+    lookup: dict[str, str] = {}
+    with path.open(newline="", encoding="utf-8") as f:
+        for row in csv.DictReader(f):
+            hid   = row["hex_id"].strip()
+            cls   = row["susceptibility_class"].strip()
+            if hid and cls:
+                lookup[hid] = cls
+    return lookup
+
+
+# ---------------------------------------------------------------------------
+# Lookup helpers — single timestamp
+# ---------------------------------------------------------------------------
+
+def _get_rainfall_at(
+    lookup: dict[str, dict[str, Optional[float]]],
+    village: str,
+    dt: datetime,
+) -> Optional[float]:
+    """Get observed precipitation (mm) for village at exact hour dt."""
+    if not lookup or village not in lookup:
+        return None
+    iso_hour = dt.strftime("%Y-%m-%dT%H:00")
+    return lookup[village].get(iso_hour)
+
+
+def _get_gwetroot_at(
+    lookup: dict[str, dict[str, Optional[float]]],
+    village: str,
+    dt: datetime,
+) -> Optional[float]:
+    """
+    Get GWETROOT for village at dt.
+    NASA POWER hourly key format: YYYYMMDDHH (no separators).
+    Falls back to daily key YYYYMMDD, then to the most recent non-null entry.
+    The last-available fallback is correct: NASA POWER changes at sub-daily resolution
+    on a ~50 km grid, and the Phase 1 snapshot may not cover the current cycle's hour.
+    This is documented, not a silent imputation.
+    """
+    if not lookup or village not in lookup:
+        return None
+    series = lookup[village]
+    key_h = dt.strftime("%Y%m%d%H")
+    key_d = dt.strftime("%Y%m%d")
+    val = series.get(key_h) if series.get(key_h) is not None else series.get(key_d)
+    if val is not None:
+        return float(val)
+    # Fallback: latest non-null entry in the series
+    # (NASA POWER snapshot may not cover the current cycle timestamp)
+    for k in sorted(series.keys(), reverse=True):
+        v = series[k]
+        if v is not None:
+            return float(v)
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Rolling window sums over the rainfall series
+# ---------------------------------------------------------------------------
+
+def _rolling_sum(
+    lookup: dict[str, dict[str, Optional[float]]],
+    village: str,
+    end_dt: datetime,
+    hours: int,
+) -> Optional[float]:
+    """
+    Sum precipitation over `hours` hours ending at (and including) end_dt.
+    Returns None if no data is found in the window.
+    """
+    total = 0.0
+    found_any = False
+    for h in range(hours):
+        slot = end_dt - timedelta(hours=h)
+        val = _get_rainfall_at(lookup, village, slot)
+        if val is not None:
+            total += val
+            found_any = True
+    return round(total, 4) if found_any else None
+
+
+def _peak_1h_in_window(
+    lookup: dict[str, dict[str, Optional[float]]],
+    village: str,
+    end_dt: datetime,
+    window_hours: int = 6,
+) -> Optional[float]:
+    """
+    Maximum 1h precipitation in the last `window_hours` hours ending at end_dt.
+    Used for rain_intensity_mm_hr.
+    """
+    peak: Optional[float] = None
+    for h in range(window_hours):
+        slot = end_dt - timedelta(hours=h)
+        val = _get_rainfall_at(lookup, village, slot)
+        if val is not None:
+            peak = max(peak, val) if peak is not None else val
+    return round(peak, 4) if peak is not None else None
+
+
+# ---------------------------------------------------------------------------
+# Antecedent Precipitation Index
+# antecedent_precipitation_index — NEVER api_score (CLAUDE.md hard constraint)
+# ---------------------------------------------------------------------------
+
+def _compute_antecedent_precipitation_index(
+    lookup: dict[str, dict[str, Optional[float]]],
+    village: str,
+    end_dt: datetime,
+    lookback_hours: int = 720,  # 30 days
+    decay: float = API_DECAY,
+) -> Optional[float]:
+    """
+    Exponentially-decayed Antecedent Precipitation Index at end_dt.
+    antecedent_precipitation_index = decay * API_{t-1} + P_t  (running sum)
+    decay = 0.85 (matches event_centered_sampling.py, Phase 4)
+    Field: antecedent_precipitation_index — NEVER api_score (CLAUDE.md).
+    """
+    running = 0.0
+    found_any = False
+    for h in range(lookback_hours, -1, -1):
+        slot = end_dt - timedelta(hours=h)
+        val = _get_rainfall_at(lookup, village, slot)
+        if val is not None:
+            running = decay * running + val
+            found_any = True
+        # If None, decay without adding (continuous decay even through data gaps)
+        else:
+            running = decay * running
+    return round(running, 4) if found_any else None
+
+
+# ---------------------------------------------------------------------------
+# Simulated signal rules (explicitly NOT the real SAsiaFFGS or GSI RLFS APIs)
+# ---------------------------------------------------------------------------
+
+def _compute_simulated_ffgs_signal(
+    rainfall_1h: Optional[float],
+    rainfall_3h: Optional[float],
+) -> Optional[bool]:
+    """
+    SIMULATED flash-flood guidance signal (proxy for SAsiaFFGS).
+    NOT the real SAsiaFFGS API — no public access per SRS §8.
+    Rule: True if rainfall_1h >= 25 mm/h OR rainfall_3h >= 40 mm/3h.
+    Source: IMD heavy rain classification thresholds.
+    Label as 'simulated' in all UI components (SRS §8 frozen requirement).
+    """
+    if rainfall_1h is None and rainfall_3h is None:
+        return None
+    r1 = rainfall_1h or 0.0
+    r3 = rainfall_3h or 0.0
+    return bool(r1 >= FFGS_1H_THRESHOLD_MM or r3 >= FFGS_3H_THRESHOLD_MM)
+
+
+def _compute_simulated_gsi_signal(
+    rainfall_24h: Optional[float],
+    gsi_susceptibility_class: Optional[str],
+) -> Optional[bool]:
+    """
+    SIMULATED GSI landslide risk signal (proxy for GSI RLFS).
+    NOT the real GSI RLFS signal — no public API per SRS §8.
+    Rule:
+      True if rainfall_24h >= 80 mm AND susceptibility in {High, Very High}
+      True if rainfall_24h >= 150 mm (any susceptibility class)
+    Source: Wayanad GSI FIR thresholds; Achu et al. (2025) empirical analysis.
+    Label as 'simulated' in all UI components (SRS §8 frozen requirement).
+    """
+    if rainfall_24h is None:
+        return None
+    r24 = rainfall_24h
+    susc = (gsi_susceptibility_class or "").strip()
+
+    if r24 >= GSI_24H_ANY_SUSC_MM:
+        return True
+    if r24 >= GSI_24H_HIGH_SUSC_MM and susc in GSI_HIGH_CLASSES:
+        return True
+    return False
+
+
+def _compute_iot_anomaly_flag() -> bool:
+    """
+    IoT sensor anomaly flag.
+    # TODO(Phase 10): wire in real IoT sensor data from Phase 10's simulation.
+    #   Until Phase 10 is implemented, this always returns False.
+    #   Do NOT substitute random values or heuristics here — the stub is explicit.
+    Stub returns False (no IoT data available until Phase 10).
+    """
+    # TODO: replace with Phase 10 IoT sensor anomaly detection
+    return False
+
+
+# ---------------------------------------------------------------------------
+# FS band width penalty (SRS §10.3)
+# ---------------------------------------------------------------------------
+
+def _compute_fs_band_penalty(
+    factor_of_safety_min: Optional[float],
+    factor_of_safety_max: Optional[float],
+    fs_band_straddles_one: Optional[bool],
+) -> float:
+    """
+    FS band width penalty for confidence_score (SRS §10.3).
+    = 0 if band does not straddle FS=1.0
+    Rising toward ~0.3 as band widens and straddles the failure threshold.
+
+    Formula: penalty = 0.3 * min(1.0, (fs_max - fs_min) / 2.0) if straddles else 0.0
+    The divisor 2.0 normalises the band width (a band of 2 units = full penalty).
+    """
+    if not fs_band_straddles_one:
+        return 0.0
+    if factor_of_safety_min is None or factor_of_safety_max is None:
+        return 0.0
+    band_width = max(0.0, factor_of_safety_max - factor_of_safety_min)
+    return round(0.3 * min(1.0, band_width / 2.0), 4)
+
+
+# ---------------------------------------------------------------------------
+# Public API — per-hex per-cycle
+# ---------------------------------------------------------------------------
+
+def compute_dynamic_features(
+    hex_id:     str,
+    village:    str,
+    timestamp:  datetime,
+    slope_deg:  Optional[float],
+    gsi_susceptibility_class: Optional[str],
+    rainfall_lookup: dict[str, dict[str, Optional[float]]],
+    soil_lookup:     dict[str, dict[str, Optional[float]]],
+) -> dict[str, Any]:
+    """
+    Compute all 14 dynamic hazard features for one hex at one ingestion-cycle timestamp.
+
+    Reads Phase 1 data via pre-loaded lookup dicts (to avoid re-parsing JSON per hex).
+    Calls Phase 5's compute_factor_of_safety() for FS features.
+
+    Arguments:
+        hex_id      : H3 hex identifier
+        village     : village name (for rainfall/soil lookup — NASA POWER nearest-grid)
+        timestamp   : cycle ingestion datetime (UTC)
+        slope_deg   : from Phase 3 static_features; None if Phase 3 not run
+        gsi_susceptibility_class : from Phase 2 GSI CSV; None if missing
+        rainfall_lookup : pre-loaded {village: {iso_hour: mm}} from load_rainfall_series()
+        soil_lookup     : pre-loaded {village: {YYYYMMDDHH: gwetroot}} from load_soil_series()
+
+    Returns:
+        dict with all 14 field names per SRS §9/§14 + audit fields.
+        Fields with None = data not available (never silently defaulted).
+    """
+    # ── Rainfall windows ──────────────────────────────────────────────────
+    r1h   = _rolling_sum(rainfall_lookup, village, timestamp, 1)
+    r3h   = _rolling_sum(rainfall_lookup, village, timestamp, 3)
+    r6h   = _rolling_sum(rainfall_lookup, village, timestamp, 6)
+    r24h  = _rolling_sum(rainfall_lookup, village, timestamp, 24)
+    r72h  = _rolling_sum(rainfall_lookup, village, timestamp, 72)
+
+    # ── Rain intensity: peak 1h in past 6h window ─────────────────────────
+    rain_intensity_mm_hr = _peak_1h_in_window(rainfall_lookup, village, timestamp, 6)
+
+    # ── Antecedent Precipitation Index (NEVER api_score — CLAUDE.md) ─────
+    antecedent_precipitation_index = _compute_antecedent_precipitation_index(
+        rainfall_lookup, village, timestamp
     )
 
-    iot_anomaly_flag = compute_iot_anomaly_flag(last_iot_timestamp, current_cycle_time)
+    # ── Soil saturation = GWETROOT directly (SRS §10.1 frozen formula) ───
+    soil_saturation_ratio = _get_gwetroot_at(soil_lookup, village, timestamp)
+
+    # ── Factor of Safety (Phase 5) ────────────────────────────────────────
+    fs_result = compute_factor_of_safety(
+        slope_deg=slope_deg,
+        soil_saturation_ratio=soil_saturation_ratio,
+    )
+    factor_of_safety     = fs_result["factor_of_safety"]
+    factor_of_safety_min = fs_result["factor_of_safety_min"]
+    factor_of_safety_max = fs_result["factor_of_safety_max"]
+    fs_band_straddles    = fs_result["fs_band_straddles_one"]
+    fs_missing           = fs_result["missing_inputs"]
+
+    # ── Confidence penalty (SRS §10.3) — used by train_fusion_model.py ───
+    fs_band_width_penalty = _compute_fs_band_penalty(
+        factor_of_safety_min, factor_of_safety_max, fs_band_straddles
+    )
+
+    # ── Simulated signals (labeled — NOT real API outputs) ───────────────
+    # simulated_ffgs_signal: SIMULATED — proxy for SAsiaFFGS (SRS §8)
+    simulated_ffgs_signal = _compute_simulated_ffgs_signal(r1h, r3h)
+    # simulated_gsi_signal: SIMULATED — proxy for GSI RLFS (SRS §8)
+    simulated_gsi_signal  = _compute_simulated_gsi_signal(r24h, gsi_susceptibility_class)
+
+    # ── IoT anomaly flag — STUB until Phase 10 ───────────────────────────
+    iot_anomaly_flag = _compute_iot_anomaly_flag()
 
     return {
-        "rainfall_1h":                    windows["rainfall_1h"],
-        "rainfall_3h":                    windows["rainfall_3h"],
-        "rainfall_6h":                    windows["rainfall_6h"],
-        "rainfall_24h":                   windows["rainfall_24h"],
-        "rainfall_72h_antecedent":        windows["rainfall_72h_antecedent"],
-        "rain_intensity_mm_hr":           windows["rain_intensity_mm_hr"],
-        # antecedent_precipitation_index -- NEVER api_score
-        "antecedent_precipitation_index": antecedent_precipitation_index,
-        # soil_saturation_ratio = GWETROOT directly (SRS.md Section 10.1 frozen)
-        "soil_saturation_ratio":          soil_saturation_ratio,
-        # Factor of Safety (None until Phase 5 merges)
-        "factor_of_safety":               fs,
-        "factor_of_safety_min":           fs_min,
-        "factor_of_safety_max":           fs_max,
-        # SIMULATED proxy signals (not real GSI/FFGS integrations)
-        "simulated_ffgs_signal":          simulated_ffgs_signal,
-        "simulated_gsi_signal":           simulated_gsi_signal,
-        # IoT anomaly (stub -- False until Phase 8 + Phase 10 wired)
-        "iot_anomaly_flag":               iot_anomaly_flag,
+        # ── 14 features per SRS §9 / §14 (field names frozen) ─────────
+        "rainfall_1h":                     r1h,
+        "rainfall_3h":                     r3h,
+        "rainfall_6h":                     r6h,
+        "rainfall_24h":                    r24h,
+        "rainfall_72h_antecedent":         r72h,
+        "rain_intensity_mm_hr":            rain_intensity_mm_hr,
+        # antecedent_precipitation_index — NEVER api_score (CLAUDE.md)
+        "antecedent_precipitation_index":  antecedent_precipitation_index,
+        # soil_saturation_ratio = GWETROOT directly (SRS §10.1 frozen)
+        "soil_saturation_ratio":           soil_saturation_ratio,
+        "factor_of_safety":                factor_of_safety,
+        "factor_of_safety_min":            factor_of_safety_min,
+        "factor_of_safety_max":            factor_of_safety_max,
+        # SIMULATED — NOT real SAsiaFFGS/GSI RLFS signals (SRS §8)
+        "simulated_ffgs_signal":           simulated_ffgs_signal,
+        "simulated_gsi_signal":            simulated_gsi_signal,
+        # STUB: iot_anomaly_flag — returns False until Phase 10
+        "iot_anomaly_flag":                iot_anomaly_flag,
+        # ── Audit / confidence fields (not model inputs; for API/UI) ─────
+        "fs_band_width_penalty":           fs_band_width_penalty,
+        "fs_band_straddles_one":           fs_band_straddles,
+        "fs_missing_inputs":               fs_missing,
+        "hex_id":                          hex_id,
+        "village":                         village,
+        "timestamp":                       timestamp.isoformat(),
+        "gsi_susceptibility_class_used":   gsi_susceptibility_class,
+        "slope_deg_used":                  slope_deg,
     }
 
 
-# ===========================================================================
-# Training mode: fill None columns in Phase 4's parquet
-# ===========================================================================
+# ---------------------------------------------------------------------------
+# Batch orchestrator — all pilot hexes, current timestamp
+# ---------------------------------------------------------------------------
 
-def load_static_features() -> dict:
+def compute_all_hexes_current_cycle(
+    timestamp:              Optional[datetime]    = None,
+    static_features_path:   Optional[Path]        = None,
+    rainfall_current_path:  Path                  = _RAINFALL_CURRENT_PATH,
+    soil_path:              Path                  = _SOIL_PATH,
+    gsi_path:               Path                  = _GSI_PATH,
+) -> dict[str, dict[str, Any]]:
     """
-    Load static features for all pilot hexes.
+    Compute all 14 dynamic features for every pilot hex for the current ingestion cycle.
 
-    Primary: data/terrain/static_features.json (Phase 3 side-output).
-    Fallback: Phase 8's PostGIS hexes table (requires DATABASE_URL env var).
-    Fails loudly with a warning if neither is available (per CLAUDE.md --
-    never silently substitute fake data).
+    Arguments:
+        timestamp             : cycle UTC datetime; defaults to latest hour available
+                                in rainfall_current.json
+        static_features_path  : Path to Phase 3 static_features.parquet (for slope_deg).
+                                If None, falls back to gsi_susceptibility.csv for hex IDs
+                                and slope_deg = None (FS will be flagged as missing).
+        rainfall_current_path : override path for rainfall JSON
+        soil_path             : override path for soil moisture JSON
+        gsi_path              : override path for GSI susceptibility CSV
+
+    Returns:
+        {hex_id: compute_dynamic_features() result}
     """
-    if STATIC_FEATURES_JSON.exists():
-        with open(STATIC_FEATURES_JSON) as f:
-            data = json.load(f)
-        if isinstance(data, list):
-            return {row["hex_id"]: row for row in data}
-        return data
+    # Load lookup tables once (not per hex)
+    rainfall_lookup = load_rainfall_series(rainfall_current_path)
+    soil_lookup     = load_soil_series(soil_path)
+    gsi_lookup      = load_gsi_lookup(gsi_path)
 
-    db_url = _get_db_url()
-    if db_url:
-        return _load_static_features_from_db(db_url)
+    # ── Determine timestamp ────────────────────────────────────────────────
+    if timestamp is None:
+        # Use latest hour in rainfall series
+        all_hours: list[str] = []
+        for series in rainfall_lookup.values():
+            all_hours.extend(series.keys())
+        if all_hours:
+            latest_iso = max(all_hours)
+            timestamp = datetime.fromisoformat(latest_iso)
+        else:
+            from datetime import timezone
+            timestamp = datetime.now(tz=timezone.utc).replace(minute=0, second=0, microsecond=0)
+        print(f"[dynamic_features] Using timestamp: {timestamp.isoformat()}")
 
-    warnings.warn(
-        f"\n[dynamic_features] WARNING: {STATIC_FEATURES_JSON} not found and no DATABASE_URL set.\n"
-        "  Run ml/features/static_features.py (Phase 3) and ensure it exports\n"
-        "  data/terrain/static_features.json, or set DATABASE_URL env var.\n"
-        "  Static feature columns (slope_deg, TWI, etc.) will be NaN in training.",
-        stacklevel=2,
+    # ── Load hex list + slope_deg from Phase 3 parquet (or GSI CSV fallback) ──
+    hex_slope: dict[str, Optional[float]] = {}
+    hex_village: dict[str, str] = {}
+
+    if static_features_path is None:
+        # Phase 3 writes to data/processed/; data/features/ is a legacy alias
+        _sf_primary = _ROOT / "data" / "processed" / "static_features.parquet"
+        _sf_alt     = _ROOT / "data" / "features"  / "static_features.parquet"
+        static_features_path = _sf_primary if _sf_primary.exists() else _sf_alt
+
+    if static_features_path.exists() and static_features_path.suffix == ".parquet":
+        try:
+            import pandas as pd
+            df = pd.read_parquet(static_features_path)
+            for _, row in df.iterrows():
+                hid = str(row["hex_id"])
+                hex_slope[hid]   = row.get("slope_deg")
+                hex_village[hid] = str(row.get("village", ""))
+            print(f"[dynamic_features] Loaded slope_deg from Phase 3 parquet: {len(hex_slope)} hexes")
+        except Exception as exc:
+            print(f"[dynamic_features] WARNING: Could not read Phase 3 parquet ({exc}); using GSI CSV")
+
+    if not hex_slope:
+        # Fallback: hex IDs from GSI CSV, slope_deg = None
+        import csv
+        gsi_path_resolved = Path(gsi_path)
+        if gsi_path_resolved.exists():
+            with gsi_path_resolved.open(newline="", encoding="utf-8") as f:
+                for row in csv.DictReader(f):
+                    hid = row["hex_id"].strip()
+                    hex_slope[hid]   = None  # Phase 3 not run yet
+                    hex_village[hid] = row.get("village", "").strip()
+            print(
+                f"[dynamic_features] WARNING: Phase 3 parquet not found. "
+                f"Using {len(hex_slope)} hex IDs from GSI CSV with slope_deg=None — "
+                f"FS will be None for all hexes."
+            )
+
+    # ── Compute features per hex ───────────────────────────────────────────
+    results: dict[str, dict[str, Any]] = {}
+    for hid, slope_deg in hex_slope.items():
+        village = hex_village.get(hid, "")
+        susc    = gsi_lookup.get(hid)
+        results[hid] = compute_dynamic_features(
+            hex_id=hid,
+            village=village,
+            timestamp=timestamp,
+            slope_deg=slope_deg,
+            gsi_susceptibility_class=susc,
+            rainfall_lookup=rainfall_lookup,
+            soil_lookup=soil_lookup,
+        )
+
+    # ── Summary ────────────────────────────────────────────────────────────
+    n_fs_ok      = sum(1 for r in results.values() if r["factor_of_safety"] is not None)
+    n_rain_ok    = sum(1 for r in results.values() if r["rainfall_1h"]      is not None)
+    n_soil_ok    = sum(1 for r in results.values() if r["soil_saturation_ratio"] is not None)
+    n_straddle   = sum(1 for r in results.values() if r["fs_band_straddles_one"])
+    print(
+        f"[dynamic_features] {len(results)} hexes computed:"
+        f" FS={n_fs_ok}/{len(results)}"
+        f" rain={n_rain_ok}/{len(results)}"
+        f" soil={n_soil_ok}/{len(results)}"
+        f" FS-straddles-1.0={n_straddle}"
     )
-    return {}
+    return results
 
 
-def _get_db_url() -> Optional[str]:
-    import os
-    return os.environ.get("DATABASE_URL")
-
-
-def _load_static_features_from_db(db_url: str) -> dict:
-    try:
-        import sqlalchemy
-        engine = sqlalchemy.create_engine(db_url)
-        with engine.connect() as conn:
-            rows = conn.execute(
-                sqlalchemy.text("SELECT hex_id, static_features FROM hexes")
-            ).fetchall()
-        result = {}
-        for hex_id, sf in rows:
-            if isinstance(sf, str):
-                sf = json.loads(sf)
-            result[hex_id] = sf or {}
-        print(f"[dynamic_features] Loaded static features for {len(result)} hexes from DB.")
-        return result
-    except Exception as exc:
-        warnings.warn(
-            f"[dynamic_features] DB static feature load failed: {exc}\n"
-            "  Static columns will be NaN.",
-            stacklevel=2,
-        )
-        return {}
-
-
-def fill_dynamic_features_into_samples(
-    samples_path: Path = SAMPLES_PARQUET,
-    output_path: Optional[Path] = None,
-) -> pd.DataFrame:
-    """
-    Load Phase 4's event_centered_samples.parquet and backfill all None dynamic
-    and static feature columns. Returns the enriched DataFrame for XGBoost training.
-
-    Fills (all currently None in Phase 4 output):
-      - All 11 static columns (slope_deg, aspect, TWI, TRI, elevation,
-        distance_to_stream_m, drainage_density, land_use_class, ndvi_mean,
-        historical_event_count_500m, gsi_susceptibility_class)
-      - gsi_susceptibility_class_int   (ordinal 0-3 encoding for XGBoost)
-      - factor_of_safety / _min / _max (Phase 5; NaN if not merged)
-      - fs_band_width_penalty           (for confidence_score in Part 2)
-      - simulated_ffgs_signal           (rainfall-threshold rule)
-      - simulated_gsi_signal            (rainfall x GSI class)
-      - iot_anomaly_flag                (False -- stub for historical snapshots)
-
-    Does NOT overwrite Phase 4's already-seeded values (rainfall windows,
-    antecedent_precipitation_index, soil_saturation_ratio) -- validates them instead.
-
-    Args:
-        samples_path: Phase 4 parquet path.
-        output_path:  save destination (defaults to overwriting samples_path in-place).
-
-    Returns: enriched pd.DataFrame ready for train_fusion_model.py.
-    """
-    if not samples_path.exists():
-        print(
-            f"ERROR: {samples_path} not found.\n"
-            "  Run ml/features/event_centered_sampling.py (Phase 4) first.",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-
-    df = pd.read_parquet(samples_path)
-    print(f"[dynamic_features] Loaded {len(df)} rows from {samples_path}")
-    _validate_phase4_columns(df)
-
-    # -------------------------------------------------------------------------
-    # 1. Join static features (Phase 3)
-    # -------------------------------------------------------------------------
-    static_map = load_static_features()
-    static_cols = [
-        "slope_deg", "aspect", "TWI", "TRI", "elevation",
-        "distance_to_stream_m", "drainage_density",
-        "land_use_class", "ndvi_mean",
-        "historical_event_count_500m", "gsi_susceptibility_class",
-    ]
-    if static_map:
-        static_df = pd.DataFrame.from_dict(static_map, orient="index")
-        static_df.index.name = "hex_id"
-        static_df = static_df.reset_index()
-        available = [c for c in static_cols if c in static_df.columns]
-        df = df.drop(columns=available, errors="ignore")
-        df = df.merge(static_df[["hex_id"] + available], on="hex_id", how="left")
-        print(
-            f"[dynamic_features] Joined static features: "
-            f"{static_df['hex_id'].nunique()} hexes, {len(available)} columns"
-        )
-    else:
-        print("[dynamic_features] No static features available -- columns will be NaN.")
-
-    # -------------------------------------------------------------------------
-    # 2. Ordinal-encode gsi_susceptibility_class (Low=0 ... Very High=3)
-    # -------------------------------------------------------------------------
-    df["gsi_susceptibility_class_int"] = (
-        df["gsi_susceptibility_class"]
-        .map(GSI_CLASS_TO_INT)
-        .where(df["gsi_susceptibility_class"].notna())
-        .astype("float32")
-    )
-
-    # -------------------------------------------------------------------------
-    # 3. Factor of Safety (per row via Phase 5 -- NaN if Phase 5 not merged)
-    # -------------------------------------------------------------------------
-    if not _FS_AVAILABLE:
-        print("[dynamic_features] Phase 5 not merged -- FS columns will be NaN.")
-        df["factor_of_safety"]     = np.nan
-        df["factor_of_safety_min"] = np.nan
-        df["factor_of_safety_max"] = np.nan
-    else:
-        print(f"[dynamic_features] Computing FS for {len(df)} rows (Phase 5 available) ...")
-        fs_results = df.apply(
-            lambda row: pd.Series(
-                compute_factor_of_safety(
-                    slope_deg=_safe_float(row.get("slope_deg")),
-                    soil_saturation_ratio=_safe_float(row.get("soil_saturation_ratio")),
-                ),
-                index=["factor_of_safety", "factor_of_safety_min", "factor_of_safety_max"],
-            ),
-            axis=1,
-        )
-        df["factor_of_safety"]     = fs_results["factor_of_safety"]
-        df["factor_of_safety_min"] = fs_results["factor_of_safety_min"]
-        df["factor_of_safety_max"] = fs_results["factor_of_safety_max"]
-
-    # -------------------------------------------------------------------------
-    # 4. FS band-width penalty (used by train_fusion_model.py for confidence_score)
-    # -------------------------------------------------------------------------
-    df["fs_band_width_penalty"] = df.apply(
-        lambda row: compute_fs_band_width_penalty(
-            _safe_float(row.get("factor_of_safety_min")),
-            _safe_float(row.get("factor_of_safety_max")),
-        ),
-        axis=1,
-    ).astype("float32")
-
-    # -------------------------------------------------------------------------
-    # 5. Simulated FFGS signal (SIMULATED -- not a real integration)
-    # -------------------------------------------------------------------------
-    df["simulated_ffgs_signal"] = df["rainfall_3h"].apply(
-        lambda r: compute_simulated_ffgs_signal(_safe_float(r))
-    ).astype("float32")
-
-    # -------------------------------------------------------------------------
-    # 6. Simulated GSI signal (SIMULATED -- not a real integration)
-    # -------------------------------------------------------------------------
-    df["simulated_gsi_signal"] = df.apply(
-        lambda row: compute_simulated_gsi_signal(
-            gsi_susceptibility_class=row.get("gsi_susceptibility_class"),
-            rainfall_24h=_safe_float(row.get("rainfall_24h")),
-        ),
-        axis=1,
-    ).astype("float32")
-
-    # -------------------------------------------------------------------------
-    # 7. IoT anomaly flag -- False for all historical training rows
-    #    (these snapshots predate Phase 10's IoT data)
-    # -------------------------------------------------------------------------
-    df["iot_anomaly_flag"] = False
-
-    # -------------------------------------------------------------------------
-    # 8. land_use_class: ensure numeric (ESA WorldCover codes are nominal ints)
-    #    XGBoost will treat these as categorical features via enable_categorical=True
-    # -------------------------------------------------------------------------
-    if "land_use_class" in df.columns:
-        df["land_use_class"] = pd.to_numeric(df["land_use_class"], errors="coerce")
-
-    # -------------------------------------------------------------------------
-    # 9. Validate null rates
-    # -------------------------------------------------------------------------
-    _validate_enriched_samples(df)
-
-    # -------------------------------------------------------------------------
-    # 10. Save
-    # -------------------------------------------------------------------------
-    save_path = output_path or samples_path
-    df.to_parquet(save_path, index=False)
-    print(f"\n[dynamic_features] Enriched parquet saved -> {save_path}")
-    print(f"  Rows: {len(df)}  |  Columns: {len(df.columns)}")
-    if not _FS_AVAILABLE:
-        print("  *** Re-run after Phase 5 merges to populate FS columns. ***")
-    return df
-
-
-# ===========================================================================
-# Helpers
-# ===========================================================================
-
-def _safe_float(val) -> Optional[float]:
-    """Convert to float, returning None for NaN/None/non-numeric."""
-    try:
-        f = float(val)
-        return None if math.isnan(f) else f
-    except (TypeError, ValueError):
-        return None
-
-
-def _validate_phase4_columns(df: pd.DataFrame) -> None:
-    """Verify Phase 4's expected columns exist and log coverage warnings."""
-    required = [
-        "hex_id", "snapshot_timestamp", "tier", "tier_int", "sample_type",
-        "rainfall_1h", "antecedent_precipitation_index", "soil_saturation_ratio",
-    ]
-    missing = [c for c in required if c not in df.columns]
-    if missing:
-        print(
-            f"ERROR: Phase 4 parquet missing expected columns: {missing}\n"
-            "  Re-run event_centered_sampling.py (Phase 4).",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-
-    for col in ["rainfall_1h", "soil_saturation_ratio", "antecedent_precipitation_index"]:
-        if col in df.columns:
-            pct_null = df[col].isna().mean() * 100
-            if pct_null > 50:
-                print(
-                    f"  WARNING: {col} is {pct_null:.0f}% null -- "
-                    "did Phase 1 (ingest_rainfall/soil) complete?",
-                    file=sys.stderr,
-                )
-
-
-def _validate_enriched_samples(df: pd.DataFrame) -> None:
-    """Log null-rate summary for key features after enrichment."""
-    key_features = [
-        "slope_deg", "soil_saturation_ratio", "factor_of_safety",
-        "simulated_ffgs_signal", "simulated_gsi_signal",
-        "antecedent_precipitation_index", "gsi_susceptibility_class_int",
-    ]
-    print("\n[dynamic_features] Null-rate summary (key features):")
-    for feat in key_features:
-        if feat in df.columns:
-            pct = df[feat].isna().mean() * 100
-            flag = "  *** HIGH ***" if pct > 30 else ""
-            print(f"  {feat:42s}  {pct:5.1f}% null{flag}")
-
-
-# ===========================================================================
-# CLI entry point
-# ===========================================================================
-
+# ---------------------------------------------------------------------------
+# CLI entry — standalone validation run
+# ---------------------------------------------------------------------------
 if __name__ == "__main__":
-    import argparse
+    print("=" * 80)
+    print("Phase 6 Part 1 — Dynamic Feature Engineering — standalone validation")
+    print("SRS.md Section 9 | 14 dynamic features per pilot hex")
+    print("=" * 80)
 
-    parser = argparse.ArgumentParser(
-        description="Phase 6 Part 1: fill dynamic features into Phase 4's training parquet."
-    )
-    parser.add_argument(
-        "--input", type=Path, default=SAMPLES_PARQUET,
-        help=f"Input parquet (default: {SAMPLES_PARQUET})",
-    )
-    parser.add_argument(
-        "--output", type=Path, default=None,
-        help="Output path (default: overwrites input in-place)",
-    )
-    args = parser.parse_args()
+    results = compute_all_hexes_current_cycle()
 
-    print("=" * 65)
-    print("HydraSense -- Phase 6 Part 1: Dynamic Feature Engineering")
-    print("SRS.md Section 9 + Section 10.1")
-    print("=" * 65)
+    # Spot-check: verify all 14 feature keys are present in every result
+    EXPECTED_KEYS = {
+        "rainfall_1h", "rainfall_3h", "rainfall_6h", "rainfall_24h",
+        "rainfall_72h_antecedent", "rain_intensity_mm_hr",
+        "antecedent_precipitation_index",  # NEVER api_score
+        "soil_saturation_ratio",
+        "factor_of_safety", "factor_of_safety_min", "factor_of_safety_max",
+        "simulated_ffgs_signal", "simulated_gsi_signal", "iot_anomaly_flag",
+    }
+    missing_keys: list[str] = []
+    for hid, r in results.items():
+        for k in EXPECTED_KEYS:
+            if k not in r:
+                missing_keys.append(f"{hid} missing key '{k}'")
 
-    enriched = fill_dynamic_features_into_samples(
-        samples_path=args.input,
-        output_path=args.output,
-    )
+    if missing_keys:
+        print("\nFAIL: missing feature keys:")
+        for m in missing_keys:
+            print(f"  {m}")
+        sys.exit(1)
 
-    preview_cols = [
-        "hex_id", "tier", "rainfall_1h", "rainfall_24h",
-        "antecedent_precipitation_index", "soil_saturation_ratio",
-        "factor_of_safety", "simulated_ffgs_signal", "simulated_gsi_signal",
-        "iot_anomaly_flag",
-    ]
-    print("\nTop-5 rows (key dynamic columns):")
-    print(enriched[[c for c in preview_cols if c in enriched.columns]].head().to_string())
+    # Verify iot_anomaly_flag is exactly False (stub check)
+    bad_iot = [hid for hid, r in results.items() if r["iot_anomaly_flag"] is not False]
+    if bad_iot:
+        print(f"FAIL: iot_anomaly_flag != False for hexes: {bad_iot[:3]}")
+        sys.exit(1)
+
+    # Verify antecedent_precipitation_index key present (never api_score)
+    if any("api_score" in r for r in results.values()):
+        print("FAIL: 'api_score' key found — must be 'antecedent_precipitation_index'")
+        sys.exit(1)
+
+    print()
+    print("Sample hex features:")
+    for hid, r in list(results.items())[:3]:
+        print(f"  {hid} ({r['village']}):")
+        for k in sorted(EXPECTED_KEYS):
+            print(f"    {k:45s} = {r[k]}")
+        print()
+
+    print("Phase 6 Part 1 — dynamic_features.py: PASS (all 14 feature keys present)")

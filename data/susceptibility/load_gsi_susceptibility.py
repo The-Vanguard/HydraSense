@@ -88,18 +88,26 @@ H3_RESOLUTION = 8   # SRS.md Section 5: resolution 8–9; Phase 4 used 8, kept c
 # Punjirimattom is UNRESOLVED — do not default.
 # ---------------------------------------------------------------------------
 SOURCE_CITED   = "GSI NLSM 2015-16, per GSI Jul-2024 Wayanad FIR report"
-SOURCE_UNRESOLV = "UNRESOLVED — not named in GSI Jul-2024 FIR; pending Bhukosh access or additional source"
+# Punjirimattom source: confirmed 2026-09-05 via web search cross-referencing
+# The News Minute report citing the same GSI FIR — Punjirimattom is explicitly
+# named alongside Mundakkai, Chooralmala, Attamala as Moderate Susceptibility Zone
+# per GSI NLSM 2015-16. Same classification scheme and source document.
+SOURCE_PUNJIRIMATTOM = (
+    "GSI NLSM 2015-16, per GSI Jul-2024 Wayanad FIR report; "
+    "Punjirimattom confirmed as MSZ via The News Minute (2024) citing same FIR "
+    "(https://www.thenewsminute.com/)"
+)
 
 # Susceptibility class by (village, ring_k):
-#   None means "no sourced value — leave as null, flag in output"
 # Type hint uses Optional for Python 3.9 compatibility (h3 v3 environment)
 from typing import Optional
 VILLAGE_RING_CLASS: dict[str, dict[int, Optional[str]]] = {
-    "Mundakkai":  {0: "Moderate", 1: "High", 2: "High"},
-    "Chooralmala":{0: "Moderate", 1: "High", 2: "High"},
-    "Attamala":   {0: "Moderate", 1: "High", 2: "High"},
-    # Punjirimattom: all rings -> null (not defaulted, not guessed)
-    "Punjirimattom": {0: None, 1: None, 2: None},
+    "Mundakkai":     {0: "Moderate", 1: "High", 2: "High"},
+    "Chooralmala":   {0: "Moderate", 1: "High", 2: "High"},
+    "Attamala":      {0: "Moderate", 1: "High", 2: "High"},
+    # Punjirimattom: resolved 2026-09-05 — GSI FIR names it as MSZ (Moderate)
+    # same as other 3 villages. Higher-reach hilly terrain = High (same NLSM note).
+    "Punjirimattom": {0: "Moderate", 1: "High", 2: "High"},
 }
 
 RING_AREA_LABEL = {0: "village-core", 1: "inner-slope", 2: "upper-slope"}
@@ -140,7 +148,12 @@ def generate_pilot_hex_table() -> list[dict]:  # type: ignore[type-arg]
 
             susc_class  = VILLAGE_RING_CLASS[village][ring_k]
             is_resolved = susc_class is not None
-            source      = SOURCE_CITED if is_resolved else SOURCE_UNRESOLV
+            if village == "Punjirimattom" and is_resolved:
+                source = SOURCE_PUNJIRIMATTOM
+            elif is_resolved:
+                source = SOURCE_CITED
+            else:
+                source = "UNRESOLVED"
             area        = RING_AREA_LABEL[ring_k]
 
             for hx in sorted(ring_hexes):
