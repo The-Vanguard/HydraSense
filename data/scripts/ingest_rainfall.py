@@ -76,7 +76,20 @@ def fetch_rainfall_for_location(lat: float, lon: float, name: str) -> dict:
             "weathercode",
         ],
         "current_weather": "true",
-        "past_days": 3,       # 72h antecedent data for antecedent_precipitation_index
+        # past_days=92: Open-Meteo free tier maximum (3 months).
+        # This is the longest lookback available without a paid API key.
+        # Phase 4's event_centered_sampling.py builds a 72h antecedent window
+        # ending at each event snapshot. For the window to be non-null, the
+        # observed data must reach back at least 72h before the snapshot.
+        # At past_days=92 (~2200h), all negative samples drawn from the
+        # current monsoon season and any events within the last 3 months will
+        # have real rainfall values. Events older than 92 days from run date
+        # will still have NaN rainfall windows -- those require a separate
+        # historical bulk pull (out of scope for Phase 1, flagged for Phase 4).
+        # Changing back to past_days=3 here would make rainfall_* and
+        # antecedent_precipitation_index NaN for almost the entire training
+        # set -- do not revert without understanding that consequence.
+        "past_days": 92,
         "forecast_days": 2,   # 48h forward for lead-time horizons up to t+24h
         "timezone": "Asia/Kolkata",
         "timeformat": "iso8601",

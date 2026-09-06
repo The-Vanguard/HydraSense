@@ -269,12 +269,36 @@ def prepare_training_data(df: pd.DataFrame) -> tuple:
     nan_rates = X.isna().mean()
     high_nan = nan_rates[nan_rates > 0.5]
     if len(high_nan) > 0:
-        warnings.warn(
-            f"\n[train_fusion_model] HIGH NaN RATE in features:\n"
-            + "\n".join(f"  {feat}: {rate*100:.0f}% null" for feat, rate in high_nan.items())
-            + "\n  Check that Phase 1 (ingest) and Phase 5 (FS model) have run.",
-            stacklevel=2,
+        print(
+            "\n[train_fusion_model] WARNING -- HIGH NaN RATE in features:",
+            file=sys.stderr,
         )
+        for feat, rate in high_nan.items():
+            print(f"  {feat}: {rate*100:.0f}% null", file=sys.stderr)
+        print(
+            "  Check that Phase 1 (ingest) and Phase 5 (FS model) have run.",
+            file=sys.stderr,
+        )
+
+    # Hard check: if ALL three FS columns are 100% NaN, the model will be trained
+    # without any slope-physics signal. This is not a usable model for Phase 7/9.
+    # Block now rather than let a physics-free model get saved and loaded silently.
+    fs_cols = ["factor_of_safety", "factor_of_safety_min", "factor_of_safety_max"]
+    fs_all_null = all(X[c].isna().all() for c in fs_cols if c in X.columns)
+    if fs_all_null:
+        print(
+            "\n[train_fusion_model] ERROR: All FS columns (factor_of_safety / _min / _max) "
+            "are 100% NaN.\n"
+            "  Phase 5 (ml/models/factor_of_safety.py) has not been merged yet.\n"
+            "  Training a model without FS physics would produce misleading LOEO results\n"
+            "  and an unacceptable lead-time estimator (Phase 9).\n"
+            "  Re-run after Phase 5 merges and fill_dynamic_features_into_samples() has\n"
+            "  been called again to populate real FS values.\n"
+            "  If you need a preliminary model for integration testing ONLY, use\n"
+            "  --allow-null-fs flag (saves model with trained_with_fs=false in metadata).",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
     y = df[TARGET_COLUMN].astype(int)
 
@@ -282,7 +306,12 @@ def prepare_training_data(df: pd.DataFrame) -> tuple:
     # (all snapshots from one event must stay together in train or val)
     groups = df.get("event_id", pd.Series(["unknown"] * len(df)))
 
-    return X, y, groups
+    # Report whether FS is populated -- caller embeds this in saved metadata
+    trained_with_fs = not fs_all_null and not all(
+        X[c].isna().mean() > 0.9 for c in fs_cols if c in X.columns
+    )
+
+    return X, y, groups, trained_with_fs
 
 
 def train_model(
@@ -310,7 +339,7 @@ def train_model(
         model:       trained xgb.XGBClassifier (fitted on full dataset after validation)
         val_metrics: dict of val-set metrics
     """
-    X, y, groups = prepare_training_data(df)
+    X, y, groups, trained_with_fs = prepare_training_data(df)
 
     n_samples   = len(X)
     n_events    = df["event_id"].nunique() if "event_id" in df.columns else "unknown"
@@ -324,6 +353,7 @@ def train_model(
         print(f"  Positive rows: {n_pos}")
         print(f"  Negative rows: {n_neg}")
         print(f"  Features:      {len(FEATURE_COLUMNS)}")
+        print(f"  FS available:  {trained_with_fs}  (False = Phase 5 not merged yet)")
         print()
         tier_dist = y.map(TIER_INT_TO_NAME).value_counts()
         print("  Tier distribution:")
@@ -344,9 +374,11 @@ def train_model(
 
     # -------------------------------------------------------------------------
     # Train on split (for val metrics)
+    # XGBClassifier reads feature names from DataFrame.columns at fit() time.
+    # Do NOT use set_params(feature_names=...) before fit -- it is a no-op on
+    # the booster and prevents get_score() from returning named importances.
     # -------------------------------------------------------------------------
     model_split = xgb.XGBClassifier(**XGB_PARAMS)
-    model_split.set_params(feature_names=FEATURE_COLUMNS)
     model_split.fit(
         X_train, y_train,
         eval_set=[(X_val, y_val)],
@@ -360,6 +392,7 @@ def train_model(
     tiers_true = [TIER_INT_TO_NAME[i] for i in y_val]
 
     val_metrics = _compute_val_metrics(y_val.values, proba_val, tiers_true, tiers_val)
+    val_metrics["trained_with_fs"] = trained_with_fs
     if verbose:
         _print_val_metrics(val_metrics)
 
@@ -370,7 +403,6 @@ def train_model(
         print("\n[train_fusion_model] Retraining on full dataset for Phase 7/9 ...")
 
     model_full = xgb.XGBClassifier(**XGB_PARAMS)
-    model_full.set_params(feature_names=FEATURE_COLUMNS)
     model_full.fit(X, y, verbose=False)
 
     return model_full, val_metrics
@@ -436,9 +468,24 @@ def save_model(model: xgb.XGBClassifier, val_metrics: dict) -> None:
 
     Model: ml/models/fusion_model.json  (XGBoost native format)
     Meta:  ml/models/fusion_model_metadata.json
-           Contains feature list, thresholds, training stats.
-           Phase 7 (LOEO) and Phase 9 (lead-time) use this to reload consistently.
+           Contains feature list, thresholds, training stats, and trained_with_fs flag.
+           Phase 7 (LOEO) and Phase 9 (lead-time) MUST check trained_with_fs=true
+           before using this model for real results.
+
+    Raises SystemExit if trained_with_fs=False -- a NaN-FS model must not be
+    saved to the canonical path where Phase 7/9 would load it silently.
     """
+    if not val_metrics.get("trained_with_fs", False):
+        print(
+            "\n[train_fusion_model] ERROR: Refusing to save model to canonical path.\n"
+            "  trained_with_fs=False in val_metrics -- FS columns were NaN during training.\n"
+            "  Saving this model would let Phase 7 (LOEO) and Phase 9 (lead-time) load a\n"
+            "  physics-free model silently and report misleading detection rates.\n"
+            "  Merge Phase 5 (factor_of_safety.py), re-run dynamic_features.py, then retrain.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
 
     model.save_model(str(MODEL_PATH))
