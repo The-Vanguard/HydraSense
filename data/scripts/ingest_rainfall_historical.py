@@ -54,8 +54,9 @@ PILOT_LOCATIONS = [
     {"name": "Punjirimattom",  "lat": 11.5100, "lon": 76.0450},
 ]
 
-ARCHIVE_BASE   = "https://archive-api.open-meteo.com/v1/archive"
-TIMEOUT_SECONDS = 10.0   # archive is slower than forecast endpoint; 10s is safe
+ARCHIVE_BASE    = "https://archive-api.open-meteo.com/v1/archive"
+TIMEOUT_SECONDS = 20.0   # archive is slower than forecast; 20s for older date ranges
+MAX_RETRIES     = 2      # one retry on timeout before aborting
 
 EVENTS_CSV = Path(__file__).resolve().parents[2] / "data" / "events" / "historical_events.csv"
 OUT_DIR    = Path(__file__).resolve().parents[2] / "data" / "weather"
@@ -159,30 +160,37 @@ def fetch_archive_window(
         "timeformat": "iso8601",
     }
 
-    try:
-        resp = httpx.get(ARCHIVE_BASE, params=params, timeout=TIMEOUT_SECONDS)
-        resp.raise_for_status()
-    except httpx.TimeoutException:
-        raise RuntimeError(
-            f"[ingest_rainfall_historical] TIMEOUT after {TIMEOUT_SECONDS}s "
-            f"fetching archive for {name} ({lat}, {lon}) "
-            f"{start} -> {end}.\n"
-            "  Per CLAUDE.md: do not silently substitute fake data."
-        )
-    except httpx.HTTPStatusError as e:
-        raise RuntimeError(
-            f"[ingest_rainfall_historical] HTTP {e.response.status_code} from archive "
-            f"for {name} ({lat}, {lon}): {e.response.text}"
-        )
-    except httpx.RequestError as e:
-        raise RuntimeError(
-            f"[ingest_rainfall_historical] Network error for {name}: {e}"
-        )
-
-    data = resp.json()
-    times  = data.get("hourly", {}).get("time", [])
-    precip = data.get("hourly", {}).get("precipitation", [])
-    return dict(zip(times, precip))
+    import time
+    last_exc: Exception | None = None
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            resp = httpx.get(ARCHIVE_BASE, params=params, timeout=TIMEOUT_SECONDS)
+            resp.raise_for_status()
+            data   = resp.json()
+            times  = data.get("hourly", {}).get("time", [])
+            precip = data.get("hourly", {}).get("precipitation", [])
+            return dict(zip(times, precip))
+        except httpx.TimeoutException as e:
+            last_exc = RuntimeError(
+                f"[ingest_rainfall_historical] TIMEOUT after {TIMEOUT_SECONDS}s "
+                f"fetching archive for {name} ({lat}, {lon}) "
+                f"{start} -> {end} (attempt {attempt}/{MAX_RETRIES}).\n"
+                "  Per CLAUDE.md: do not silently substitute fake data."
+            )
+            if attempt < MAX_RETRIES:
+                wait = 5 * attempt
+                print(f" timeout, retrying in {wait}s...", end=" ", flush=True)
+                time.sleep(wait)
+        except httpx.HTTPStatusError as e:
+            raise RuntimeError(
+                f"[ingest_rainfall_historical] HTTP {e.response.status_code} from archive "
+                f"for {name} ({lat}, {lon}): {e.response.text}"
+            )
+        except httpx.RequestError as e:
+            raise RuntimeError(
+                f"[ingest_rainfall_historical] Network error for {name}: {e}"
+            )
+    raise last_exc  # all retries exhausted
 
 
 def main() -> None:
