@@ -30,8 +30,9 @@ export function isCoromandelCoast(lat, lng) {
 }
 
 // Classify surface color & geographical context
-export function classifyLocationAndColor(r, g, b, lat, lng) {
+export function classifyLocationAndColor(r, g, b, lat, lng, isRightSide = undefined) {
   const h = coordHash(lat, lng, 1);
+  const isRight = isRightSide !== undefined ? isRightSide : lng >= 76.5;
 
   // Check Coromandel Coast first
   if (isCoromandelCoast(lat, lng)) {
@@ -52,15 +53,34 @@ export function classifyLocationAndColor(r, g, b, lat, lng) {
     };
   }
 
-  // Green on map: Steep, lush mountain slopes (Western Ghats hazard zone)
-  // Green is dominant: g > r and g > b
-  if ((g > r + 6 && g > b + 8) || (g > 155 && r < 195 && b < 180 && g > r)) {
-    return {
-      surface: 'green_slope',
-      label: '⛰️ Mountain Slope (Steep Saturated Incline)',
-      defaultTier: h < 0.50 ? 'Orange' : 'Red',
-      isSteepSlope: true,
-    };
+  // Green on map:
+  // Rule: Green on right side of map -> either Yellow or Orange
+  //       Green on left side of map  -> mostly Green or Yellow
+  const isGreen = (g > r + 6 && g > b + 8) || (g > 150 && r < 200 && b < 185 && g > r);
+  if (isGreen) {
+    if (isRight) {
+      // Right side green: either Yellow or Orange
+      const defaultTier = h < 0.50 ? 'Yellow' : 'Orange';
+      return {
+        surface: 'green_slope',
+        label: defaultTier === 'Orange'
+          ? '⛰️ Mountain Slope (Eastern Saturated Incline)'
+          : '⛰️ Vegetated Incline (Moderate Slope Runoff)',
+        defaultTier,
+        isSteepSlope: defaultTier === 'Orange',
+      };
+    } else {
+      // Left side green: mostly Green or Yellow
+      const defaultTier = h < 0.60 ? 'Green' : 'Yellow';
+      return {
+        surface: 'green_slope',
+        label: defaultTier === 'Yellow'
+          ? '⛰️ Mountain Slope (Western Ridge Moderate Slope)'
+          : '🌲 Mountain Slope (Western Forested Ridge — Stable)',
+        defaultTier,
+        isSteepSlope: false,
+      };
+    }
   }
 
   // Non-green: Flat plains, valleys, built-up land, low gradient
@@ -79,6 +99,18 @@ export function classifyLocationAndColor(r, g, b, lat, lng) {
 export function sampleMapColor(map, latlng) {
   const { lat, lng } = latlng;
   const h = coordHash(lat, lng, 1);
+
+  // Determine if location is on the right side or left side of current map view / geography
+  let isRightSide = lng >= 76.5;
+  if (map && map.latLngToContainerPoint && map.getSize) {
+    try {
+      const pt = map.latLngToContainerPoint(latlng);
+      const size = map.getSize();
+      isRightSide = pt.x >= (size.x / 2);
+    } catch (e) {
+      // fallback to longitude
+    }
+  }
 
   // Immediate Coromandel check by coordinates
   if (isCoromandelCoast(lat, lng)) {
@@ -120,7 +152,7 @@ export function sampleMapColor(map, latlng) {
             const relY = Math.floor(((screenY - rect.top) / rect.height) * img.naturalHeight);
             ctx.drawImage(img, relX, relY, 1, 1, 0, 0, 1, 1);
             const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
-            return classifyLocationAndColor(r, g, b, lat, lng);
+            return classifyLocationAndColor(r, g, b, lat, lng, isRightSide);
           }
         }
       }
@@ -130,14 +162,29 @@ export function sampleMapColor(map, latlng) {
   }
 
   // Fallback heuristic:
-  // Western Ghats mountainous zone (approx lng 75.2 - 77.2, lat 8.5 - 13.5) = green mountain slopes!
-  if (lng >= 75.2 && lng <= 77.2 && lat >= 8.5 && lat <= 13.5) {
-    return {
-      surface: 'green_slope',
-      label: '⛰️ Mountain Slope (Western Ghats Incline)',
-      defaultTier: h < 0.50 ? 'Orange' : 'Red',
-      isSteepSlope: true,
-    };
+  // Western Ghats mountainous zone (approx lng 75.2 - 77.5, lat 8.5 - 13.5) = green mountain slopes!
+  if (lng >= 75.2 && lng <= 77.5 && lat >= 8.5 && lat <= 13.5) {
+    if (isRightSide) {
+      const defaultTier = h < 0.50 ? 'Yellow' : 'Orange';
+      return {
+        surface: 'green_slope',
+        label: defaultTier === 'Orange'
+          ? '⛰️ Mountain Slope (Eastern Saturated Incline)'
+          : '⛰️ Vegetated Incline (Moderate Slope Runoff)',
+        defaultTier,
+        isSteepSlope: defaultTier === 'Orange',
+      };
+    } else {
+      const defaultTier = h < 0.60 ? 'Green' : 'Yellow';
+      return {
+        surface: 'green_slope',
+        label: defaultTier === 'Yellow'
+          ? '⛰️ Mountain Slope (Western Ridge Moderate Slope)'
+          : '🌲 Mountain Slope (Western Forested Ridge — Stable)',
+        defaultTier,
+        isSteepSlope: false,
+      };
+    }
   }
 
   // Other areas: predominantly flat plains
