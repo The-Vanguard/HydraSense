@@ -60,20 +60,27 @@ def get_risk_map(bbox: Optional[str] = Query(None, description="minLon,minLat,ma
 
 @router.get("/{hex_id}", response_model=RiskResponse)
 def get_risk(hex_id: str):
-    """GET /risk/{hex_id} -- latest risk score for a hex."""
+    """GET /risk/{hex_id} -- current risk score for a hex.
+
+    Phase 9: always recomputes via compute_and_store_risk so lead_time_min
+    and data_source reflect the live (or cached_demo) forecast rather than
+    a stale DB row. DB write still happens inside compute_and_store_risk
+    so the /history endpoint remains populated.
+    Falls back to last DB row only if model is unavailable.
+    """
+    result = compute_and_store_risk(hex_id)
+    if result is not None:
+        return RiskResponse(**result)
+
+    # Model unavailable -- fall back to last DB row
     with get_db() as conn:
         row = conn.execute(
             "SELECT * FROM risk_scores WHERE hex_id=? ORDER BY timestamp DESC LIMIT 1",
             (hex_id,)
         ).fetchone()
     if row is None:
-        # No cached score -- compute on demand
-        result = compute_and_store_risk(hex_id)
-        if result is None:
-            raise HTTPException(status_code=404,
-                detail=f"No risk score for {hex_id} and model not available")
-        return RiskResponse(**result)
-
+        raise HTTPException(status_code=404,
+            detail=f"No risk score for {hex_id} and model not available")
     contribs = json.loads(row["feature_contributions"] or "[]")
     return RiskResponse(
         hex_id=row["hex_id"],
@@ -82,9 +89,9 @@ def get_risk(hex_id: str):
         tier=row["tier"],
         confidence_score=row["confidence_score"],
         lead_time_min=row["lead_time_min"],
-        lead_time_basis=row["lead_time_basis"] or "pending_phase_9",
+        lead_time_basis=row["lead_time_basis"] or "model_unavailable",
         top_contributing_features=contribs,
-        data_source=row["data_source"] or "live",
+        data_source=row["data_source"] or "cached_demo",
     )
 
 

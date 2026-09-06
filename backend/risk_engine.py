@@ -8,8 +8,7 @@ Called on each ingestion cycle:
   4. Write result to risk_scores
 
 factor_of_safety from Phase 5 is computed inside FusionModel via dynamic_features.py.
-lead_time_min is NULL until Phase 9 wires it in.
-data_source is "live" until Phase 9 implements the cached_demo fallback.
+lead_time_min and data_source are now computed by Phase 9 (backend/lead_time.py).
 """
 
 from __future__ import annotations
@@ -23,6 +22,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from backend.database import get_db
+from backend.lead_time import compute_lead_time
 
 # Phase 6 model
 _MODEL_PATH = ROOT / "ml" / "models" / "fusion_model.pkl"
@@ -115,6 +115,12 @@ def compute_and_store_risk(hex_id: str) -> dict[str, Any] | None:
 
         now_ts = datetime.now(timezone.utc).isoformat()
 
+        # 4. Phase 9: compute lead time + data_source from live/cached forecast
+        features = _merge_features(static_feats, dynamic_feats)
+        lead_time_min, lead_time_basis, data_source = compute_lead_time(
+            hex_id, features
+        )
+
         # 5. Write to risk_scores
         conn.execute(
             """INSERT INTO risk_scores
@@ -127,10 +133,10 @@ def compute_and_store_risk(hex_id: str) -> dict[str, Any] | None:
                 pred["risk_score"],
                 pred["tier"],
                 pred["confidence_score"],
-                None,             # lead_time_min: Phase 9
-                "pending_phase_9",
+                lead_time_min,
+                lead_time_basis,
                 json.dumps(top_features),
-                "live",
+                data_source,
             )
         )
 
@@ -140,8 +146,8 @@ def compute_and_store_risk(hex_id: str) -> dict[str, Any] | None:
             "risk_score":                pred["risk_score"],
             "tier":                      pred["tier"],
             "confidence_score":          pred["confidence_score"],
-            "lead_time_min":             None,
-            "lead_time_basis":           "pending_phase_9",
+            "lead_time_min":             lead_time_min,
+            "lead_time_basis":           lead_time_basis,
             "top_contributing_features": top_features,
-            "data_source":               "live",
+            "data_source":               data_source,
         }
