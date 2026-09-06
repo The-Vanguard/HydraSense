@@ -3,49 +3,49 @@
   "loeo_n_detected": 30,
   "loeo_n_skipped": 0,
   "detection_rate": 1.0,
-  "false_positive_rate": 0.0,
-  "false_positive_rate_note": "approximate -- computed on full dataset, not per-fold",
+  "false_positive_rate": null,
+  "false_positive_rate_note": "NOT COMPUTED per-fold -- requires out-of-fold negative rows. In-sample FPR (on training negatives seen by the final model) is trivially 0% and was removed to avoid a misleading metric. Per-fold FPR requires negative samples from other events' non-alarm windows, which are not currently split into the held-out sets.",
   "timing_error": {
-    "mean_min": 2880.0,
-    "median_min": 2880.0,
-    "min_min": 2880.0,
-    "max_min": 2880.0,
+    "mean_min": 1440.0,
+    "median_min": 1440.0,
+    "min_min": 1440.0,
+    "max_min": 1440.0,
     "n": 30
   },
   "worst_5_events_by_lead_time": [
     {
       "event_id": "E001",
       "village": "?",
-      "timing_error_min": 2880.0,
-      "crossing_tier": "Red"
+      "timing_error_min": 1440.0,
+      "crossing_tier": "Orange"
     },
     {
       "event_id": "E002",
       "village": "?",
-      "timing_error_min": 2880.0,
-      "crossing_tier": "Red"
+      "timing_error_min": 1440.0,
+      "crossing_tier": "Orange"
     },
     {
       "event_id": "E003",
       "village": "?",
-      "timing_error_min": 2880.0,
-      "crossing_tier": "Red"
+      "timing_error_min": 1440.0,
+      "crossing_tier": "Orange"
     },
     {
       "event_id": "E004",
       "village": "?",
-      "timing_error_min": 2880.0,
-      "crossing_tier": "Red"
+      "timing_error_min": 1440.0,
+      "crossing_tier": "Orange"
     },
     {
       "event_id": "E005",
       "village": "?",
-      "timing_error_min": 2880.0,
-      "crossing_tier": "Red"
+      "timing_error_min": 1440.0,
+      "crossing_tier": "Orange"
     }
   ],
-  "data_completeness_note": "rainfall features non-null ~65pct of positive rows; factor_of_safety 0pct non-null (Phase 3 DEM rasters not run). Detection rate improves once Phase 3 terrain + historical backfill exist. Harness is structurally correct -- results are data-limited, not harness-limited.",
-  "run_timestamp_utc": "2026-09-06T10:12:23.644154+00:00",
+  "data_completeness_note": "LOEO detection semantics (corrected v2): 'detected' means fold model predicts Orange/Red on a snapshot whose ground-truth label is also Orange/Red (within the true alarm window). timing_error_min is event_time minus first ground-truth Orange/Red snapshot -- this is the maximum demonstrable lead time from the current dataset, not the model's forecast horizon. FPR removed: previous in-sample FPR on training negatives was trivially 0% and not meaningful. Per-fold FPR requires explicit negative test windows.Static terrain (slope/TWI/elevation) still 100% NaN pending Phase 3 DEM run. rainfall_72h_antecedent ~22% NaN (backfill landed, negative samples have no rainfall). Detection results are data-limited; harness logic is correct.",
+  "run_timestamp_utc": "2026-09-06T10:37:23.571660+00:00",
   "n_sample_rows": 5716,
   "leakage_buffer_days": 7
 }
