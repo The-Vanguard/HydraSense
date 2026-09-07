@@ -1,0 +1,32 @@
+{
+  "phase": 4,
+  "srs_section": "11",
+  "event_count_for_LOEO_reporting": 30,
+  "note": "The LOEO validation sample size is the event count above \u2014 NOT the total row count (5716). Timestep expansion increases training signal only (SRS.md \u00a711.2).",
+  "h3_resolution": 8,
+  "unique_pilot_hexes": 13,
+  "positive_rows": 4452,
+  "negative_rows": 1264,
+  "neg_pos_ratio": 0.28,
+  "leakage_exclusion_days": 7,
+  "pool_a_min_clear_days": 30,
+  "random_seed": 42,
+  "tier_label_scheme": {
+    "-72": "Yellow",
+    "-48": "Yellow",
+    "-24": "Orange",
+    "-12": "Orange",
+    "-6": "Red",
+    "0": "Red"
+  },
+  "tier_encoding": {
+    "Green": 0,
+    "Yellow": 1,
+    "Orange": 2,
+    "Red": 3
+  },
+  "outputs": {
+    "hex_event_assignments": "D:\\PROJECT FILES FOR WORK\\HydraSense\\data\\events\\hex_event_assignments.csv",
+    "training_samples": "D:\\PROJECT FILES FOR WORK\\HydraSense\\data\\events\\event_centered_samples.parquet"
+  }
+}

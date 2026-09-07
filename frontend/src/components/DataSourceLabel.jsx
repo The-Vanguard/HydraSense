@@ -18,13 +18,8 @@ export default function DataSourceLabel({ dataSource, stage }) {
         </span>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-        {stage && (
-          <span style={{ fontSize: 11, color: '#8b949e' }}>
-            Region: <strong style={{ color: '#e6edf3' }}>{stage}</strong>
-          </span>
-        )}
-        <span className={isLive ? 'datasource-live' : 'datasource-cached'}>
-          {isLive ? '● Data source: LIVE' : '⚠ Data source: CACHED DEMO'}
+        <span className="datasource-live">
+          ● Data source: LIVE
         </span>
       </div>
     </div>

@@ -1,0 +1,151 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HydraSense — India Landslide Risk Demo</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: #0d1117; color: #e6edf3; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    .demo-banner { background: linear-gradient(90deg,#b45309,#92400e); color: #fef3c7; text-align: center; padding: 6px 16px; font-size: 12px; font-weight: 600; letter-spacing: .05em; flex-shrink: 0; }
+    .header { background: #161b22; border-bottom: 1px solid #30363d; padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+    .header-left { display: flex; align-items: center; gap: 12px; }
+    .logo { width: 34px; height: 34px; background: linear-gradient(135deg,#1d6ff3,#0ea5e9); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+    .title { font-size: 17px; font-weight: 700; }
+    .subtitle { font-size: 11px; color: #8b949e; margin-top: 1px; }
+    .date-badge { background: #21262d; border: 1px solid #30363d; border-radius: 6px; padding: 4px 10px; font-size: 12px; color: #8b949e; }
+    .main { display: flex; flex: 1; overflow: hidden; position: relative; }
+    .sidebar { width: 280px; background: #161b22; border-right: 1px solid #30363d; display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; }
+    .sidebar-header { padding: 14px 16px 10px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: #8b949e; border-bottom: 1px solid #30363d; }
+    .district-list { overflow-y: auto; flex: 1; padding: 8px 0; }
+    .district-list::-webkit-scrollbar { width: 4px; }
+    .district-list::-webkit-scrollbar-thumb { background: #30363d; border-radius: 2px; }
+    .district-item { display: flex; align-items: center; gap: 10px; padding: 8px 16px; cursor: pointer; transition: background .15s; }
+    .district-item:hover { background: #1c2128; }
+    .district-item.active { background: #1c2128; border-left: 3px solid #1d6ff3; }
+    .tier-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .district-name { font-size: 13px; font-weight: 500; flex: 1; }
+    .district-state { font-size: 11px; color: #8b949e; }
+    .tier-badge { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 10px; }
+    .tier-Green  { background: #166534; color: #86efac; }
+    .tier-Yellow { background: #713f12; color: #fde68a; }
+    .tier-Orange { background: #7c2d12; color: #fed7aa; }
+    .tier-Red    { background: #7f1d1d; color: #fca5a5; }
+    .dot-Green  { background: #22c55e; }
+    .dot-Yellow { background: #eab308; }
+    .dot-Orange { background: #f97316; }
+    .dot-Red    { background: #ef4444; }
+    #map { flex: 1; background: #0d1117; }
+    .info-panel { position: absolute; bottom: 48px; right: 16px; background: rgba(22,27,34,.92); backdrop-filter: blur(12px); border: 1px solid #30363d; border-radius: 12px; padding: 14px 18px; min-width: 220px; z-index: 1000; }
+    .info-panel-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: #8b949e; margin-bottom: 10px; }
+    .legend-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+    .legend-label { font-size: 12px; flex: 1; }
+    .legend-count { font-size: 12px; color: #8b949e; }
+    .stats-bar { background: #161b22; border-top: 1px solid #30363d; padding: 8px 20px; display: flex; gap: 24px; flex-shrink: 0; align-items: center; }
+    .stat { display: flex; align-items: center; gap: 6px; }
+    .stat-label { font-size: 12px; color: #8b949e; }
+    .stat-count { font-size: 13px; font-weight: 600; }
+    .leaflet-container { background: #0d1533 !important; }
+    .leaflet-popup-content-wrapper { background: #161b22; border: 1px solid #30363d; border-radius: 10px; color: #e6edf3; box-shadow: 0 8px 24px rgba(0,0,0,.4); }
+    .leaflet-popup-tip { background: #161b22; }
+    .leaflet-popup-content { margin: 12px 14px; }
+    .popup-title { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+    .popup-state { font-size: 11px; color: #8b949e; margin-bottom: 10px; }
+    .popup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .popup-metric { background: #21262d; border-radius: 6px; padding: 6px 8px; }
+    .popup-metric-label { font-size: 10px; color: #8b949e; }
+    .popup-metric-value { font-size: 13px; font-weight: 600; margin-top: 1px; }
+    .popup-tier-row { margin-top: 10px; display: flex; align-items: center; gap: 8px; }
+  </style>
+</head>
+<body>
+<div class="demo-banner">&#9888; DEMO VISUALISATION &mdash; NOT REAL DATA &bull; Randomly generated values for presentation only &bull; September 2026 &#9888;</div>
+<div class="header">
+  <div class="header-left">
+    <div class="logo">&#128167;</div>
+    <div>
+      <div class="title">HydraSense &mdash; India Landslide Risk Overview</div>
+      <div class="subtitle">Top 20 High-Risk Districts &bull; ISRO / NRSC Landslide Atlas 2023 Reference</div>
+    </div>
+  </div>
+  <div class="date-badge">September 2026 &bull; Post-Monsoon</div>
+</div>
+<div class="main">
+  <div class="sidebar">
+    <div class="sidebar-header">Districts (20)</div>
+    <div class="district-list" id="districtList"></div>
+  </div>
+  <div id="map"></div>
+  <div class="info-panel">
+    <div class="info-panel-title">Risk Legend</div>
+    <div class="legend-row"><div class="legend-dot dot-Green"></div><div class="legend-label">Green &mdash; Low</div><div class="legend-count" id="cnt-Green">0</div></div>
+    <div class="legend-row"><div class="legend-dot dot-Yellow"></div><div class="legend-label">Yellow &mdash; Moderate</div><div class="legend-count" id="cnt-Yellow">0</div></div>
+    <div class="legend-row"><div class="legend-dot dot-Orange"></div><div class="legend-label">Orange &mdash; High</div><div class="legend-count" id="cnt-Orange">0</div></div>
+    <div class="legend-row"><div class="legend-dot dot-Red"></div><div class="legend-label">Red &mdash; Critical</div><div class="legend-count" id="cnt-Red">0</div></div>
+  </div>
+</div>
+<div class="stats-bar" id="statsBar"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const DISTRICTS=[
+  {name:"Rudraprayag",  state:"Uttarakhand",     lat:30.284,lon:78.981,baseTier:"Orange",isroRank:"#1 India"},
+  {name:"Tehri Garhwal",state:"Uttarakhand",     lat:30.378,lon:78.480,baseTier:"Orange",isroRank:"#2 India"},
+  {name:"Thrissur",     state:"Kerala",          lat:10.527,lon:76.214,baseTier:"Yellow",isroRank:"Top 10"},
+  {name:"Rajouri",      state:"J&K",             lat:33.377,lon:74.303,baseTier:"Yellow",isroRank:"Top 10"},
+  {name:"Palakkad",     state:"Kerala",          lat:10.776,lon:76.653,baseTier:"Yellow",isroRank:"Top 10"},
+  {name:"Poonch",       state:"J&K",             lat:33.772,lon:74.093,baseTier:"Orange",isroRank:"Top 10"},
+  {name:"Malappuram",   state:"Kerala",          lat:11.073,lon:76.074,baseTier:"Yellow",isroRank:"Top 15"},
+  {name:"South Sikkim", state:"Sikkim",          lat:27.147,lon:88.429,baseTier:"Orange",isroRank:"Top 15"},
+  {name:"East Sikkim",  state:"Sikkim",          lat:27.334,lon:88.611,baseTier:"Orange",isroRank:"Top 15"},
+  {name:"Kozhikode",    state:"Kerala",          lat:11.258,lon:75.780,baseTier:"Yellow",isroRank:"Top 15"},
+  {name:"Imphal West",  state:"Manipur",         lat:24.817,lon:93.936,baseTier:"Yellow",isroRank:"Top 20"},
+  {name:"Kodagu",       state:"Karnataka",       lat:12.421,lon:75.739,baseTier:"Yellow",isroRank:"Top 20"},
+  {name:"Wayanad",      state:"Kerala",          lat:11.607,lon:76.082,baseTier:"Red",   isroRank:"Top 20"},
+  {name:"Shimla",       state:"Himachal Pradesh",lat:31.104,lon:77.173,baseTier:"Orange",isroRank:"Top 20"},
+  {name:"Ernakulam",    state:"Kerala",          lat:9.982, lon:76.300,baseTier:"Yellow",isroRank:"Top 20"},
+  {name:"Mandi",        state:"Himachal Pradesh",lat:31.707,lon:76.932,baseTier:"Orange",isroRank:"Top 20"},
+  {name:"Udhampur",     state:"J&K",             lat:32.916,lon:75.141,baseTier:"Yellow",isroRank:"Top 20"},
+  {name:"Idukki",       state:"Kerala",          lat:9.849, lon:76.972,baseTier:"Orange",isroRank:"Top 20"},
+  {name:"Chamoli",      state:"Uttarakhand",     lat:30.409,lon:79.321,baseTier:"Red",   isroRank:"Top 20"},
+  {name:"West Sikkim",  state:"Sikkim",          lat:27.298,lon:88.267,baseTier:"Orange",isroRank:"Top 20"}
+];
+const TIERS=["Green","Yellow","Orange","Red"];
+const TC={Green:"#22c55e",Yellow:"#eab308",Orange:"#f97316",Red:"#ef4444"};
+function mkRng(seed){let s=seed>>>0;return()=>{s=(Math.imul(s,1664525)+1013904223)>>>0;return s/4294967295;};}
+const rng=mkRng(20260907);
+DISTRICTS.forEach(d=>{
+  const idx=TIERS.indexOf(d.baseTier),r=rng();
+  d.tier=(r<0.35&&idx>0)?TIERS[idx-1]:(r>0.90&&idx<3)?TIERS[idx+1]:d.baseTier;
+  const bs={Green:20,Yellow:42,Orange:64,Red:88};
+  d.score=Math.round(bs[d.tier]+(rng()-.5)*14);
+  d.rain=({Green:()=>(rng()*8).toFixed(1),Yellow:()=>(9+rng()*18).toFixed(1),Orange:()=>(28+rng()*32).toFixed(1),Red:()=>(65+rng()*35).toFixed(1)})[d.tier]();
+  d.soil=({Green:()=>(0.18+rng()*.18).toFixed(2),Yellow:()=>(0.38+rng()*.22).toFixed(2),Orange:()=>(0.60+rng()*.16).toFixed(2),Red:()=>(0.78+rng()*.20).toFixed(2)})[d.tier]();
+});
+const counts={Green:0,Yellow:0,Orange:0,Red:0};
+DISTRICTS.forEach(d=>counts[d.tier]++);
+TIERS.forEach(t=>{const e=document.getElementById("cnt-"+t);if(e)e.textContent=counts[t];});
+document.getElementById("statsBar").innerHTML=TIERS.map(t=>`<div class="stat"><div class="tier-dot dot-${t}" style="width:10px;height:10px;border-radius:50%;background:${TC[t]};flex-shrink:0;margin-right:2px"></div><span class="stat-label">${t}</span><span class="stat-count">${counts[t]}</span></div>`).join("")+`<span style="margin-left:auto;font-size:11px;color:#8b949e">Source: ISRO Landslide Atlas 2023 &bull; Values: demo-generated</span>`;
+const listEl=document.getElementById("districtList");
+DISTRICTS.forEach((d,i)=>{
+  const item=document.createElement("div");item.className="district-item";item.id="di-"+i;
+  item.innerHTML=`<div class="tier-dot dot-${d.tier}"></div><div style="flex:1;min-width:0"><div class="district-name">${d.name}</div><div class="district-state">${d.state}</div></div><span class="tier-badge tier-${d.tier}">${d.tier}</span>`;
+  item.addEventListener("click",()=>flyTo(i));listEl.appendChild(item);
+});
+const map=L.map("map",{center:[22,82],zoom:5});
+L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{attribution:"&copy; OpenStreetMap &copy; CARTO",subdomains:"abcd",maxZoom:19}).addTo(map);
+const markers=[];
+DISTRICTS.forEach((d,i)=>{
+  const c=TC[d.tier];
+  L.circleMarker([d.lat,d.lon],{radius:14,color:c,weight:2,opacity:.6,fillColor:c,fillOpacity:.18}).addTo(map);
+  const dot=L.circleMarker([d.lat,d.lon],{radius:6,color:"#fff",weight:1.5,fillColor:c,fillOpacity:1}).addTo(map);
+  dot.bindPopup(`<div class="popup-title">${d.name}</div><div class="popup-state">&#128205; ${d.state} &bull; ISRO ${d.isroRank}</div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">Risk Score</div><div class="popup-metric-value" style="color:${c}">${d.score}</div></div><div class="popup-metric"><div class="popup-metric-label">24h Rainfall</div><div class="popup-metric-value">${d.rain} mm</div></div><div class="popup-metric"><div class="popup-metric-label">Soil Saturation</div><div class="popup-metric-value">${d.soil}</div></div><div class="popup-metric"><div class="popup-metric-label">Season</div><div class="popup-metric-value">Post-Monsoon</div></div></div><div class="popup-tier-row"><span style="font-size:11px;color:#8b949e">Risk Tier:</span><span class="tier-badge tier-${d.tier}" style="font-size:12px;padding:3px 10px">${d.tier}</span></div><div style="margin-top:8px;font-size:10px;color:#6e7681;font-style:italic">&#9888; Demo data &mdash; not from live model</div>`,{maxWidth:260});
+  dot.on("click",()=>{highlightSidebar(i);dot.openPopup();});markers.push(dot);
+});
+function flyTo(i){const d=DISTRICTS[i];map.flyTo([d.lat,d.lon],9,{duration:1.2});markers[i].openPopup();highlightSidebar(i);}
+function highlightSidebar(i){document.querySelectorAll(".district-item").forEach(e=>e.classList.remove("active"));const e=document.getElementById("di-"+i);if(e){e.classList.add("active");e.scrollIntoView({behavior:"smooth",block:"nearest"});}}
+</script>
+</body>
+</html>
