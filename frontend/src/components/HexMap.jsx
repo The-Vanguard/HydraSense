@@ -273,13 +273,21 @@ export default function HexMap({
         { className: 'hydra-leaflet-popup', maxWidth: 240 }
       );
 
-      // On click: push district's own fixed data to sidebar AND sync pin marker color/position
+      // On click: generate full simulation payload (instant 0ms) matching district tier & score
       dot.on('click', (e) => {
         L.DomEvent.stopPropagation(e);
 
+        const surfaceInfo = { surface: 'district', label: `${d.name}, ${d.state}` };
+        const simData = generatePinSimulation(d.lat, d.lon, d.tier, surfaceInfo);
+        
+        // Pin exact district score & village metadata
+        simData.risk.risk_score = d.score;
+        simData.risk.village = `${d.name}, ${d.state} (ISRO Rank #${d.isroRank})`;
+        simData.surface = { label: `${d.name}, ${d.state}` };
+
         const tierColor = TIER_COLORS[d.tier] || '#8b949e';
 
-        // ── Move / create the draggable pin marker at this district's location ──
+        // Move or create the pin marker at district location
         let marker = pinMarkerRef.current;
         if (!marker) {
           marker = L.marker([d.lat, d.lon], {
@@ -296,46 +304,23 @@ export default function HexMap({
           marker.setIcon(createPinIcon(tierColor));
         }
 
+        const popupHtml = buildPopupHtml(simData, d.lat, d.lon);
+        marker.bindPopup(popupHtml, {
+          className: 'hydra-leaflet-popup',
+          maxWidth: 240,
+          autoPan: false,
+        });
+
         pinStateRef.current = {
-          lat: d.lat, lng: d.lon,
-          surface: { label: `${d.name}, ${d.state}` },
+          lat: d.lat,
+          lng: d.lon,
+          surface: simData.surface,
           tier: d.tier,
         };
 
-        // ── Build sidebar payload that exactly matches the district dot ──
-        const simData = {
-          risk: {
-            tier:             d.tier,
-            risk_score:       d.score,
-            confidence_score: d.tier === 'Red' ? 88 : d.tier === 'Orange' ? 79 : d.tier === 'Yellow' ? 84 : 91,
-            lead_time_min:    d.tier === 'Red' ? 120 : d.tier === 'Orange' ? 240 : null,
-            lead_time_basis:  ['Orange', 'Red'].includes(d.tier)
-              ? 'deterministic_slope_rainfall_threshold'
-              : 'no_red_crossing_in_forecast_window',
-            factor_of_safety: d.tier === 'Red' ? 0.87 : d.tier === 'Orange' ? 1.05 : d.tier === 'Yellow' ? 1.28 : 1.72,
-            factor_of_safety_min: d.tier === 'Red' ? 0.71 : d.tier === 'Orange' ? 0.88 : null,
-            factor_of_safety_max: d.tier === 'Red' ? 1.08 : d.tier === 'Orange' ? 1.24 : null,
-            coordinates: { lat: d.lat, lng: d.lon },
-          },
-          surface:  { label: `${d.name}, ${d.state}` },
-          features: [
-            { feature: 'rainfall_24h',                  contribution: d.tier === 'Red' ? 0.38 : d.tier === 'Orange' ? 0.28 : 0.18 },
-            { feature: 'soil_saturation_ratio',         contribution: d.tier === 'Red' ? 0.31 : d.tier === 'Orange' ? 0.24 : 0.14 },
-            { feature: 'slope_deg',                     contribution: 0.15 },
-            { feature: 'factor_of_safety',              contribution: d.tier === 'Red' ? 0.12 : 0.08 },
-            { feature: 'antecedent_precipitation_index',contribution: 0.07 },
-            { feature: 'TWI',                           contribution: 0.05 },
-          ],
-          alert: ['Orange', 'Red'].includes(d.tier) ? {
-            tier:    d.tier,
-            hex_id:  `demo_${d.name.replace(/ /g, '_').toLowerCase()}`,
-            message: `Flash flood watch — ${d.name}, ${d.state}`,
-            nearest_shelter: { name: `${d.name} Relief Camp`, distance_m: 1800 },
-            lead_time_min: d.tier === 'Red' ? 120 : 240,
-          } : null,
-        };
-
-        if (onPinDropRef.current) onPinDropRef.current(simData);
+        if (onPinDropRef.current) {
+          onPinDropRef.current(simData);
+        }
       });
     });
 
