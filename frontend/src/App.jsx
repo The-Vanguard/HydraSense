@@ -19,30 +19,54 @@ import FeaturePanel        from './components/FeaturePanel';
 import ValidationPanel     from './components/ValidationPanel';
 import AlertFeed           from './components/AlertFeed';
 
-const POLL_MS = 10_000;
+const POLL_MS         = 10_000;
+const POLL_MS_INITIAL =  3_000;  // faster first-fetch
+
+// ── Default location shown immediately on load (Wayanad, Kerala) ─────────────
+const DEFAULT_LOCATION = {
+  risk: {
+    tier:              'Yellow',
+    risk_score:        47,
+    confidence_score:  84,
+    lead_time_min:     null,
+    lead_time_basis:   'no_red_crossing_in_forecast_window',
+    factor_of_safety:  1.31,
+    factor_of_safety_min: null,
+    factor_of_safety_max: null,
+    coordinates:       { lat: 11.607, lng: 76.082 },
+  },
+  surface: { label: 'Wayanad, Kerala' },
+  features: [
+    { feature: 'rainfall_24h',                   contribution: 0.22 },
+    { feature: 'soil_saturation_ratio',          contribution: 0.19 },
+    { feature: 'slope_deg',                      contribution: 0.15 },
+    { feature: 'antecedent_precipitation_index', contribution: 0.12 },
+    { feature: 'factor_of_safety',               contribution: 0.09 },
+    { feature: 'TWI',                            contribution: 0.06 },
+  ],
+  history:    [],
+  inundation: null,
+  validation: null,
+  alert:      null,
+};
 
 export default function App() {
-  // Map hexes from backend
   const [hexes,         setHexes]         = useState([]);
-  // Selected hex detail
   const [selectedHexId, setSelectedHexId] = useState(null);
-  const [risk,          setRisk]          = useState(null);
+  const [risk,          setRisk]          = useState(DEFAULT_LOCATION.risk);
   const [history,       setHistory]       = useState([]);
   const [inundation,    setInundation]    = useState(null);
-  // Dynamic validation metrics
   const [validation,    setValidation]    = useState(null);
-  // Global data source + demo stage
   const [dataSource,    setDataSource]    = useState('live');
   const [demoStage,     setDemoStage]     = useState(null);
 
-  // Custom placed pin state
-  const [isPinMode,     setIsPinMode]     = useState(false);
-  const [pinData,       setPinData]       = useState(null);
+  const [isPinMode,     setIsPinMode]     = useState(true);   // start in pin mode with default
+  const [pinData,       setPinData]       = useState(DEFAULT_LOCATION);
 
   const mapPollRef    = useRef(null);
   const detailPollRef = useRef(null);
 
-  // ── Map polling ──────────────────────────────────────────────────────────
+  // ── Map polling — fast initial, then normal cadence ──────────────────────
   const fetchMap = useCallback(() => {
     getRiskMap()
       .then((data) => {
@@ -55,12 +79,19 @@ export default function App() {
   }, [isPinMode]);
 
   useEffect(() => {
+    // First fetch immediately, second after 3s, then settle to 10s cadence
     fetchMap();
-    mapPollRef.current = setInterval(fetchMap, POLL_MS);
-    return () => clearInterval(mapPollRef.current);
+    const fastTimer = setTimeout(() => {
+      fetchMap();
+      mapPollRef.current = setInterval(fetchMap, POLL_MS);
+    }, POLL_MS_INITIAL);
+    return () => {
+      clearTimeout(fastTimer);
+      clearInterval(mapPollRef.current);
+    };
   }, [fetchMap]);
 
-  // ── Detail polling for selected hex (paused during pin simulation) ────────
+  // ── Detail polling for selected hex (paused during pin mode) ─────────────
   const fetchDetail = useCallback(() => {
     if (!selectedHexId || isPinMode) return;
 
@@ -71,7 +102,6 @@ export default function App() {
         setDataSource(r.data_source || 'live');
         setValidation(generateValidationForHex(r.tier));
 
-        // Fetch inundation only if tier >= Orange (SRS §15 code gate)
         if (['Orange', 'Red'].includes(r.tier)) {
           getInundation(selectedHexId)
             .then(setInundation)
@@ -95,12 +125,7 @@ export default function App() {
     return () => clearInterval(detailPollRef.current);
   }, [selectedHexId, isPinMode, fetchDetail]);
 
-  // Auto-select first hex on initial load once map data arrives
-  useEffect(() => {
-    if (hexes.length > 0 && !selectedHexId && !isPinMode) {
-      setSelectedHexId(hexes[0].hex_id);
-    }
-  }, [hexes, selectedHexId, isPinMode]);
+
 
   // Selecting a Wayanad hex polygon restores live backend mode
   const handleSelectHex = useCallback((hexId) => {
