@@ -1,8 +1,8 @@
-/**
+﻿/**
  * AlertFeed.jsx — Phase 12
  * Polls GET /alert/feed every 10s.
- * CAP alerts and downgrade events rendered as DISTINCT item types.
- * SRS §17: never conflate the two.
+ * CAP alerts and downgrade events rendered as DISTINCT item types (SRS §17).
+ * Auto-fires a CAP entry on Orange/Red, followed by a downgrade after 8s.
  */
 import React, { useEffect, useState, useRef } from 'react';
 import { getAlertFeed } from '../api/client';
@@ -47,7 +47,7 @@ function AlertItem({ item }) {
       </div>
       {!isDowngrade && item.nearest_shelter && (
         <div style={{ marginTop: 4, fontSize: 10, color: '#8b949e' }}>
-          🏫 Nearest shelter: {item.nearest_shelter.name} ({(item.nearest_shelter.distance_m / 1000).toFixed(1)} km)
+          Nearest shelter: {item.nearest_shelter.name} ({(item.nearest_shelter.distance_m / 1000).toFixed(1)} km)
         </div>
       )}
       {!isDowngrade && item.lead_time_min && (
@@ -60,13 +60,15 @@ function AlertItem({ item }) {
 }
 
 export default function AlertFeed({ customAlert }) {
-  const [alerts, setAlerts] = useState([]);
-  const timerRef = useRef(null);
+  const [alerts,    setAlerts]    = useState([]);
+  const [localCap,  setLocalCap]  = useState(null);
+  const [downgrade, setDowngrade] = useState(null);
+  const timerRef     = useRef(null);
+  const downgradeRef = useRef(null);
+  const prevTierRef  = useRef(null);
 
   const fetchAlerts = () => {
-    getAlertFeed()
-      .then(setAlerts)
-      .catch(() => {}); // silent — don't crash panel on network error
+    getAlertFeed().then(setAlerts).catch(() => {});
   };
 
   useEffect(() => {
@@ -75,11 +77,33 @@ export default function AlertFeed({ customAlert }) {
     return () => clearInterval(timerRef.current);
   }, []);
 
-  const combinedAlerts = [...alerts];
-  if (customAlert) {
-    // Add custom simulated alert at top
-    combinedAlerts.push(customAlert);
-  }
+  // Auto-fire CAP when customAlert is Orange/Red, then downgrade after 8s
+  useEffect(() => {
+    clearTimeout(downgradeRef.current);
+    if (!customAlert) {
+      setLocalCap(null); setDowngrade(null); prevTierRef.current = null;
+      return;
+    }
+    const tier = customAlert.tier;
+    if (['Orange', 'Red'].includes(tier) && tier !== prevTierRef.current) {
+      setLocalCap({ ...customAlert, timestamp: new Date().toISOString() });
+      setDowngrade(null);
+      prevTierRef.current = tier;
+      downgradeRef.current = setTimeout(() => {
+        setDowngrade({
+          type: 'downgrade',
+          hex_id: customAlert.hex_id,
+          message: 'Risk subsiding — consecutive below-Orange cycles >= 2',
+          timestamp: new Date().toISOString(),
+        });
+      }, 8000);
+    }
+    return () => clearTimeout(downgradeRef.current);
+  }, [customAlert]);
+
+  const combined = [...alerts];
+  if (downgrade) combined.push(downgrade);
+  if (localCap)  combined.push(localCap);
 
   return (
     <div className="panel">
@@ -89,16 +113,13 @@ export default function AlertFeed({ customAlert }) {
           — polls every {POLL_MS / 1000}s
         </span>
       </div>
-
-      {combinedAlerts.length === 0 ? (
+      {combined.length === 0 ? (
         <div className="empty-state">No alerts — system nominal</div>
       ) : (
-        // Most recent first
-        [...combinedAlerts].reverse().map((a, idx) => (
-          <AlertItem key={a.alert_id || `sim_${idx}`} item={a} />
+        [...combined].reverse().map((a, idx) => (
+          <AlertItem key={a.alert_id || `local_${idx}`} item={a} />
         ))
       )}
     </div>
   );
 }
-

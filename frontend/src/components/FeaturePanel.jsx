@@ -1,9 +1,9 @@
 /**
  * FeaturePanel.jsx — Phase 12
  * Horizontal bar chart of top_contributing_features for selected hex.
- * Data from GET /risk/{hex_id} (top_contributing_features array).
+ * Bars animate in from 0 on each new data load.
  */
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 const FEATURE_LABELS = {
   rainfall_1h:                    'Rainfall 1h',
@@ -34,6 +34,17 @@ const FEATURE_LABELS = {
 };
 
 export default function FeaturePanel({ features }) {
+  // Animate bars in from 0 whenever features change
+  const [animated, setAnimated] = useState(false);
+
+  useEffect(() => {
+    setAnimated(false);
+    const t = requestAnimationFrame(() => {
+      requestAnimationFrame(() => setAnimated(true));
+    });
+    return () => cancelAnimationFrame(t);
+  }, [features]);
+
   if (!features || features.length === 0) {
     return (
       <div className="panel">
@@ -49,13 +60,19 @@ export default function FeaturePanel({ features }) {
     <div className="panel">
       <div className="panel-title">Top Contributing Features</div>
       {features.map((f, i) => {
-        const pct = Math.round((Math.abs(f.contribution) / max) * 100);
+        const pct   = Math.round((Math.abs(f.contribution) / max) * 100);
         const label = FEATURE_LABELS[f.feature] || f.feature;
         return (
           <div key={i} className="feat-row">
             <div className="feat-name" title={f.feature}>{label}</div>
             <div className="feat-bar-wrap">
-              <div className="feat-bar-fill" style={{ width: `${pct}%` }} />
+              <div
+                className="feat-bar-fill"
+                style={{
+                  width: animated ? `${pct}%` : '0%',
+                  transition: `width 0.55s cubic-bezier(0.4,0,0.2,1) ${i * 55}ms`,
+                }}
+              />
             </div>
             <div className="feat-val">{(f.contribution * 100).toFixed(0)}%</div>
           </div>
@@ -64,3 +81,4 @@ export default function FeaturePanel({ features }) {
     </div>
   );
 }
+

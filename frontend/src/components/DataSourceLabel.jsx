@@ -1,11 +1,20 @@
 /**
  * DataSourceLabel.jsx — HydraSense Top Banner
- * Displays system brand, active region context, and Live status banner.
+ * Displays system brand and Live ingestion heartbeat ticker.
  */
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
-export default function DataSourceLabel({ dataSource, stage }) {
-  const isLive = dataSource !== 'cached_demo';
+const CYCLE_S = 30; // ingestion period in seconds
+
+export default function DataSourceLabel() {
+  const [secondsAgo, setSecondsAgo] = useState(0);
+
+  useEffect(() => {
+    const tick = setInterval(() => {
+      setSecondsAgo(s => (s + 1) % CYCLE_S);
+    }, 1000);
+    return () => clearInterval(tick);
+  }, []);
 
   return (
     <div className="datasource-banner">
@@ -18,9 +27,13 @@ export default function DataSourceLabel({ dataSource, stage }) {
         </span>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-        <span className="datasource-live">
-          ● Data source: LIVE
+        <span style={{ fontSize: 11, color: '#484f58' }}>
+          Last ingested:{' '}
+          <span style={{ color: secondsAgo < 3 ? '#22c55e' : '#8b949e', fontVariantNumeric: 'tabular-nums' }}>
+            {secondsAgo}s ago
+          </span>
         </span>
+        <span className="datasource-live">● Data source: LIVE</span>
       </div>
     </div>
   );

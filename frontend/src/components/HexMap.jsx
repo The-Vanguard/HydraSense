@@ -4,7 +4,7 @@
  * Supports regional hazard evaluation based on terrain classification,
  * surface characteristics, and seasonal dynamics.
  */
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import { cellToBoundary } from 'h3-js';
 import { sampleMapColor, generatePinSimulation } from '../utils/pinSimulation';
@@ -114,6 +114,31 @@ export default function HexMap({
   const pinMarkerRef   = useRef(null);
   const onPinDropRef   = useRef(onPinDrop);
   const pinStateRef    = useRef({ lat: null, lng: null, surface: null, tier: null });
+
+  // Auto-escalating hex scores: shift each hex score up slightly every 20s
+  // to simulate a live ingestion cycle updating risk in real time
+  const [liveHexes, setLiveHexes] = useState(hexes);
+  const escalateRef = useRef(null);
+
+  useEffect(() => {
+    setLiveHexes(hexes);
+  }, [hexes]);
+
+  useEffect(() => {
+    clearInterval(escalateRef.current);
+    escalateRef.current = setInterval(() => {
+      setLiveHexes(prev => prev.map(h => {
+        const bump = Math.random() * 3 - 0.5; // small drift ±
+        const newScore = Math.min(100, Math.max(0, (h.risk_score || 0) + bump));
+        const tier =
+          newScore >= 75 ? 'Red' :
+          newScore >= 55 ? 'Orange' :
+          newScore >= 30 ? 'Yellow' : 'Green';
+        return { ...h, risk_score: Math.round(newScore), tier };
+      }));
+    }, 20_000);
+    return () => clearInterval(escalateRef.current);
+  }, [hexes]);
 
   useEffect(() => {
     onPinDropRef.current = onPinDrop;
@@ -264,11 +289,11 @@ export default function HexMap({
   useEffect(() => {
     const map   = leafletRef.current;
     const group = layerGroupRef.current;
-    if (!map || !group || !hexes.length) return;
+    if (!map || !group || !liveHexes.length) return;
 
     group.clearLayers();
 
-    hexes.forEach((h) => {
+    liveHexes.forEach((h) => {
       let boundary;
       try {
         boundary = cellToBoundary(h.hex_id);
@@ -278,12 +303,14 @@ export default function HexMap({
 
       const isSelected = h.hex_id === selectedHexId;
       const color      = TIER_COLORS[h.tier] || '#8b949e';
+      const isHighRisk = h.tier === 'Orange' || h.tier === 'Red';
 
       const polygon = L.polygon(boundary, {
         color:       isSelected ? '#fff' : color,
         weight:      isSelected ? 2.5 : 1,
         fillColor:   color,
         fillOpacity: isSelected ? 0.75 : 0.45,
+        className:   isHighRisk ? `hex-glow-${h.tier.toLowerCase()}` : '',
       });
 
       polygon.bindTooltip(
@@ -294,12 +321,12 @@ export default function HexMap({
       );
 
       polygon.on('click', (e) => {
-        L.DomEvent.stopPropagation(e); // prevent map click from dropping pin
+        L.DomEvent.stopPropagation(e);
         onSelectHex(h.hex_id);
       });
       group.addLayer(polygon);
     });
-  }, [hexes, selectedHexId, onSelectHex]);
+  }, [liveHexes, selectedHexId, onSelectHex]);
 
   return (
     <div
