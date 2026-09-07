@@ -272,7 +272,45 @@ export default function HexMap({
         </div>`,
         { className: 'hydra-leaflet-popup', maxWidth: 240 }
       );
+
+      // On click: push district's own fixed data to sidebar, stop map click
+      dot.on('click', (e) => {
+        L.DomEvent.stopPropagation(e);
+        if (onPinDropRef.current) {
+          // Build a simData object that matches the district's actual tier/score
+          const simData = {
+            risk: {
+              tier:             d.tier,
+              risk_score:       d.score,
+              confidence_score: 82,
+              lead_time_min:    d.tier === 'Red' ? 120 : d.tier === 'Orange' ? 240 : null,
+              lead_time_basis:  ['Orange','Red'].includes(d.tier)
+                ? 'deterministic_slope_rainfall_threshold'
+                : 'no_red_crossing_in_forecast_window',
+              factor_of_safety: d.tier === 'Red' ? 0.87 : d.tier === 'Orange' ? 1.05 : 1.6,
+              coordinates:      { lat: d.lat, lng: d.lon },
+            },
+            surface:  { label: `${d.name}, ${d.state}` },
+            features: [
+              { feature: 'rainfall_24h',           contribution: d.tier === 'Red' ? 0.38 : 0.22 },
+              { feature: 'soil_saturation_ratio',  contribution: d.tier === 'Red' ? 0.31 : 0.19 },
+              { feature: 'slope_deg',              contribution: 0.14 },
+              { feature: 'factor_of_safety',       contribution: d.tier === 'Red' ? 0.12 : 0.08 },
+              { feature: 'antecedent_precipitation_index', contribution: 0.07 },
+            ],
+            alert: ['Orange','Red'].includes(d.tier) ? {
+              tier:    d.tier,
+              hex_id:  `demo_${d.name.replace(/ /g,'_').toLowerCase()}`,
+              message: `Flash flood watch — ${d.name}, ${d.state}`,
+              nearest_shelter: { name: `${d.name} Relief Camp`, distance_m: 1800 },
+              lead_time_min: d.tier === 'Red' ? 120 : 240,
+            } : null,
+          };
+          onPinDropRef.current(simData);
+        }
+      });
     });
+
 
     // Click anywhere on map to drop pin and simulate
     map.on('click', (e) => {
