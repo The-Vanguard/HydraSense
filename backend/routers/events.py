@@ -8,13 +8,15 @@ output -- every entry carries data_source_note saying so explicitly
 """
 from __future__ import annotations
 import json
+import re
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import List, Optional
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 from backend.database import get_db
 from backend.models import EventMapEntry
-from backend.seed_multiregion import REGIONS  # {region_key: (target_location, default_point)}
+from backend.seed_multiregion import REGIONS, load_terrain, H3_RES  # {region_key: (target_location, default_point)}
 from ml.models.factor_of_safety import compute_factor_of_safety
 
 import h3
@@ -62,7 +64,44 @@ REGION_TO_SOIL_SLUG = {
     "Dhemaji":     "dhemaji",
 }
 
+# Same region_key -> slug map as soil (same filename convention:
+# <kind>_<slug>.json in data/multiregion/<kind>/).
+WEATHER_DIR = ROOT / "data" / "multiregion" / "weather"
+REGION_TO_WEATHER_SLUG = REGION_TO_SOIL_SLUG
+
 _soil_cache: dict[str, Optional[float]] = {}
+_terrain_cache: Optional[dict] = None
+
+
+def _point_name_for_hex(region_key: str, hex_id: str) -> Optional[str]:
+    """Reverse-lookup a real terrain point's name from its hex_id -- same
+    h3.latlng_to_cell computation seed_multiregion.py used to create the hex
+    in the first place, never a guess."""
+    global _terrain_cache
+    if _terrain_cache is None:
+        _terrain_cache = load_terrain()
+    for point_name, feats in _terrain_cache.get(region_key, {}).items():
+        lat, lon = feats.get("lat"), feats.get("lon")
+        if lat is None or lon is None:
+            continue
+        if h3.latlng_to_cell(lat, lon, H3_RES) == hex_id:
+            return point_name
+    return None
+
+
+def _parse_event_date(date_str: str) -> Optional[datetime]:
+    """Real dataset date format is 'DD-MM-YYYY HH:mm' (India Flood Inventory
+    v3) -- matches frontend HistoricalEventPanel.jsx's parseEventDate."""
+    if not date_str:
+        return None
+    m = re.match(r"^(\d{1,2})-(\d{1,2})-(\d{4})(?:\s+(\d{1,2}):(\d{2}))?", date_str)
+    if not m:
+        return None
+    day, month, year, hour, minute = m.groups()
+    try:
+        return datetime(int(year), int(month), int(day), int(hour or 0), int(minute or 0))
+    except ValueError:
+        return None
 
 
 def _latest_soil_for_region(region_key: str) -> Optional[float]:
@@ -207,3 +246,80 @@ def get_events_map(bbox: Optional[str] = Query(None, description="minLon,minLat,
             ),
         ))
     return entries
+
+
+@router.get("/{event_id}/rainfall-window")
+def get_event_rainfall_window(event_id: str):
+    """GET /events/{event_id}/rainfall-window -- real hourly rainfall (mm)
+    for the 24h immediately before this specific real event's recorded
+    timestamp, sourced from the same ingested ERA5 series used throughout
+    Phase 13 (data/multiregion/weather/rainfall_historical_<region>.json).
+    Returns an empty series (with an honest note) rather than a fabricated
+    one when real coverage doesn't reach this event's date -- the ingestion
+    window covers full monsoon seasons per year, not arbitrary dates."""
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT event_id, hex_id, date, region FROM historical_events WHERE event_id = ?",
+            (event_id,),
+        ).fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail=f"No event {event_id}")
+
+    event_dt = _parse_event_date(row["date"])
+    region_key = TARGET_TO_REGION_KEY.get(row["region"])
+    point_name = _point_name_for_hex(region_key, row["hex_id"]) if region_key else None
+
+    if event_dt is None or region_key is None or point_name is None:
+        return {
+            "event_id": event_id, "event_date": row["date"], "region": row["region"],
+            "point_name": point_name, "series": [],
+            "note": "Could not resolve this event to a real date/terrain point -- no window to show.",
+        }
+
+    slug = REGION_TO_WEATHER_SLUG.get(region_key)
+    path = WEATHER_DIR / f"rainfall_historical_{slug}.json" if slug else None
+    if not path or not path.exists():
+        return {
+            "event_id": event_id, "event_date": row["date"], "region": row["region"],
+            "point_name": point_name, "series": [],
+            "note": f"No real rainfall series file for region '{row['region']}'.",
+        }
+
+    try:
+        data = json.loads(path.read_text())
+        loc = next((l for l in data.get("locations", []) if l.get("location") == point_name), None)
+    except (json.JSONDecodeError, OSError):
+        loc = None
+
+    if loc is None:
+        return {
+            "event_id": event_id, "event_date": row["date"], "region": row["region"],
+            "point_name": point_name, "series": [],
+            "note": f"No real rainfall series for point '{point_name}' in this region's ingested data.",
+        }
+
+    times = loc.get("series", {}).get("time", [])
+    precip = loc.get("series", {}).get("precipitation_mm", [])
+    window_start = event_dt - timedelta(hours=24)
+
+    series = []
+    for t_str, p in zip(times, precip):
+        try:
+            t = datetime.fromisoformat(t_str)
+        except ValueError:
+            continue
+        if window_start <= t <= event_dt:
+            series.append({"time": t.isoformat(), "rainfall_mm": p})
+    series.sort(key=lambda x: x["time"])
+
+    note = (
+        f"Real ERA5-derived hourly rainfall at {point_name}, the {24} hours before this event's "
+        "recorded timestamp -- not a model prediction."
+        if series else
+        f"Real rainfall series exists for {point_name} but has no coverage in the 24h before "
+        f"{row['date']} (ingestion covers full monsoon-season windows per year, not every date)."
+    )
+    return {
+        "event_id": event_id, "event_date": row["date"], "region": row["region"],
+        "point_name": point_name, "series": series, "note": note,
+    }

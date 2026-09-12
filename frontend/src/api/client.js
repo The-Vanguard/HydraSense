@@ -61,6 +61,14 @@ export const getEventsMap = (bbox = null) => {
 };
 
 /**
+ * GET /events/{event_id}/rainfall-window — real hourly ERA5 rainfall for the
+ * 24h before this specific event's recorded timestamp. Empty series (with an
+ * honest note) when real ingestion doesn't cover that date -- never faked.
+ */
+export const getEventRainfallWindow = (eventId) =>
+  api.get(`/events/${eventId}/rainfall-window`).then((r) => r.data);
+
+/**
  * POST /simulate/risk — manual "what-if" scenario, scored by the real
  * trained Wayanad FusionModel. Fires a real ntfy.sh alert on Orange/Red
  * (server-side dedup). Fields are all optional; sparse input gets an

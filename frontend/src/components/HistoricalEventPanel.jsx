@@ -4,7 +4,12 @@
  * dataset): region name, real terrain profile, and the real recorded event
  * list. No live model output for these regions -- see data_source_note.
  */
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer,
+} from 'recharts';
+import { getEventRainfallWindow } from '../api/client';
 
 const TIER_COLORS = {
   Green: '#22c55e', Yellow: '#eab308', Orange: '#f97316', Red: '#ef4444',
@@ -21,20 +26,29 @@ function parseEventDate(d) {
   return Number.isNaN(t) ? null : new Date(t);
 }
 
-// Simple inline SVG sparkline -- no charting library, real data only.
-function TrendSparkline({ points }) {
-  if (points.length < 2) return null;
-  const W = 220, H = 56, PAD = 6;
-  const xs = points.map((_, i) => PAD + (i * (W - 2 * PAD)) / (points.length - 1));
-  const ys = points.map((p) => H - PAD - (p.score / 100) * (H - 2 * PAD));
-  const path = xs.map((x, i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${ys[i].toFixed(1)}`).join(' ');
+function formatHourLabel(iso) {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleTimeString([], { hour: 'numeric', hour12: true }).replace(' ', '');
+  } catch { return ''; }
+}
+
+// Real hourly rainfall (data/multiregion/weather/rainfall_historical_*.json)
+// for the 24h immediately before this event's own recorded timestamp --
+// real ERA5-derived values, not a fabricated or resampled series.
+function RainfallWindowChart({ series }) {
+  if (!series || series.length < 2) return null;
+  const data = series.map((p) => ({ time: formatHourLabel(p.time), rain: p.rainfall_mm }));
   return (
-    <svg width={W} height={H} style={{ display: 'block' }}>
-      <path d={path} fill="none" stroke="#38bdf8" strokeWidth="2" />
-      {xs.map((x, i) => (
-        <circle key={i} cx={x} cy={ys[i]} r={3} fill={TIER_COLORS[points[i].tier] || '#38bdf8'} />
-      ))}
-    </svg>
+    <ResponsiveContainer width="100%" height={110}>
+      <LineChart data={data} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke="#30363d" />
+        <XAxis dataKey="time" tick={{ fontSize: 9, fill: '#8b949e' }} interval="preserveStartEnd" />
+        <YAxis tick={{ fontSize: 9, fill: '#8b949e' }} width={32} label={{ value: 'mm', position: 'insideTopLeft', fontSize: 9, fill: '#8b949e' }} />
+        <Tooltip contentStyle={{ background: '#21262d', border: '1px solid #30363d', fontSize: 11 }} labelStyle={{ color: '#8b949e' }} />
+        <Line type="monotone" dataKey="rain" stroke="#38bdf8" strokeWidth={2} dot={{ r: 2 }} activeDot={{ r: 4 }} />
+      </LineChart>
+    </ResponsiveContainer>
   );
 }
 
@@ -98,23 +112,19 @@ const TERRAIN_FIELDS = [
 ];
 
 export default function HistoricalEventPanel({ selectedEvent, onClose }) {
-  if (!selectedEvent) return null;
+  const [rainfallWindow, setRainfallWindow] = useState(null);
 
-  const { region, lat, lon, events, staticFeatures } = selectedEvent;
-  const listed = events.slice(0, MAX_LISTED);
-  const remaining = events.length - listed.length;
-  const terrainRows = TERRAIN_FIELDS
-    .map(([key, label, unit]) => [key, label, unit, staticFeatures?.[key]])
-    .filter(([, , , v]) => v !== null && v !== undefined);
-  const river = events.find((ev) => ev.chronos_station != null);
-  const fsEntry = events.find((ev) => ev.factor_of_safety != null || ev.factor_of_safety_note);
-
+  const events = selectedEvent?.events || [];
+  const staticFeatures = selectedEvent?.staticFeatures;
   const allScored = events
     .filter((ev) => ev.tabpfn_risk_score != null)
     .map((ev) => ({ ev, d: parseEventDate(ev.date) }))
     .filter((x) => x.d)
     .sort((a, b) => a.d - b.d)
-    .map((x) => ({ score: x.ev.tabpfn_risk_score, tier: x.ev.tabpfn_tier, date: x.ev.date, year: x.d.getFullYear() }));
+    .map((x) => ({
+      event_id: x.ev.event_id, score: x.ev.tabpfn_risk_score, tier: x.ev.tabpfn_tier,
+      date: x.ev.date, year: x.d.getFullYear(),
+    }));
   // Previous-year data dropped entirely -- both the headline score and the
   // trend only ever look at the most recent year present in this location's
   // real dated data. Older years never show anywhere here.
@@ -123,6 +133,27 @@ export default function HistoricalEventPanel({ selectedEvent, onClose }) {
   const topScored = scoredChrono.length
     ? scoredChrono.reduce((a, b) => (b.score > a.score ? b : a))
     : null;
+
+  useEffect(() => {
+    setRainfallWindow(null);
+    if (!topScored?.event_id) return;
+    let cancelled = false;
+    getEventRainfallWindow(topScored.event_id)
+      .then((data) => { if (!cancelled) setRainfallWindow(data); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [topScored?.event_id]);
+
+  if (!selectedEvent) return null;
+
+  const { region, lat, lon } = selectedEvent;
+  const listed = events.slice(0, MAX_LISTED);
+  const remaining = events.length - listed.length;
+  const terrainRows = TERRAIN_FIELDS
+    .map(([key, label, unit]) => [key, label, unit, staticFeatures?.[key]])
+    .filter(([, , , v]) => v !== null && v !== undefined);
+  const river = events.find((ev) => ev.chronos_station != null);
+  const fsEntry = events.find((ev) => ev.factor_of_safety != null || ev.factor_of_safety_note);
 
   return (
     <div className="panel" style={{ borderColor: '#38bdf8' }}>
@@ -182,12 +213,17 @@ export default function HistoricalEventPanel({ selectedEvent, onClose }) {
               {topScored.date}
             </span>
           </div>
-          {scoredChrono.length > 1 && (
-            <div>
+          {rainfallWindow?.series?.length > 1 && (
+            <div style={{ marginTop: 4 }}>
               <div style={{ fontSize: 10, color: '#8b949e', marginBottom: 2 }}>
-                Score trend across {scoredChrono.length} real dated events in {latestYear} (most recent year on record)
+                Rainfall, 24h before this event ({rainfallWindow.point_name})
               </div>
-              <TrendSparkline points={scoredChrono} />
+              <RainfallWindowChart series={rainfallWindow.series} />
+            </div>
+          )}
+          {rainfallWindow && (!rainfallWindow.series || rainfallWindow.series.length <= 1) && (
+            <div style={{ fontSize: 9, color: '#6e7681', marginTop: 4, lineHeight: 1.4 }}>
+              {rainfallWindow.note}
             </div>
           )}
         </div>
