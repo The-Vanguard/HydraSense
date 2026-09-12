@@ -55,17 +55,29 @@ FEATURE_COLS = [
     "river_water_level_m", "river_level_change_m_per_hr",
 ]
 
-CAVEAT_TEXT = (
-    "Computed by TabPFN (pretrained tabular classifier) on the real "
-    "multiregion dataset. KNOWN LIMITATION, disclosed not hidden: negative "
-    "training samples are 0% covered on rainfall/soil features by "
-    "construction, so the model may partly reflect that pattern rather than "
-    "pure flood physics. Missing feature values were median-imputed for "
-    "model input only (see manifest); do not treat this score with the same "
-    "confidence as Wayanad's live XGBoost pilot."
-)
-
 TARGET_TO_REGION_KEY = {target_loc: key for key, (target_loc, _default_pt) in REGIONS.items()}
+
+
+def build_caveat_text(full_df: pd.DataFrame) -> str:
+    """Caveat text states MEASURED negative-sample coverage, not a fixed
+    claim -- after widening ingest_rainfall_historical_multiregion.py /
+    ingest_soil_multiregion.py's fetch windows (previously 0% covered by
+    construction), the real number now varies by feature, so hardcoding
+    '0% covered' would be actively false. Recomputed each run."""
+    neg = full_df[full_df["sample_type"] == "negative"]
+    rain_pct = round(neg["rainfall_1h"].notna().mean() * 100, 1) if len(neg) else 0.0
+    soil_pct = round(neg["soil_saturation_ratio"].notna().mean() * 100, 1) if len(neg) else 0.0
+    return (
+        "Computed by TabPFN (pretrained tabular classifier) on the real "
+        f"multiregion dataset. Negative (non-event) training samples are "
+        f"{rain_pct}% covered on real rainfall_1h and {soil_pct}% covered on "
+        "real soil_saturation_ratio (measured, not assumed -- rainfall gap "
+        "closed by widening the ingestion windows; remaining soil nulls are "
+        "a real NASA POWER pre-2001 coverage limit, not fabricated). "
+        "Missing feature values were median-imputed for model input only "
+        "(see manifest); do not treat this score with the same confidence "
+        "as Wayanad's live XGBoost pilot."
+    )
 
 
 def main():
@@ -75,6 +87,9 @@ def main():
     val_df = pd.read_csv(VAL_CSV)
     full_df = pd.concat([train_df, val_df], ignore_index=True)
     print(f"Loaded {len(full_df)} total rows ({len(train_df)} train + {len(val_df)} val)")
+
+    CAVEAT_TEXT = build_caveat_text(full_df)
+    print(f"Caveat (measured): {CAVEAT_TEXT}")
 
     X_full = full_df[FEATURE_COLS].copy()
     medians = X_full.median(numeric_only=True)

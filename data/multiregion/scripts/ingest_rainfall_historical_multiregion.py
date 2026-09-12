@@ -131,11 +131,8 @@ def load_event_dates(region: str) -> list[date]:
     return [pd.Timestamp(d).date() for d in dates]
 
 
-def merged_windows(dates: list[date]) -> list[tuple[date, date]]:
-    raw = sorted([
-        (d - timedelta(days=WINDOW_DAYS_BEFORE), d + timedelta(days=WINDOW_DAYS_AFTER))
-        for d in dates
-    ])
+def merge_ranges(raw: list[tuple[date, date]]) -> list[tuple[date, date]]:
+    raw = sorted(raw)
     merged: list[tuple[date, date]] = []
     for s, e in raw:
         if merged and s <= merged[-1][1] + timedelta(days=1):
@@ -143,6 +140,26 @@ def merged_windows(dates: list[date]) -> list[tuple[date, date]]:
         else:
             merged.append((s, e))
     return merged
+
+
+def merged_windows(dates: list[date]) -> list[tuple[date, date]]:
+    """Real event-date windows (+/- WINDOW_DAYS) PLUS a full June-November
+    window for every year in the events' real date range -- so the negative
+    (non-event) samples build_event_centered_samples.py draws from that same
+    year range and monsoon-month set (see its candidate-generation loop)
+    land on dates this script actually fetched, instead of the 0%-covered
+    gap flagged in run_tabpfn_inference.py's caveat. Not a scope change --
+    same regions, same years already implied by the real event data; just
+    fetching the whole season instead of narrow slivers around each event."""
+    event_windows = [
+        (d - timedelta(days=WINDOW_DAYS_BEFORE), d + timedelta(days=WINDOW_DAYS_AFTER))
+        for d in dates
+    ]
+    year_min, year_max = dates[0].year, dates[-1].year
+    monsoon_windows = [
+        (date(y, 6, 1), date(y, 11, 30)) for y in range(year_min, year_max + 1)
+    ]
+    return merge_ranges(event_windows + monsoon_windows)
 
 
 def fetch_archive_window(lat: float, lon: float, start: date, end: date) -> dict:

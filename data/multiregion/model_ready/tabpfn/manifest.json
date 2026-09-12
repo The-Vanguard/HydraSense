@@ -41,7 +41,7 @@
   "val_events": 100,
   "split_method": "grouped by event_id (80/20), negatives split independently by row",
   "risk_score_formula_from_predict_proba": "risk_score = P(Green)*15 + P(Yellow)*42 + P(Orange)*64 + P(Red)*88",
-  "known_data_quality_issue": "Negative rows (sample_type=negative) are 0% covered on rainfall_1h and soil_saturation_ratio by construction (Step 5). A model trained on this file as-is may learn feature-nullness as its decision boundary rather than real flood physics. This is documented, not fixed, here -- the fix (simulated baseline values for negatives) is deferred pending explicit user go-ahead.",
+  "known_data_quality_issue": "Negative rows (sample_type=negative) are 100.0% covered on real rainfall_1h and 41.8% covered on real soil_saturation_ratio, measured directly from this file (not assumed). Rainfall gap closed by widening ingest_rainfall_historical_multiregion.py's fetch windows to the full real monsoon-season span per year, not just narrow event windows. Remaining soil nulls are a real NASA POWER coverage limit (data starts 2001-01-01; negatives before that date are genuinely unavailable, not fabricated) -- median-imputed for model input only, same as any other null.",
   "river_discharge_excluded": "100% null at every location -- confirmed unavailable, not included as a feature.",
   "how_to_run_tabpfn": {
     "install": "pip install tabpfn",

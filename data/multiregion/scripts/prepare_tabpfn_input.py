@@ -15,11 +15,12 @@ event_id (negatives, which have event_id=None, are split independently by
 row since they aren't part of any event group).
 
 HONEST DATA-QUALITY NOTE (carried into the manifest, not hidden): negative
-rows are 0% covered on rainfall_1h/soil_saturation_ratio by construction
-(flagged in Step 5 and in this session's prior turns). Training on this
-file as-is risks the model learning "feature is null" as its decision rule
-instead of real flood physics -- documented here, not fixed here, since the
-simulation step to address it is explicitly deferred to the user's call.
+rows previously had 0% real rainfall/soil coverage because the ingestion
+scripts only fetched narrow windows around real event dates. Fixed by
+widening ingest_rainfall_historical_multiregion.py / ingest_soil_multiregion.py
+to fetch the full real monsoon-season span per year -- coverage is now
+measured (not assumed) below at manifest-write time. Remaining soil nulls
+are a real NASA POWER pre-2001 coverage limit, not a fetch failure.
 
 river_discharge is dropped entirely -- 100% null, confirmed unavailable at
 every GUARDIAN station checked. Including an all-null column would be
@@ -87,6 +88,13 @@ def main():
         n_null_feats = out[FEATURE_COLS].isna().mean().mean() * 100
         print(f"  {name}.csv -> {out_path}  ({len(out)} rows, {n_null_feats:.1f}% avg feature nullness)")
 
+    # Measured (not assumed) real coverage on negative rows specifically --
+    # this is what the TabPFN/CLAUDE.md caveat text should actually say,
+    # after the rainfall/soil backfill (widened ingestion windows).
+    neg_df = df[df["sample_type"] == "negative"]
+    rain_cov_pct = round(neg_df["rainfall_1h"].notna().mean() * 100, 1) if len(neg_df) else 0.0
+    soil_cov_pct = round(neg_df["soil_saturation_ratio"].notna().mean() * 100, 1) if len(neg_df) else 0.0
+
     manifest = {
         "feature_columns": FEATURE_COLS,
         "target_column": TARGET_COL,
@@ -97,11 +105,14 @@ def main():
         "split_method": "grouped by event_id (80/20), negatives split independently by row",
         "risk_score_formula_from_predict_proba": "risk_score = P(Green)*15 + P(Yellow)*42 + P(Orange)*64 + P(Red)*88",
         "known_data_quality_issue": (
-            "Negative rows (sample_type=negative) are 0% covered on rainfall_1h and "
-            "soil_saturation_ratio by construction (Step 5). A model trained on this file "
-            "as-is may learn feature-nullness as its decision boundary rather than real "
-            "flood physics. This is documented, not fixed, here -- the fix (simulated "
-            "baseline values for negatives) is deferred pending explicit user go-ahead."
+            f"Negative rows (sample_type=negative) are {rain_cov_pct}% covered on real "
+            f"rainfall_1h and {soil_cov_pct}% covered on real soil_saturation_ratio, "
+            "measured directly from this file (not assumed). Rainfall gap closed by "
+            "widening ingest_rainfall_historical_multiregion.py's fetch windows to the "
+            "full real monsoon-season span per year, not just narrow event windows. "
+            "Remaining soil nulls are a real NASA POWER coverage limit (data starts "
+            "2001-01-01; negatives before that date are genuinely unavailable, not "
+            "fabricated) -- median-imputed for model input only, same as any other null."
         ),
         "river_discharge_excluded": "100% null at every location -- confirmed unavailable, not included as a feature.",
         "how_to_run_tabpfn": {
