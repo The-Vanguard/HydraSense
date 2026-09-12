@@ -15,6 +15,7 @@ from fastapi import APIRouter, Query
 from backend.database import get_db
 from backend.models import EventMapEntry
 from backend.seed_multiregion import REGIONS  # {region_key: (target_location, default_point)}
+from ml.models.factor_of_safety import compute_factor_of_safety
 
 import h3
 
@@ -45,6 +46,50 @@ REGION_TO_CHRONOS_ITEM_ID = {
     "Darjeeling":  "Melli",
     "Dhemaji":     "Dibrugarh",
 }
+
+# region_key -> soil_moisture_<slug>.json filename (data/multiregion/soil/),
+# per ingest_soil_multiregion.py's real NASA POWER GWETROOT output.
+SOIL_DIR = ROOT / "data" / "multiregion" / "soil"
+REGION_TO_SOIL_SLUG = {
+    "Idukki":      "idukki",
+    "Rudraprayag": "rudraprayag",
+    "Chamoli":     "chamoli",
+    "Ribhoi":      "ribhoi",
+    "Nilgiris":    "nilgiris",
+    "Sikkim":      "sikkim_mangan",
+    "Darjeeling":  "darjeeling_kalimpong",
+    "Kullu":       "kullu",
+    "Dhemaji":     "dhemaji",
+}
+
+_soil_cache: dict[str, Optional[float]] = {}
+
+
+def _latest_soil_for_region(region_key: str) -> Optional[float]:
+    """Latest real NASA POWER GWETROOT reading (soil_saturation_ratio, SRS
+    §10.1: used directly, never derived) for this region -- all named points
+    in a region share one ~50km MERRA-2 grid cell (see the json's own
+    resolution_note), so any one location's series is representative.
+    Returns None if the file/series is missing -- never fabricated."""
+    if region_key in _soil_cache:
+        return _soil_cache[region_key]
+    slug = REGION_TO_SOIL_SLUG.get(region_key)
+    value = None
+    if slug:
+        path = SOIL_DIR / f"soil_moisture_{slug}.json"
+        if path.exists():
+            try:
+                data = json.loads(path.read_text())
+                locations = data.get("locations", [])
+                if locations:
+                    series = locations[0].get("gwetroot_hourly", {})
+                    if series:
+                        latest_key = max(series.keys())
+                        value = series[latest_key]
+            except (json.JSONDecodeError, OSError):
+                value = None
+    _soil_cache[region_key] = value
+    return value
 
 
 def _load_chronos_predictions() -> dict:
@@ -120,6 +165,15 @@ def get_events_map(bbox: Optional[str] = Query(None, description="minLon,minLat,
         item_id = REGION_TO_CHRONOS_ITEM_ID.get(region_key)
         river = chronos.get(item_id) if item_id else None
 
+        # Real Phase 5 factor-of-safety (SRS §10.1: beta=slope_deg,
+        # m=soil_saturation_ratio, no Monte Carlo) using this point's real
+        # SRTM slope + the region's latest real GWETROOT reading. NOT this
+        # historical event's own at-disaster soil conditions -- a present-day
+        # estimate at a real terrain point, always disclosed as such.
+        slope_deg = static_features.get("slope_deg") if static_features else None
+        soil_val = _latest_soil_for_region(region_key) if region_key else None
+        fs = compute_factor_of_safety(slope_deg, soil_val)
+
         entries.append(EventMapEntry(
             event_id=row["event_id"],
             hex_id=row["hex_id"],
@@ -142,5 +196,14 @@ def get_events_map(bbox: Optional[str] = Query(None, description="minLon,minLat,
             chronos_forecast_high_m=river["forecast_high_m"] if river else None,
             chronos_prediction_length_steps=river["prediction_length_steps"] if river else None,
             chronos_caveat=river["caveat"] if river else None,
+            factor_of_safety=fs["factor_of_safety"],
+            factor_of_safety_min=fs["factor_of_safety_min"],
+            factor_of_safety_max=fs["factor_of_safety_max"],
+            factor_of_safety_note=(
+                "Present-day estimate: this point's real slope + the region's latest real "
+                "NASA POWER soil reading -- not this historical event's own at-disaster conditions."
+                if not fs["missing_inputs"] else
+                f"Factor of safety unavailable -- missing real: {', '.join(fs['missing_inputs'])}"
+            ),
         ))
     return entries

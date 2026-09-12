@@ -117,6 +117,14 @@ class EventMapEntry(BaseModel):
     chronos_forecast_high_m:     Optional[List[float]] = None
     chronos_prediction_length_steps: Optional[int] = None
     chronos_caveat:         Optional[str] = None
+    # Real Phase 5 factor-of-safety (SRS §10.1) computed from this point's
+    # real slope + the region's latest real soil reading -- see
+    # factor_of_safety_note for what it is/isn't (never this historical
+    # event's own at-disaster soil conditions).
+    factor_of_safety:       Optional[float] = None
+    factor_of_safety_min:   Optional[float] = None
+    factor_of_safety_max:   Optional[float] = None
+    factor_of_safety_note:  Optional[str] = None
 
 
 # ---------------------------------------------------------------------------

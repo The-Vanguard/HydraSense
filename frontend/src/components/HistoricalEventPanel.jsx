@@ -6,6 +6,65 @@
  */
 import React from 'react';
 
+const TIER_COLORS = {
+  Green: '#22c55e', Yellow: '#eab308', Orange: '#f97316', Red: '#ef4444',
+};
+
+// Real dataset date format is "DD-MM-YYYY HH:mm" (India Flood Inventory v3) --
+// plain Date.parse misreads this as MM-DD, so events sort wrong chronologically
+// unless parsed explicitly here.
+function parseEventDate(d) {
+  if (!d) return null;
+  const m = /^(\d{1,2})-(\d{1,2})-(\d{4})/.exec(d);
+  if (m) return new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+  const t = Date.parse(d);
+  return Number.isNaN(t) ? null : new Date(t);
+}
+
+// Simple inline SVG sparkline -- no charting library, real data only.
+function TrendSparkline({ points }) {
+  if (points.length < 2) return null;
+  const W = 220, H = 56, PAD = 6;
+  const xs = points.map((_, i) => PAD + (i * (W - 2 * PAD)) / (points.length - 1));
+  const ys = points.map((p) => H - PAD - (p.score / 100) * (H - 2 * PAD));
+  const path = xs.map((x, i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${ys[i].toFixed(1)}`).join(' ');
+  return (
+    <svg width={W} height={H} style={{ display: 'block' }}>
+      <path d={path} fill="none" stroke="#38bdf8" strokeWidth="2" />
+      {xs.map((x, i) => (
+        <circle key={i} cx={x} cy={ys[i]} r={3} fill={TIER_COLORS[points[i].tier] || '#38bdf8'} />
+      ))}
+    </svg>
+  );
+}
+
+// Real Chronos-Bolt 1-day (hourly-step) river-level forecast, with its real
+// low/high quantile band -- no fabricated smoothing, straight from
+// data/multiregion/model_ready/chronos/predictions.json.
+function RiverTrendChart({ median, low, high }) {
+  if (!median || median.length < 2) return null;
+  const W = 220, H = 64, PAD = 6;
+  const all = [...median, ...(low || []), ...(high || [])];
+  const min = Math.min(...all), max = Math.max(...all);
+  const span = max - min || 1;
+  const n = median.length;
+  const x = (i) => PAD + (i * (W - 2 * PAD)) / (n - 1);
+  const y = (v) => H - PAD - ((v - min) / span) * (H - 2 * PAD);
+  const linePath = (vals) => vals.map((v, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+  let bandPath = null;
+  if (low && high && low.length === n && high.length === n) {
+    const top = high.map((v, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+    const bottom = low.map((v, i) => `L${x(n - 1 - i).toFixed(1)},${y(low[n - 1 - i]).toFixed(1)}`).join(' ');
+    bandPath = `${top} ${bottom} Z`;
+  }
+  return (
+    <svg width={W} height={H} style={{ display: 'block' }}>
+      {bandPath && <path d={bandPath} fill="#38bdf8" opacity={0.15} stroke="none" />}
+      <path d={linePath(median)} fill="none" stroke="#38bdf8" strokeWidth="2" />
+    </svg>
+  );
+}
+
 const TYPE_LABELS = {
   flash_flood:    'Flash flood',
   riverine_flood: 'Riverine flood',
@@ -47,6 +106,23 @@ export default function HistoricalEventPanel({ selectedEvent, onClose }) {
   const terrainRows = TERRAIN_FIELDS
     .map(([key, label, unit]) => [key, label, unit, staticFeatures?.[key]])
     .filter(([, , , v]) => v !== null && v !== undefined);
+  const river = events.find((ev) => ev.chronos_station != null);
+  const fsEntry = events.find((ev) => ev.factor_of_safety != null || ev.factor_of_safety_note);
+
+  const allScored = events
+    .filter((ev) => ev.tabpfn_risk_score != null)
+    .map((ev) => ({ ev, d: parseEventDate(ev.date) }))
+    .filter((x) => x.d)
+    .sort((a, b) => a.d - b.d)
+    .map((x) => ({ score: x.ev.tabpfn_risk_score, tier: x.ev.tabpfn_tier, date: x.ev.date, year: x.d.getFullYear() }));
+  // Previous-year data dropped entirely -- both the headline score and the
+  // trend only ever look at the most recent year present in this location's
+  // real dated data. Older years never show anywhere here.
+  const latestYear = allScored.length ? Math.max(...allScored.map((s) => s.year)) : null;
+  const scoredChrono = allScored.filter((s) => s.year === latestYear);
+  const topScored = scoredChrono.length
+    ? scoredChrono.reduce((a, b) => (b.score > a.score ? b : a))
+    : null;
 
   return (
     <div className="panel" style={{ borderColor: '#38bdf8' }}>
@@ -80,6 +156,100 @@ export default function HistoricalEventPanel({ selectedEvent, onClose }) {
         <strong>{events.length}</strong> real recorded event{events.length === 1 ? '' : 's'}
         {' '}(India Flood Inventory v3, IMD-sourced)
       </div>
+
+      {topScored && (
+        <div style={{
+          marginBottom: 10, borderRadius: 6, padding: '10px 12px',
+          background: `${TIER_COLORS[topScored.tier] || '#38bdf8'}1a`,
+          border: `1px solid ${TIER_COLORS[topScored.tier] || '#38bdf8'}`,
+        }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: '#8b949e', letterSpacing: 0.5, marginBottom: 2 }}>
+            HIGHEST TabPFN SCORE IN {latestYear} (MOST RECENT YEAR ON RECORD)
+          </div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
+            <span style={{ fontSize: 30, fontWeight: 800, color: TIER_COLORS[topScored.tier] || '#38bdf8' }}>
+              {Math.round(topScored.score)}
+            </span>
+            <span style={{ fontSize: 13, color: '#8b949e' }}>/100</span>
+            <span style={{
+              marginLeft: 4, fontSize: 11, fontWeight: 700, borderRadius: 4, padding: '2px 8px',
+              color: TIER_COLORS[topScored.tier] || '#8b949e',
+              border: `1px solid ${TIER_COLORS[topScored.tier] || '#8b949e'}`,
+            }}>
+              {topScored.tier}
+            </span>
+            <span style={{ fontSize: 10, color: '#6e7681', marginLeft: 'auto' }}>
+              {topScored.date}
+            </span>
+          </div>
+          {scoredChrono.length > 1 && (
+            <div>
+              <div style={{ fontSize: 10, color: '#8b949e', marginBottom: 2 }}>
+                Score trend across {scoredChrono.length} real dated events in {latestYear} (most recent year on record)
+              </div>
+              <TrendSparkline points={scoredChrono} />
+            </div>
+          )}
+        </div>
+      )}
+
+      {river && (
+        <div style={{ marginBottom: 10, borderTop: '1px solid #30363d', paddingTop: 8 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: '#8b949e', marginBottom: 4, letterSpacing: 0.5 }}>
+            RIVER LEVEL FORECAST — {river.chronos_station} (Chronos-Bolt, pretrained)
+          </div>
+          <div style={{ fontSize: 11, color: '#c9d1d9', marginBottom: 6 }}>
+            Lead time: <strong>{river.chronos_prediction_length_steps || river.chronos_forecast_median_m.length}h</strong> ahead (hourly steps, zero-shot)
+          </div>
+          <div style={{ fontSize: 10, color: '#8b949e', marginBottom: 2 }}>
+            1-day risk trend (river level, median ± real forecast band)
+          </div>
+          <RiverTrendChart
+            median={river.chronos_forecast_median_m}
+            low={river.chronos_forecast_low_m}
+            high={river.chronos_forecast_high_m}
+          />
+          <div style={{
+            fontSize: 10, color: '#d29922',
+            border: '1px solid #92640a', background: 'rgba(146,100,10,0.12)',
+            borderRadius: 4, padding: '5px 7px', lineHeight: 1.4, marginTop: 4,
+          }}>
+            {river.chronos_caveat}
+          </div>
+        </div>
+      )}
+
+      {fsEntry && (
+        <div style={{ marginBottom: 10, borderTop: '1px solid #30363d', paddingTop: 8 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: '#8b949e', marginBottom: 4, letterSpacing: 0.5 }}>
+            FACTOR OF SAFETY (real, SRS §10.1)
+          </div>
+          {fsEntry.factor_of_safety != null ? (
+            <>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 11 }}>
+                <span style={{ color: '#8b949e' }}>FS</span>
+                <span style={{
+                  fontWeight: 700,
+                  color: fsEntry.factor_of_safety < 1.0 ? '#ef4444' : fsEntry.factor_of_safety < 1.3 ? '#f97316' : '#22c55e',
+                }}>
+                  {fsEntry.factor_of_safety.toFixed(2)}
+                </span>
+              </div>
+              {fsEntry.factor_of_safety_min != null && fsEntry.factor_of_safety_max != null && (
+                <div style={{ fontSize: 9, color: '#484f58', marginBottom: 4 }}>
+                  Band: {fsEntry.factor_of_safety_min.toFixed(2)} – {fsEntry.factor_of_safety_max.toFixed(2)}
+                  {fsEntry.factor_of_safety_min < 1.0 && fsEntry.factor_of_safety_max >= 1.0 && (
+                    <span style={{ color: '#ef4444' }}> · straddles failure threshold</span>
+                  )}
+                </div>
+              )}
+            </>
+          ) : null}
+          <div style={{ fontSize: 9, color: '#6e7681', lineHeight: 1.4 }}>
+            {fsEntry.factor_of_safety_note}
+          </div>
+        </div>
+      )}
 
       {terrainRows.length > 0 && (
         <div style={{ marginBottom: 10, borderTop: '1px solid #30363d', paddingTop: 8 }}>
