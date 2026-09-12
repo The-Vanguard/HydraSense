@@ -412,7 +412,10 @@ export default function HexMap({
           marker.on('click', (e) => {
             L.DomEvent.stopPropagation(e);
             if (onEventSelectRef.current) {
-              onEventSelectRef.current({ region: pt.region, lat: pt.lat, lon: pt.lon, events: sorted });
+              onEventSelectRef.current({
+                region: pt.region, lat: pt.lat, lon: pt.lon, events: sorted,
+                staticFeatures: latest.static_features || null,
+              });
             }
           });
         });

@@ -7,6 +7,7 @@ output -- every entry carries data_source_note saying so explicitly
 (CLAUDE.md: external-data-only content must be visibly labeled).
 """
 from __future__ import annotations
+import json
 from typing import List, Optional
 
 from fastapi import APIRouter, Query
@@ -23,10 +24,11 @@ def get_events_map(bbox: Optional[str] = Query(None, description="minLon,minLat,
     """GET /events/map?bbox=... -- all real historical events with a resolved hex."""
     with get_db() as conn:
         rows = conn.execute(
-            """SELECT event_id, hex_id, date, type, severity, source,
-                      coordinate_precision, region
-               FROM historical_events
-               WHERE hex_id IS NOT NULL"""
+            """SELECT he.event_id, he.hex_id, he.date, he.type, he.severity, he.source,
+                      he.coordinate_precision, he.region, h.static_features
+               FROM historical_events he
+               LEFT JOIN hexes h ON he.hex_id = h.hex_id
+               WHERE he.hex_id IS NOT NULL"""
         ).fetchall()
 
     entries = []
@@ -42,6 +44,10 @@ def get_events_map(bbox: Optional[str] = Query(None, description="minLon,minLat,
                     continue
             except Exception:
                 pass
+        try:
+            static_features = json.loads(row["static_features"]) if row["static_features"] else None
+        except (json.JSONDecodeError, TypeError):
+            static_features = None
         entries.append(EventMapEntry(
             event_id=row["event_id"],
             hex_id=row["hex_id"],
@@ -52,5 +58,6 @@ def get_events_map(bbox: Optional[str] = Query(None, description="minLon,minLat,
             severity=row["severity"],
             source=row["source"],
             coordinate_precision=row["coordinate_precision"] or "village-level",
+            static_features=static_features,
         ))
     return entries

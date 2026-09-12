@@ -94,6 +94,10 @@ class EventMapEntry(BaseModel):
     source:                 Optional[str] = None
     coordinate_precision:   str = "village-level"
     data_source_note:       str = "Historical event, sourced -- not a live model output"
+    # Real SRTM30m+pysheds terrain, from hexes.static_features -- same for
+    # every event at this hex. No risk_score/tier here: that needs a trained
+    # model this dataset doesn't have (see backend/seed_multiregion.py).
+    static_features:       Optional[dict] = None
 
 
 # ---------------------------------------------------------------------------
