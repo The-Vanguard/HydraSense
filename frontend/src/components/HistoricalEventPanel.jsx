@@ -54,6 +54,7 @@ export default function HistoricalEventPanel({ selectedEvent, onClose }) {
     .map(([key, label, unit]) => [key, label, unit, staticFeatures?.[key]])
     .filter(([, , , v]) => v !== null && v !== undefined);
   const anyTabpfn = events.find((ev) => ev.tabpfn_risk_score != null);
+  const river = events.find((ev) => ev.chronos_station != null);
 
   return (
     <div className="panel" style={{ borderColor: '#38bdf8' }}>
@@ -114,6 +115,28 @@ export default function HistoricalEventPanel({ selectedEvent, onClose }) {
               </span>
             </div>
           ))}
+        </div>
+      )}
+
+      {river && (
+        <div style={{ marginBottom: 10, borderTop: '1px solid #30363d', paddingTop: 8 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: '#8b949e', marginBottom: 4, letterSpacing: 0.5 }}>
+            RIVER LEVEL FORECAST — {river.chronos_station} (Chronos-Bolt, pretrained)
+          </div>
+          <div style={{ fontSize: 11, color: '#c9d1d9', marginBottom: 4 }}>
+            Last real reading: <strong>{river.chronos_last_observed_value_m} m</strong>
+            {' '}at {new Date(river.chronos_last_observed_time).toLocaleString()}
+          </div>
+          <div style={{ fontSize: 11, color: '#c9d1d9', marginBottom: 6 }}>
+            Next-6h median forecast: {river.chronos_forecast_median_m.slice(0, 6).map((v) => v.toFixed(2)).join(' → ')} m
+          </div>
+          <div style={{
+            fontSize: 10, color: '#fbbf24',
+            border: '1px solid #92640a', background: 'rgba(146,100,10,0.12)',
+            borderRadius: 4, padding: '5px 7px', lineHeight: 1.4,
+          }}>
+            ⚠ {river.chronos_caveat}
+          </div>
         </div>
       )}
 

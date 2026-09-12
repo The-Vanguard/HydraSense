@@ -105,6 +105,14 @@ class EventMapEntry(BaseModel):
     tabpfn_risk_score:      Optional[float] = None
     tabpfn_tier:            Optional[str] = None
     tabpfn_caveat:          Optional[str] = None
+    # Real Chronos-Bolt zero-shot forecast (Step 6b), continuing from the
+    # nearest real GUARDIAN river station's last real observed reading --
+    # NOT a live forecast for the current moment (see chronos_caveat).
+    chronos_station:        Optional[str] = None
+    chronos_last_observed_time:  Optional[str] = None
+    chronos_last_observed_value_m: Optional[float] = None
+    chronos_forecast_median_m:   Optional[List[float]] = None
+    chronos_caveat:         Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
