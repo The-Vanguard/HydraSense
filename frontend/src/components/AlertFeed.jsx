@@ -33,7 +33,7 @@ function AlertItem({ item }) {
               color: item.tier === 'Red' ? '#ef4444' : '#f97316',
               textTransform: 'uppercase',
             }}>
-              ⚠ CAP Alert — {item.tier}
+              CAP Alert — {item.tier}
             </span>
           )}
           <div style={{ marginTop: 3, fontSize: 12 }}>{item.message}</div>

@@ -56,6 +56,11 @@ html, body, #root {
   overflow: hidden;
 }
 
+/* No hex/pin/event selected yet -- map fills the full width, no empty sidebar */
+.app-body.no-sidebar {
+  grid-template-columns: 1fr;
+}
+
 .sidebar {
   display: flex;
   flex-direction: column;

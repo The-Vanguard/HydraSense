@@ -6,7 +6,8 @@
  * NOT a live/current score. Its caveat must always render alongside it
  * (CLAUDE.md labeling rule: never hide a known limitation).
  */
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { getTabpfnImportance } from '../api/client';
 
 const TIER_COLORS = {
   Green: '#22c55e', Yellow: '#eab308', Orange: '#f97316', Red: '#ef4444',
@@ -30,6 +31,46 @@ const TYPE_COLORS = {
 
 const MAX_LISTED = 15;
 
+// Real dataset date format is "DD-MM-YYYY HH:mm" (India Flood Inventory v3) --
+// plain Date.parse misreads this as MM-DD, so events sort wrong chronologically
+// unless parsed explicitly here.
+function parseEventDate(d) {
+  if (!d) return null;
+  const m = /^(\d{1,2})-(\d{1,2})-(\d{4})/.exec(d);
+  if (m) return new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+  const t = Date.parse(d);
+  return Number.isNaN(t) ? null : new Date(t);
+}
+
+const FEATURE_LABELS = {
+  elevation: 'Elevation', slope_deg: 'Slope', aspect: 'Aspect',
+  TWI: 'Topographic wetness index', TRI: 'Terrain roughness index',
+  distance_to_river_m: 'Distance to river', flow_accumulation_cells: 'Flow accumulation',
+  drainage_density_km_per_km2: 'Drainage density', cwc_danger_level_m: 'CWC danger level',
+  rainfall_1h: 'Rainfall (1h)', rainfall_3h: 'Rainfall (3h)', rainfall_6h: 'Rainfall (6h)',
+  rainfall_24h: 'Rainfall (24h)', rainfall_72h_antecedent: 'Rainfall (72h antecedent)',
+  antecedent_precipitation_index: 'Antecedent precipitation index',
+  rain_intensity_mm_hr: 'Rain intensity', soil_saturation_ratio: 'Soil saturation ratio',
+  river_water_level_m: 'River water level', river_level_change_m_per_hr: 'River level change rate',
+};
+
+// Simple inline SVG sparkline -- no charting library, real data only.
+function TrendSparkline({ points }) {
+  if (points.length < 2) return null;
+  const W = 220, H = 56, PAD = 6;
+  const xs = points.map((_, i) => PAD + (i * (W - 2 * PAD)) / (points.length - 1));
+  const ys = points.map((p) => H - PAD - (p.score / 100) * (H - 2 * PAD));
+  const path = xs.map((x, i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${ys[i].toFixed(1)}`).join(' ');
+  return (
+    <svg width={W} height={H} style={{ display: 'block' }}>
+      <path d={path} fill="none" stroke="#38bdf8" strokeWidth="2" />
+      {xs.map((x, i) => (
+        <circle key={i} cx={x} cy={ys[i]} r={3} fill={TIER_COLORS[points[i].tier] || '#38bdf8'} />
+      ))}
+    </svg>
+  );
+}
+
 // Real SRTM30m+pysheds terrain fields (data/multiregion/events/terrain_features_points.json)
 // -- label + unit only, no computed/derived risk value.
 const TERRAIN_FIELDS = [
@@ -45,6 +86,16 @@ const TERRAIN_FIELDS = [
 ];
 
 export default function HistoricalEventPanel({ selectedEvent, onClose }) {
+  const [importance, setImportance] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getTabpfnImportance()
+      .then((data) => { if (!cancelled && data?.features) setImportance(data); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
   if (!selectedEvent) return null;
 
   const { region, lat, lon, events, staticFeatures } = selectedEvent;
@@ -56,10 +107,20 @@ export default function HistoricalEventPanel({ selectedEvent, onClose }) {
   const anyTabpfn = events.find((ev) => ev.tabpfn_risk_score != null);
   const river = events.find((ev) => ev.chronos_station != null);
 
+  const scoredChrono = events
+    .filter((ev) => ev.tabpfn_risk_score != null)
+    .map((ev) => ({ ev, d: parseEventDate(ev.date) }))
+    .filter((x) => x.d)
+    .sort((a, b) => a.d - b.d)
+    .map((x) => ({ score: x.ev.tabpfn_risk_score, tier: x.ev.tabpfn_tier, date: x.ev.date }));
+  const topScored = scoredChrono.length
+    ? scoredChrono.reduce((a, b) => (b.score > a.score ? b : a))
+    : null;
+
   return (
     <div className="panel" style={{ borderColor: '#38bdf8' }}>
       <div className="panel-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span>📌 {region}</span>
+        <span>{region}</span>
         <button
           onClick={onClose}
           style={{
@@ -89,13 +150,39 @@ export default function HistoricalEventPanel({ selectedEvent, onClose }) {
         {' '}(India Flood Inventory v3, IMD-sourced)
       </div>
 
-      {anyTabpfn && (
+      {topScored && (
         <div style={{
-          marginBottom: 10, fontSize: 10, color: '#fbbf24',
-          border: '1px solid #92640a', background: 'rgba(146,100,10,0.12)',
-          borderRadius: 4, padding: '6px 8px', lineHeight: 1.4,
+          marginBottom: 10, borderRadius: 6, padding: '10px 12px',
+          background: `${TIER_COLORS[topScored.tier] || '#38bdf8'}1a`,
+          border: `1px solid ${TIER_COLORS[topScored.tier] || '#38bdf8'}`,
         }}>
-          ⚠ {anyTabpfn.tabpfn_caveat}
+          <div style={{ fontSize: 10, fontWeight: 700, color: '#8b949e', letterSpacing: 0.5, marginBottom: 2 }}>
+            HIGHEST RECORDED TabPFN SCORE AT THIS LOCATION
+          </div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
+            <span style={{ fontSize: 30, fontWeight: 800, color: TIER_COLORS[topScored.tier] || '#38bdf8' }}>
+              {Math.round(topScored.score)}
+            </span>
+            <span style={{ fontSize: 13, color: '#8b949e' }}>/100</span>
+            <span style={{
+              marginLeft: 4, fontSize: 11, fontWeight: 700, borderRadius: 4, padding: '2px 8px',
+              color: TIER_COLORS[topScored.tier] || '#8b949e',
+              border: `1px solid ${TIER_COLORS[topScored.tier] || '#8b949e'}`,
+            }}>
+              {topScored.tier}
+            </span>
+            <span style={{ fontSize: 10, color: '#6e7681', marginLeft: 'auto' }}>
+              {topScored.date}
+            </span>
+          </div>
+          {scoredChrono.length > 1 && (
+            <div>
+              <div style={{ fontSize: 10, color: '#8b949e', marginBottom: 2 }}>
+                Score trend across {scoredChrono.length} real dated events (chronological)
+              </div>
+              <TrendSparkline points={scoredChrono} />
+            </div>
+          )}
         </div>
       )}
 
@@ -118,6 +205,32 @@ export default function HistoricalEventPanel({ selectedEvent, onClose }) {
         </div>
       )}
 
+      {anyTabpfn && importance?.features?.length > 0 && (
+        <div style={{ marginBottom: 10, borderTop: '1px solid #30363d', paddingTop: 8 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: '#8b949e', marginBottom: 4, letterSpacing: 0.5 }}>
+            TOP CONTRIBUTING FACTORS (TabPFN, global ranking)
+          </div>
+          {importance.features.slice(0, 6).map((f) => {
+            const max = importance.features[0].importance_mean || 1;
+            const pct = Math.max(4, Math.round((f.importance_mean / max) * 100));
+            return (
+              <div key={f.name} style={{ marginBottom: 5 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#c9d1d9' }}>
+                  <span>{FEATURE_LABELS[f.name] || f.name}</span>
+                  <span style={{ color: '#8b949e' }}>{f.importance_mean.toFixed(3)}</span>
+                </div>
+                <div style={{ height: 4, background: '#21262d', borderRadius: 2 }}>
+                  <div style={{ width: `${pct}%`, height: 4, background: '#38bdf8', borderRadius: 2 }} />
+                </div>
+              </div>
+            );
+          })}
+          <div style={{ fontSize: 9, color: '#6e7681', marginTop: 4, lineHeight: 1.4 }}>
+            {importance.caveat}
+          </div>
+        </div>
+      )}
+
       {river && (
         <div style={{ marginBottom: 10, borderTop: '1px solid #30363d', paddingTop: 8 }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: '#8b949e', marginBottom: 4, letterSpacing: 0.5 }}>
@@ -131,11 +244,11 @@ export default function HistoricalEventPanel({ selectedEvent, onClose }) {
             Next-6h median forecast: {river.chronos_forecast_median_m.slice(0, 6).map((v) => v.toFixed(2)).join(' → ')} m
           </div>
           <div style={{
-            fontSize: 10, color: '#fbbf24',
+            fontSize: 10, color: '#d29922',
             border: '1px solid #92640a', background: 'rgba(146,100,10,0.12)',
             borderRadius: 4, padding: '5px 7px', lineHeight: 1.4,
           }}>
-            ⚠ {river.chronos_caveat}
+            {river.chronos_caveat}
           </div>
         </div>
       )}
@@ -157,7 +270,7 @@ export default function HistoricalEventPanel({ selectedEvent, onClose }) {
                   color: TIER_COLORS[ev.tabpfn_tier] || '#8b949e',
                   border: `1px solid ${TIER_COLORS[ev.tabpfn_tier] || '#8b949e'}`,
                 }}>
-                  TabPFN {ev.tabpfn_risk_score}/100 · {ev.tabpfn_tier}
+                  TabPFN {Math.round(ev.tabpfn_risk_score)}/100 · {ev.tabpfn_tier}
                 </span>
               )}
             </div>

@@ -9,7 +9,7 @@ export default function SensorLabel({ iotAnomalyFlag }) {
   if (!iotAnomalyFlag) return null;
   return (
     <div className="sensor-offline-label">
-      ⚡ external-data-only estimate
+      external-data-only estimate
     </div>
   );
 }

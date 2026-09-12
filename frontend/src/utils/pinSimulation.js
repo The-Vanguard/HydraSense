@@ -38,7 +38,7 @@ export function classifyLocationAndColor(r, g, b, lat, lng, isRightSide = undefi
   if (isCoromandelCoast(lat, lng)) {
     return {
       surface: 'coromandel_coast',
-      label: '🌧️ Coromandel Coast (September Rain & Inundation)',
+      label: 'Coromandel Coast (September Rain & Inundation)',
       defaultTier: h < 0.55 ? 'Orange' : 'Red',
       isCoastalRain: true,
     };
@@ -48,7 +48,7 @@ export function classifyLocationAndColor(r, g, b, lat, lng, isRightSide = undefi
   if (b > r + 15 && b > g - 5 && b > 110) {
     return {
       surface: 'water',
-      label: '🌊 Water Body / Inundation Zone',
+      label: 'Water Body / Inundation Zone',
       defaultTier: 'Orange',
     };
   }
@@ -64,8 +64,8 @@ export function classifyLocationAndColor(r, g, b, lat, lng, isRightSide = undefi
       return {
         surface: 'green_slope',
         label: defaultTier === 'Orange'
-          ? '⛰️ Mountain Slope (Eastern Saturated Incline)'
-          : '⛰️ Vegetated Incline (Moderate Slope Runoff)',
+          ? 'Mountain Slope (Eastern Saturated Incline)'
+          : 'Vegetated Incline (Moderate Slope Runoff)',
         defaultTier,
         isSteepSlope: defaultTier === 'Orange',
       };
@@ -75,8 +75,8 @@ export function classifyLocationAndColor(r, g, b, lat, lng, isRightSide = undefi
       return {
         surface: 'green_slope',
         label: defaultTier === 'Yellow'
-          ? '⛰️ Mountain Slope (Western Ridge Moderate Slope)'
-          : '🌲 Mountain Slope (Western Forested Ridge — Stable)',
+          ? 'Mountain Slope (Western Ridge Moderate Slope)'
+          : 'Mountain Slope (Western Forested Ridge — Stable)',
         defaultTier,
         isSteepSlope: false,
       };
@@ -86,7 +86,7 @@ export function classifyLocationAndColor(r, g, b, lat, lng, isRightSide = undefi
   // Non-green: Flat plains, valleys, built-up land, low gradient
   return {
     surface: 'flat_land',
-    label: '🏡 Low Gradient Plains (Stable Terrain)',
+    label: 'Low Gradient Plains (Stable Terrain)',
     defaultTier: h < 0.85 ? 'Green' : 'Yellow',
     isFlatPlain: true,
   };
@@ -116,7 +116,7 @@ export function sampleMapColor(map, latlng) {
   if (isCoromandelCoast(lat, lng)) {
     return {
       surface: 'coromandel_coast',
-      label: '🌧️ Coromandel Coast (September Rain & Inundation)',
+      label: 'Coromandel Coast (September Rain & Inundation)',
       defaultTier: h < 0.55 ? 'Orange' : 'Red',
       isCoastalRain: true,
     };
@@ -169,8 +169,8 @@ export function sampleMapColor(map, latlng) {
       return {
         surface: 'green_slope',
         label: defaultTier === 'Orange'
-          ? '⛰️ Mountain Slope (Eastern Saturated Incline)'
-          : '⛰️ Vegetated Incline (Moderate Slope Runoff)',
+          ? 'Mountain Slope (Eastern Saturated Incline)'
+          : 'Vegetated Incline (Moderate Slope Runoff)',
         defaultTier,
         isSteepSlope: defaultTier === 'Orange',
       };
@@ -179,8 +179,8 @@ export function sampleMapColor(map, latlng) {
       return {
         surface: 'green_slope',
         label: defaultTier === 'Yellow'
-          ? '⛰️ Mountain Slope (Western Ridge Moderate Slope)'
-          : '🌲 Mountain Slope (Western Forested Ridge — Stable)',
+          ? 'Mountain Slope (Western Ridge Moderate Slope)'
+          : 'Mountain Slope (Western Forested Ridge — Stable)',
         defaultTier,
         isSteepSlope: false,
       };
@@ -190,7 +190,7 @@ export function sampleMapColor(map, latlng) {
   // Other areas: predominantly flat plains
   return {
     surface: 'flat_land',
-    label: '🏡 Low Gradient Plains (Stable Terrain)',
+    label: 'Low Gradient Plains (Stable Terrain)',
     defaultTier: 'Green',
     isFlatPlain: true,
   };
