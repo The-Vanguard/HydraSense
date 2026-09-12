@@ -1,0 +1,52 @@
+{
+  "feature_columns": [
+    "elevation",
+    "slope_deg",
+    "aspect",
+    "TWI",
+    "TRI",
+    "distance_to_river_m",
+    "flow_accumulation_cells",
+    "drainage_density_km_per_km2",
+    "cwc_danger_level_m",
+    "rainfall_1h",
+    "rainfall_3h",
+    "rainfall_6h",
+    "rainfall_24h",
+    "rainfall_72h_antecedent",
+    "antecedent_precipitation_index",
+    "rain_intensity_mm_hr",
+    "soil_saturation_ratio",
+    "river_water_level_m",
+    "river_level_change_m_per_hr"
+  ],
+  "target_column": "tier_int",
+  "target_meaning": {
+    "0": "Green",
+    "1": "Yellow",
+    "2": "Orange",
+    "3": "Red"
+  },
+  "id_columns_not_for_training": [
+    "region",
+    "point",
+    "event_id",
+    "snapshot_timestamp",
+    "sample_type",
+    "tier"
+  ],
+  "train_rows": 4388,
+  "val_rows": 1110,
+  "train_events": 402,
+  "val_events": 100,
+  "split_method": "grouped by event_id (80/20), negatives split independently by row",
+  "risk_score_formula_from_predict_proba": "risk_score = P(Green)*15 + P(Yellow)*42 + P(Orange)*64 + P(Red)*88",
+  "known_data_quality_issue": "Negative rows (sample_type=negative) are 0% covered on rainfall_1h and soil_saturation_ratio by construction (Step 5). A model trained on this file as-is may learn feature-nullness as its decision boundary rather than real flood physics. This is documented, not fixed, here -- the fix (simulated baseline values for negatives) is deferred pending explicit user go-ahead.",
+  "river_discharge_excluded": "100% null at every location -- confirmed unavailable, not included as a feature.",
+  "how_to_run_tabpfn": {
+    "install": "pip install tabpfn",
+    "python": "import pandas as pd\nfrom tabpfn import TabPFNClassifier\n\ntrain = pd.read_csv('train.csv')\nval = pd.read_csv('val.csv')\nfeature_cols = [\"elevation\", \"slope_deg\", \"aspect\", \"TWI\", \"TRI\", \"distance_to_river_m\", \"flow_accumulation_cells\", \"drainage_density_km_per_km2\", \"cwc_danger_level_m\", \"rainfall_1h\", \"rainfall_3h\", \"rainfall_6h\", \"rainfall_24h\", \"rainfall_72h_antecedent\", \"antecedent_precipitation_index\", \"rain_intensity_mm_hr\", \"soil_saturation_ratio\", \"river_water_level_m\", \"river_level_change_m_per_hr\"]\nX_train, y_train = train[feature_cols], train['tier_int']\nX_val, y_val = val[feature_cols], val['tier_int']\n\nclf = TabPFNClassifier()  # pretrained, no hyperparameter tuning\nclf.fit(X_train, y_train)\nproba = clf.predict_proba(X_val)  # shape (n_val, 4), columns ordered [Green,Yellow,Orange,Red]\nrisk_score = proba @ [15, 42, 64, 88]\n",
+    "expected_output_shape": "predict_proba: (1110, 4) array; risk_score: (1110,) array in [15, 88]",
+    "sanity_check": "Compare mean risk_score for val rows where tier=='Red' vs tier=='Green'. Red should average noticeably higher than Green. If they're close or inverted, the model likely learned the rainfall/soil nullness pattern instead of real signal (see known_data_quality_issue above) -- this is the exact failure mode discussed earlier in this session."
+  }
+}

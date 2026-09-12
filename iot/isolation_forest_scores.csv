@@ -1,0 +1,67 @@
+stage,stage_name,hex_id,sensor_type,value,anomaly_score,is_anomaly
+1,Normal,8860064e4bfffff,rainfall,0.2,0.0418,False
+1,Normal,8860064e4bfffff,soil_moisture,0.35,0.016,False
+1,Normal,8860064e4bfffff,tilt,0.1,0.019,False
+1,Normal,8860064e41fffff,rainfall,0.1,0.0163,False
+1,Normal,8860064e41fffff,soil_moisture,0.32,0.0347,False
+1,Normal,8860064e41fffff,tilt,0.0,0.1085,False
+1,Normal,88600640b7fffff,rainfall,0.2,0.0418,False
+1,Normal,88600640b7fffff,soil_moisture,0.3,-0.0061,True
+1,Normal,88600640b7fffff,tilt,0.1,0.019,False
+1,Normal,88600640b5fffff,rainfall,0.2,0.0418,False
+1,Normal,88600640b5fffff,soil_moisture,0.34,0.0596,False
+1,Normal,88600640b5fffff,tilt,0.0,0.1085,False
+1,Normal,8860064e43fffff,rainfall,0.1,0.0163,False
+1,Normal,8860064e43fffff,soil_moisture,0.33,0.0483,False
+1,Normal,8860064e43fffff,tilt,0.0,0.1085,False
+2,Rainfall rising,8860064e4bfffff,rainfall,18.5,-0.2678,True
+2,Rainfall rising,8860064e4bfffff,soil_moisture,0.52,-0.2645,True
+2,Rainfall rising,8860064e4bfffff,tilt,0.2,-0.249,True
+2,Rainfall rising,8860064e41fffff,rainfall,16.0,-0.2678,True
+2,Rainfall rising,8860064e41fffff,soil_moisture,0.5,-0.2645,True
+2,Rainfall rising,8860064e41fffff,tilt,0.1,0.019,False
+2,Rainfall rising,88600640b7fffff,rainfall,17.0,-0.2678,True
+2,Rainfall rising,88600640b7fffff,soil_moisture,0.48,-0.2645,True
+2,Rainfall rising,88600640b7fffff,tilt,0.2,-0.249,True
+2,Rainfall rising,88600640b5fffff,rainfall,19.0,-0.2678,True
+2,Rainfall rising,88600640b5fffff,soil_moisture,0.55,-0.2645,True
+2,Rainfall rising,88600640b5fffff,tilt,0.3,-0.249,True
+2,Rainfall rising,8860064e43fffff,rainfall,17.5,-0.2678,True
+2,Rainfall rising,8860064e43fffff,soil_moisture,0.51,-0.2645,True
+2,Rainfall rising,8860064e43fffff,tilt,0.2,-0.249,True
+3,Saturation building,8860064e4bfffff,rainfall,34.0,-0.2678,True
+3,Saturation building,8860064e4bfffff,soil_moisture,0.78,-0.2645,True
+3,Saturation building,8860064e4bfffff,tilt,0.5,-0.249,True
+3,Saturation building,8860064e41fffff,rainfall,31.0,-0.2678,True
+3,Saturation building,8860064e41fffff,soil_moisture,0.76,-0.2645,True
+3,Saturation building,8860064e41fffff,tilt,0.3,-0.249,True
+3,Saturation building,88600640b7fffff,rainfall,32.0,-0.2678,True
+3,Saturation building,88600640b7fffff,soil_moisture,0.74,-0.2645,True
+3,Saturation building,88600640b7fffff,tilt,0.4,-0.249,True
+3,Saturation building,8860064e43fffff,rainfall,33.0,-0.2678,True
+3,Saturation building,8860064e43fffff,soil_moisture,0.77,-0.2645,True
+3,Saturation building,8860064e43fffff,tilt,0.5,-0.249,True
+4,Slope response,8860064e4bfffff,rainfall,52.0,-0.2678,True
+4,Slope response,8860064e4bfffff,soil_moisture,0.91,-0.2645,True
+4,Slope response,8860064e4bfffff,tilt,1.2,-0.249,True
+4,Slope response,8860064e41fffff,rainfall,48.0,-0.2678,True
+4,Slope response,8860064e41fffff,soil_moisture,0.89,-0.2645,True
+4,Slope response,8860064e41fffff,tilt,0.8,-0.249,True
+4,Slope response,88600640b7fffff,rainfall,50.0,-0.2678,True
+4,Slope response,88600640b7fffff,soil_moisture,0.87,-0.2645,True
+4,Slope response,88600640b7fffff,tilt,0.9,-0.249,True
+4,Slope response,8860064e43fffff,rainfall,55.0,-0.2678,True
+4,Slope response,8860064e43fffff,soil_moisture,0.92,-0.2645,True
+4,Slope response,8860064e43fffff,tilt,1.8,-0.249,True
+5,Decision,8860064e4bfffff,rainfall,52.0,-0.2678,True
+5,Decision,8860064e4bfffff,soil_moisture,0.91,-0.2645,True
+5,Decision,8860064e4bfffff,tilt,1.2,-0.249,True
+5,Decision,8860064e41fffff,rainfall,48.0,-0.2678,True
+5,Decision,8860064e41fffff,soil_moisture,0.89,-0.2645,True
+5,Decision,8860064e41fffff,tilt,0.8,-0.249,True
+5,Decision,88600640b7fffff,rainfall,50.0,-0.2678,True
+5,Decision,88600640b7fffff,soil_moisture,0.87,-0.2645,True
+5,Decision,88600640b7fffff,tilt,0.9,-0.249,True
+5,Decision,8860064e43fffff,rainfall,55.0,-0.2678,True
+5,Decision,8860064e43fffff,soil_moisture,0.92,-0.2645,True
+5,Decision,8860064e43fffff,tilt,1.8,-0.249,True

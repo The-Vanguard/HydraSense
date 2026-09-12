@@ -32,8 +32,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.database import init_db
-from backend.routers import ingest, risk, validation, shelters, alerts
+from backend.routers import ingest, risk, validation, shelters, alerts, events
 from backend.seed import run_seed
+from backend.seed_multiregion import run_seed_multiregion
 
 app = FastAPI(
     title="HydraSense Backend API",
@@ -54,12 +55,14 @@ app.include_router(risk.router)
 app.include_router(validation.router)
 app.include_router(shelters.router)
 app.include_router(alerts.router)
+app.include_router(events.router)
 
 
 @app.on_event("startup")
 def startup():
     init_db()
     run_seed()
+    run_seed_multiregion()
     print("[startup] HydraSense backend ready.")
 
 

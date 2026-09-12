@@ -77,6 +77,26 @@ class UncertaintyResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Historical event map response (GET /events/map -- multiregion dataset,
+# Phase 13). Sourced historical events, NOT a live model output -- see
+# data_source_note.
+# ---------------------------------------------------------------------------
+
+class EventMapEntry(BaseModel):
+    event_id:             str
+    hex_id:                Optional[str] = None
+    region:                Optional[str] = None
+    lat:                   Optional[float] = None
+    lon:                    Optional[float] = None
+    date:                   Optional[str] = None
+    type:                   Optional[str] = None
+    severity:               Optional[str] = None
+    source:                 Optional[str] = None
+    coordinate_precision:   str = "village-level"
+    data_source_note:       str = "Historical event, sourced -- not a live model output"
+
+
+# ---------------------------------------------------------------------------
 # LOEO validation response (SRS.md Section 15 -- GET /validation/loeo)
 # ---------------------------------------------------------------------------
 

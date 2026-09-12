@@ -1,0 +1,31 @@
+{
+  "source_file": "India_Flood_Inventory_v3.csv",
+  "actual_date_range": [
+    "1968-07-01 00:00:00",
+    "2023-09-01 00:00:00"
+  ],
+  "note_on_date_range": "Original task brief assumed the inventory was capped at 2011; parsed dates show real coverage to 2023. All rows are Event Source=IMD regardless of year.",
+  "total_matched_events": 749,
+  "events_per_location": {
+    "Idukki": 116,
+    "Wayanad": 149,
+    "Nilgiris": 27,
+    "Rudraprayag": 18,
+    "Chamoli": 29,
+    "Kullu": 101,
+    "Darjeeling/Kalimpong": 73,
+    "Sikkim/Mangan": 23,
+    "Dhemaji": 202,
+    "Ribhoi": 11
+  },
+  "sikkim_precision_breakdown": {
+    "state-wide (all 4 Sikkim districts listed)": 8,
+    "district-specific (Mangan only)": 7,
+    "partial-multi (Mangan + 1-2 others named)": 4,
+    "state-wide-only (no district named)": 4
+  },
+  "kullu_precision_breakdown": {
+    "district-named": 96,
+    "town-level (Manali only, no 'Kullu' district string)": 5
+  }
+}

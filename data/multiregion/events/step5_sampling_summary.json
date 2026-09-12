@@ -1,0 +1,49 @@
+{
+  "regions": [
+    "Wayanad",
+    "Idukki",
+    "Rudraprayag",
+    "Chamoli",
+    "Ribhoi",
+    "Nilgiris",
+    "Sikkim/Mangan",
+    "Darjeeling/Kalimpong",
+    "Kullu",
+    "Dhemaji"
+  ],
+  "total_rows": 5498,
+  "positive_rows": 3306,
+  "negative_rows": 2192,
+  "positive_events": 502,
+  "per_region_positive_rows": {
+    "Chamoli": 168,
+    "Darjeeling/Kalimpong": 420,
+    "Dhemaji": 96,
+    "Idukki": 690,
+    "Kullu": 594,
+    "Nilgiris": 162,
+    "Ribhoi": 18,
+    "Rudraprayag": 108,
+    "Sikkim/Mangan": 138,
+    "Wayanad": 912
+  },
+  "per_region_negative_rows": {
+    "Chamoli": 112,
+    "Darjeeling/Kalimpong": 280,
+    "Dhemaji": 64,
+    "Idukki": 460,
+    "Kullu": 396,
+    "Nilgiris": 108,
+    "Ribhoi": 12,
+    "Rudraprayag": 72,
+    "Sikkim/Mangan": 92,
+    "Wayanad": 596
+  },
+  "real_coverage": {
+    "rainfall_1h_non_null_pct": 50.1,
+    "soil_saturation_non_null_pct": 40.2,
+    "river_water_level_non_null_pct": 5.5,
+    "river_discharge_non_null_pct": 0.0
+  },
+  "labeling_decision_flag": "Rudraprayag + Chamoli + Nilgiris + Sikkim/Mangan + Darjeeling/Kalimpong + Kullu ambiguous Main Cause rows regional-defaulted to flash_flood (steep-terrain reasoning, user-confirmed per region). Ribhoi and Dhemaji ambiguous rows NOT defaulted -- excluded from flash_flood_occurrence positives, kept only if explicitly flash_flood/landslide tagged. Dhemaji additionally scoped to its 112 locally-listed rows (<=10 districts) out of 202 raw rows -- see DHEMAJI_MAX_DISTRICTS."
+}

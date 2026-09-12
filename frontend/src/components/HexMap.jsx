@@ -8,12 +8,24 @@ import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import { cellToBoundary } from 'h3-js';
 import { sampleMapColor, generatePinSimulation } from '../utils/pinSimulation';
+import { getEventsMap } from '../api/client';
 
 const TIER_COLORS = {
   Green:  '#22c55e',
   Yellow: '#eab308',
   Orange: '#f97316',
   Red:    '#ef4444',
+};
+
+// Phase 13 — real sourced historical events. Deliberately NOT reusing
+// TIER_COLORS: that palette means "live risk tier," these are historical
+// records with no live model output. Neutral blue/purple family instead.
+const EVENT_TYPE_COLORS = {
+  flash_flood:     '#38bdf8',
+  riverine_flood:  '#818cf8',
+  landslide_only:  '#a78bfa',
+  ambiguous:       '#94a3b8',
+  unknown:         '#64748b',
 };
 
 // Map center: India overview so all 20 demo districts are visible
@@ -30,8 +42,11 @@ function _mkRng(seed) {
 }
 const _rng = _mkRng(20260907);
 
+// Rudraprayag, Chamoli, Idukki, and Wayanad were removed from this list
+// (Phase 13) -- real sourced historical event data now covers them (see
+// EVENT_TYPE_COLORS layer below); keeping a fabricated dot at the same
+// coordinates as real data would be misleading.
 const DEMO_DISTRICTS = [
-  { name: 'Rudraprayag',   state: 'Uttarakhand',      lat: 30.284, lon: 78.981, baseTier: 'Orange', isroRank: '#1' },
   { name: 'Tehri Garhwal', state: 'Uttarakhand',      lat: 30.378, lon: 78.480, baseTier: 'Orange', isroRank: '#2' },
   { name: 'Thrissur',      state: 'Kerala',           lat: 10.527, lon: 76.214, baseTier: 'Yellow', isroRank: 'Top 10', fixedTier: 'Yellow' },
   { name: 'Rajouri',       state: 'J&K',              lat: 33.377, lon: 74.303, baseTier: 'Orange', isroRank: 'Top 10', fixedTier: 'Orange' },
@@ -43,13 +58,10 @@ const DEMO_DISTRICTS = [
   { name: 'Kozhikode',     state: 'Kerala',           lat: 11.258, lon: 75.780, baseTier: 'Yellow', isroRank: 'Top 15', fixedTier: 'Green' },
   { name: 'Imphal West',   state: 'Manipur',          lat: 24.817, lon: 93.936, baseTier: 'Yellow', isroRank: 'Top 20' },
   { name: 'Kodagu',        state: 'Karnataka',        lat: 12.421, lon: 75.739, baseTier: 'Yellow', isroRank: 'Top 20' },
-  { name: 'Wayanad',       state: 'Kerala',           lat: 11.607, lon: 76.082, baseTier: 'Red',    isroRank: 'Top 20', fixedTier: 'Yellow' },
   { name: 'Shimla',        state: 'Himachal Pradesh', lat: 31.104, lon: 77.173, baseTier: 'Orange', isroRank: 'Top 20' },
   { name: 'Ernakulam',     state: 'Kerala',           lat:  9.982, lon: 76.300, baseTier: 'Yellow', isroRank: 'Top 20', fixedTier: 'Green' },
   { name: 'Mandi',         state: 'Himachal Pradesh', lat: 31.707, lon: 76.932, baseTier: 'Orange', isroRank: 'Top 20' },
   { name: 'Udhampur',      state: 'J&K',              lat: 32.916, lon: 75.141, baseTier: 'Yellow', isroRank: 'Top 20' },
-  { name: 'Idukki',        state: 'Kerala',           lat:  9.849, lon: 76.972, baseTier: 'Orange', isroRank: 'Top 20', fixedTier: 'Yellow' },
-  { name: 'Chamoli',       state: 'Uttarakhand',      lat: 30.409, lon: 79.321, baseTier: 'Red',    isroRank: 'Top 20' },
   { name: 'West Sikkim',   state: 'Sikkim',           lat: 27.298, lon: 88.267, baseTier: 'Orange', isroRank: 'Top 20' },
 ].map(d => {
   // Kerala districts are pinned to Green/Yellow (fixedTier). Others use seeded RNG.
@@ -111,6 +123,7 @@ export default function HexMap({
   const leafletRef     = useRef(null);
   const layerGroupRef  = useRef(null);
   const demoLayerRef   = useRef(null);
+  const eventsLayerRef = useRef(null);
   const pinMarkerRef   = useRef(null);
   const onPinDropRef   = useRef(onPinDrop);
   const pinStateRef    = useRef({ lat: null, lng: null, surface: null, tier: null });
@@ -324,7 +337,43 @@ export default function HexMap({
       });
     });
 
+    // ── Real historical events (Phase 13 multiregion dataset) ───────────────
+    // Sourced, one-time fetch -- historical data, not polled like live risk.
+    const eventsGroup = L.layerGroup().addTo(map);
+    eventsLayerRef.current = eventsGroup;
 
+    getEventsMap()
+      .then((events) => {
+        events.forEach((ev) => {
+          if (ev.lat == null || ev.lon == null) return;
+          const c = EVENT_TYPE_COLORS[ev.type] || EVENT_TYPE_COLORS.unknown;
+          const marker = L.circleMarker([ev.lat, ev.lon], {
+            radius: 4, color: '#ffffff', weight: 1,
+            fillColor: c, fillOpacity: 0.85,
+          }).addTo(eventsGroup);
+          marker.bindPopup(
+            `<div class="hydra-popup-card">
+              <div class="popup-header">
+                <span class="popup-surface">&#128204; ${ev.region || 'Unknown region'}</span>
+                <span class="popup-coords">${ev.date || ''}</span>
+              </div>
+              <div style="margin-top:4px;font-size:11px;">
+                Type: <strong>${ev.type || 'unknown'}</strong><br/>
+                Severity: ${ev.severity || 'n/a'}<br/>
+                Precision: ${ev.coordinate_precision}
+              </div>
+              <div style="margin-top:6px;font-size:9px;color:#8b949e">
+                Source: ${ev.source || 'n/a'}<br/>
+                ${ev.data_source_note}
+              </div>
+            </div>`,
+            { className: 'hydra-leaflet-popup', maxWidth: 240 }
+          );
+        });
+      })
+      .catch((err) => {
+        console.warn('[HexMap] /events/map fetch failed (non-fatal, historical layer only):', err);
+      });
 
     // Click anywhere on map to drop pin and simulate
     map.on('click', (e) => {
