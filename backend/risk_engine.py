@@ -105,10 +105,15 @@ def compute_and_store_risk(hex_id: str) -> dict[str, Any] | None:
         features = _merge_features(static_feats, dynamic_feats)
         pred = model.predict_one(features)
 
-        # 4. Build feature contributions list (top 5)
+        # 4. Build feature contributions list (top 5) -- exclude exactly-zero
+        # contributions rather than padding the list with them. A feature the
+        # model currently assigns zero gain to (e.g. slope_deg while Phase 3
+        # terrain coverage is unavailable) is not a "top contributor," and
+        # listing it as one would misrepresent a real-but-degenerate model
+        # output as if every feature were meaningfully analyzed.
         contributions = pred.get("feature_contributions", {})
         top_features = sorted(
-            [{"feature": k, "contribution": v} for k, v in contributions.items()],
+            [{"feature": k, "contribution": v} for k, v in contributions.items() if v != 0],
             key=lambda x: abs(x["contribution"]),
             reverse=True,
         )[:5]

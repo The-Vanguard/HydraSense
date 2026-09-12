@@ -7,7 +7,6 @@
  */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { getRiskMap, getRisk, getRiskHistory, getInundation, getUncertainty } from './api/client';
-import { generateValidationForHex } from './utils/pinSimulation';
 
 import DataSourceLabel     from './components/DataSourceLabel';
 import SensorLabel         from './components/SensorLabel';
@@ -30,7 +29,6 @@ export default function App() {
   const [risk,          setRisk]          = useState(null);
   const [history,       setHistory]       = useState([]);
   const [inundation,    setInundation]    = useState(null);
-  const [validation,    setValidation]    = useState(null);
   const [dataSource,    setDataSource]    = useState('live');
   const [demoStage,     setDemoStage]     = useState(null);
 
@@ -77,7 +75,6 @@ export default function App() {
       .then((r) => {
         setDemoStage(r.demo_stage || null);
         setDataSource(r.data_source || 'live');
-        setValidation(generateValidationForHex(r.tier));
 
         // Real Phase 5 factor-of-safety (+ band) for this hex, from real
         // observations -- merged onto the risk object so ConfidenceLeadTime
@@ -134,7 +131,6 @@ export default function App() {
     setRisk(null);
     setHistory([]);
     setInundation(null);
-    setValidation(generateValidationForHex('Yellow'));
     setDataSource('live');
     setDemoStage(null);
   }, [manualScenarioOpen]);
@@ -149,7 +145,6 @@ export default function App() {
     setRisk(data.risk);
     setHistory(data.history);
     setInundation(data.inundation);
-    setValidation(data.validation);
     setDataSource('live');
     setDemoStage(
       data.surface?.surface === 'coromandel_coast'
@@ -267,8 +262,8 @@ export default function App() {
           {/* Alert feed (displays custom pin alert if Orange/Red) */}
           <AlertFeed customAlert={isPinMode ? pinData?.alert : null} />
 
-          {/* LOEO validation — dynamic metrics */}
-          <ValidationPanel validation={validation} />
+          {/* LOEO validation — real Phase 7 benchmark, model-wide (not per-hex) */}
+          <ValidationPanel />
           </>
           )}
 
