@@ -40,3 +40,13 @@ export const getAlertFeed = () =>
 /** GET /shelters/nearest/{hex_id} — nearest static shelter lookup */
 export const getNearestShelter = (hexId) =>
   api.get(`/shelters/nearest/${hexId}`).then((r) => r.data);
+
+/**
+ * GET /events/map — real sourced historical flood/landslide events
+ * (Phase 13 multiregion dataset). NOT a live model output — each entry
+ * carries data_source_note saying so; render distinctly from live risk hexes.
+ */
+export const getEventsMap = (bbox = null) => {
+  const params = bbox ? { bbox: bbox.join(',') } : {};
+  return api.get('/events/map', { params }).then((r) => r.data);
+};

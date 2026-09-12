@@ -125,4 +125,11 @@ def init_db() -> None:
             lon         REAL
         );
         """)
+        # Additive, nullable column -- lets historical_events carry a region
+        # label (e.g. "Dhemaji") without parsing free-text source strings.
+        # Existing Wayanad rows stay NULL (frontend falls back to "Wayanad").
+        # Safe no-op if it already exists.
+        cols = [r["name"] for r in conn.execute("PRAGMA table_info(historical_events)").fetchall()]
+        if "region" not in cols:
+            conn.execute("ALTER TABLE historical_events ADD COLUMN region TEXT")
     print(f"[db] Schema initialised -> {DB_PATH}")

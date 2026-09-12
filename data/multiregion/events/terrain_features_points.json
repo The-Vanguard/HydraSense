@@ -1,0 +1,406 @@
+{
+  "Wayanad": {
+    "Mundakkai": {
+      "lat": 11.5185,
+      "lon": 76.0524,
+      "elevation": 1154.0,
+      "slope_deg": 26.286,
+      "aspect": 332.11,
+      "TWI": 4.8198,
+      "TRI": 11.75,
+      "distance_to_river_m": 322.3,
+      "flow_accumulation_cells": 1.0,
+      "drainage_density_km_per_km2": 1.7524
+    },
+    "Chooralmala": {
+      "lat": 11.5143,
+      "lon": 76.0498,
+      "elevation": 982.0,
+      "slope_deg": 20.692,
+      "aspect": 10.06,
+      "TWI": 6.0044,
+      "TRI": 9.25,
+      "distance_to_river_m": 61.8,
+      "flow_accumulation_cells": 4.0,
+      "drainage_density_km_per_km2": 1.5687
+    },
+    "Attamala": {
+      "lat": 11.522,
+      "lon": 76.057,
+      "elevation": 1247.0,
+      "slope_deg": 19.318,
+      "aspect": 306.84,
+      "TWI": 5.1627,
+      "TRI": 12.125,
+      "distance_to_river_m": 96.0,
+      "flow_accumulation_cells": 1.0,
+      "drainage_density_km_per_km2": 1.6912
+    },
+    "Punjirimattom": {
+      "lat": 11.51,
+      "lon": 76.045,
+      "elevation": 947.0,
+      "slope_deg": 13.249,
+      "aspect": 65.67,
+      "TWI": 7.1702,
+      "TRI": 4.875,
+      "distance_to_river_m": 60.6,
+      "flow_accumulation_cells": 9.0,
+      "drainage_density_km_per_km2": 1.5764
+    }
+  },
+  "Idukki": {
+    "Munnar_town": {
+      "lat": 10.0889,
+      "lon": 77.0595,
+      "elevation": 1454.0,
+      "slope_deg": 3.87,
+      "aspect": 103.83,
+      "TWI": 14.6379,
+      "TRI": 3.5,
+      "distance_to_river_m": 0.0,
+      "flow_accumulation_cells": 5016.0,
+      "drainage_density_km_per_km2": 1.9562
+    },
+    "Pettimudi_Rajamala": {
+      "lat": 10.1683,
+      "lon": 77.0114,
+      "elevation": 1880.0,
+      "slope_deg": 15.807,
+      "aspect": 156.04,
+      "TWI": 9.3205,
+      "TRI": 7.375,
+      "distance_to_river_m": 0.0,
+      "flow_accumulation_cells": 102.0,
+      "drainage_density_km_per_km2": 1.8027
+    },
+    "Idamalayar_Dam": {
+      "lat": 10.2062,
+      "lon": 76.8496,
+      "elevation": 534.0,
+      "slope_deg": 40.268,
+      "aspect": 212.87,
+      "TWI": 6.0746,
+      "TRI": 21.5,
+      "distance_to_river_m": 357.1,
+      "flow_accumulation_cells": 11.0,
+      "drainage_density_km_per_km2": 2.0175
+    },
+    "Idukki_Arch_Dam": {
+      "lat": 9.8447,
+      "lon": 76.9744,
+      "elevation": 742.0,
+      "slope_deg": 21.269,
+      "aspect": 197.17,
+      "TWI": 6.159,
+      "TRI": 9.625,
+      "distance_to_river_m": 217.0,
+      "flow_accumulation_cells": 5.0,
+      "drainage_density_km_per_km2": 1.5496
+    },
+    "Idukki_district_centroid_proxy_Painavu": {
+      "lat": 9.8497,
+      "lon": 76.9744,
+      "elevation": 646.0,
+      "slope_deg": 30.507,
+      "aspect": 48.8,
+      "TWI": 5.5622,
+      "TRI": 13.625,
+      "distance_to_river_m": 239.3,
+      "flow_accumulation_cells": 4.0,
+      "drainage_density_km_per_km2": 1.7874
+    }
+  },
+  "Rudraprayag": {
+    "Rudraprayag_town": {
+      "lat": 30.2849,
+      "lon": 78.981,
+      "elevation": 683.0,
+      "slope_deg": 18.862,
+      "aspect": 6.31,
+      "TWI": 5.5296,
+      "TRI": 7.375,
+      "distance_to_river_m": 159.8,
+      "flow_accumulation_cells": 2.0,
+      "drainage_density_km_per_km2": 2.3319
+    },
+    "Kedarnath": {
+      "lat": 30.7346,
+      "lon": 79.0669,
+      "elevation": 3541.0,
+      "slope_deg": 2.141,
+      "aspect": 149.87,
+      "TWI": 8.0295,
+      "TRI": 0.875,
+      "distance_to_river_m": 85.7,
+      "flow_accumulation_cells": 3.0,
+      "drainage_density_km_per_km2": 3.5517
+    },
+    "Guptkashi": {
+      "lat": 30.5333,
+      "lon": 79.0833,
+      "elevation": 1453.0,
+      "slope_deg": 18.444,
+      "aspect": 106.91,
+      "TWI": 5.1482,
+      "TRI": 7.375,
+      "distance_to_river_m": 216.5,
+      "flow_accumulation_cells": 1.0,
+      "drainage_density_km_per_km2": 2.4109
+    }
+  },
+  "Chamoli": {
+    "Joshimath": {
+      "lat": 30.5622,
+      "lon": 79.5641,
+      "elevation": 1507.0,
+      "slope_deg": 30.594,
+      "aspect": 34.87,
+      "TWI": 6.5213,
+      "TRI": 13.75,
+      "distance_to_river_m": 26.6,
+      "flow_accumulation_cells": 13.0,
+      "drainage_density_km_per_km2": 3.1419
+    },
+    "Gopeshwar": {
+      "lat": 30.3936,
+      "lon": 79.3159,
+      "elevation": 1048.0,
+      "slope_deg": 34.637,
+      "aspect": 237.43,
+      "TWI": 5.336,
+      "TRI": 14.25,
+      "distance_to_river_m": 162.3,
+      "flow_accumulation_cells": 4.0,
+      "drainage_density_km_per_km2": 1.9727
+    },
+    "Badrinath": {
+      "lat": 30.7433,
+      "lon": 79.4938,
+      "elevation": 3125.0,
+      "slope_deg": 1.42,
+      "aspect": 130.73,
+      "TWI": 7.7475,
+      "TRI": 0.625,
+      "distance_to_river_m": 181.7,
+      "flow_accumulation_cells": 1.0,
+      "drainage_density_km_per_km2": 3.1706
+    }
+  },
+  "Ribhoi": {
+    "Nongpoh_town_district_HQ": {
+      "lat": 25.9167,
+      "lon": 91.8833,
+      "elevation": 606.0,
+      "slope_deg": 25.057,
+      "aspect": 90.0,
+      "TWI": 5.525,
+      "TRI": 9.5,
+      "distance_to_river_m": 224.6,
+      "flow_accumulation_cells": 3.0,
+      "drainage_density_km_per_km2": 2.1992
+    },
+    "Byrnihat": {
+      "lat": 25.9667,
+      "lon": 91.8667,
+      "elevation": 268.0,
+      "slope_deg": 1.03,
+      "aspect": 270.0,
+      "TWI": 16.7276,
+      "TRI": 2.125,
+      "distance_to_river_m": 0.0,
+      "flow_accumulation_cells": 11279.0,
+      "drainage_density_km_per_km2": 2.0673
+    }
+  },
+  "Nilgiris": {
+    "Ooty_Udhagamandalam_district_HQ": {
+      "lat": 11.4064,
+      "lon": 76.6932,
+      "elevation": 2252.0,
+      "slope_deg": 6.692,
+      "aspect": 145.78,
+      "TWI": 6.2574,
+      "TRI": 2.25,
+      "distance_to_river_m": 259.8,
+      "flow_accumulation_cells": 1.0,
+      "drainage_density_km_per_km2": 2.1889
+    },
+    "Coonoor": {
+      "lat": 11.353,
+      "lon": 76.7959,
+      "elevation": 1841.0,
+      "slope_deg": 14.346,
+      "aspect": 284.65,
+      "TWI": 5.4782,
+      "TRI": 6.25,
+      "distance_to_river_m": 192.1,
+      "flow_accumulation_cells": 1.0,
+      "drainage_density_km_per_km2": 1.745
+    },
+    "Gudalur": {
+      "lat": 11.5,
+      "lon": 76.4833,
+      "elevation": 908.0,
+      "slope_deg": 5.945,
+      "aspect": 108.09,
+      "TWI": 7.7631,
+      "TRI": 3.5,
+      "distance_to_river_m": 181.9,
+      "flow_accumulation_cells": 7.0,
+      "drainage_density_km_per_km2": 1.9746
+    }
+  },
+  "Sikkim": {
+    "Mangan_district_HQ": {
+      "lat": 27.5167,
+      "lon": 88.5333,
+      "elevation": 884.0,
+      "slope_deg": 49.411,
+      "aspect": 290.26,
+      "TWI": 6.854,
+      "TRI": 25.25,
+      "distance_to_river_m": 167.3,
+      "flow_accumulation_cells": 37.0,
+      "drainage_density_km_per_km2": 2.6124
+    },
+    "Chungthang": {
+      "lat": 27.6167,
+      "lon": 88.6333,
+      "elevation": 1963.0,
+      "slope_deg": 40.117,
+      "aspect": 183.73,
+      "TWI": 6.1813,
+      "TRI": 21.0,
+      "distance_to_river_m": 113.9,
+      "flow_accumulation_cells": 13.0,
+      "drainage_density_km_per_km2": 2.6124
+    },
+    "Lachen": {
+      "lat": 27.7167,
+      "lon": 88.55,
+      "elevation": 2967.0,
+      "slope_deg": 16.885,
+      "aspect": 36.96,
+      "TWI": 7.3359,
+      "TRI": 7.125,
+      "distance_to_river_m": 463.1,
+      "flow_accumulation_cells": 15.0,
+      "drainage_density_km_per_km2": 2.5251
+    }
+  },
+  "Darjeeling": {
+    "Darjeeling_town_district_HQ": {
+      "lat": 27.041,
+      "lon": 88.2663,
+      "elevation": 2123.0,
+      "slope_deg": 21.586,
+      "aspect": 299.37,
+      "TWI": 5.3997,
+      "TRI": 7.875,
+      "distance_to_river_m": 450.5,
+      "flow_accumulation_cells": 2.0,
+      "drainage_density_km_per_km2": 1.4521
+    },
+    "Kalimpong_town_district_HQ": {
+      "lat": 27.067,
+      "lon": 88.47,
+      "elevation": 1184.0,
+      "slope_deg": 10.639,
+      "aspect": 284.97,
+      "TWI": 5.7391,
+      "TRI": 4.0,
+      "distance_to_river_m": 391.2,
+      "flow_accumulation_cells": 1.0,
+      "drainage_density_km_per_km2": 2.1892
+    },
+    "Kurseong": {
+      "lat": 26.8809,
+      "lon": 88.2809,
+      "elevation": 1615.0,
+      "slope_deg": 18.496,
+      "aspect": 247.25,
+      "TWI": 5.162,
+      "TRI": 7.125,
+      "distance_to_river_m": 216.5,
+      "flow_accumulation_cells": 1.0,
+      "drainage_density_km_per_km2": 1.6857
+    }
+  },
+  "Kullu": {
+    "Kullu_town_district_HQ": {
+      "lat": 31.9576,
+      "lon": 77.1095,
+      "elevation": 1229.0,
+      "slope_deg": 4.737,
+      "aspect": 112.97,
+      "TWI": 9.9666,
+      "TRI": 2.875,
+      "distance_to_river_m": 163.3,
+      "flow_accumulation_cells": 61.0,
+      "drainage_density_km_per_km2": 3.6515
+    },
+    "Manali": {
+      "lat": 32.2432,
+      "lon": 77.1892,
+      "elevation": 1896.0,
+      "slope_deg": 6.593,
+      "aspect": 261.96,
+      "TWI": 6.6054,
+      "TRI": 1.75,
+      "distance_to_river_m": 96.4,
+      "flow_accumulation_cells": 2.0,
+      "drainage_density_km_per_km2": 3.1675
+    },
+    "Bhuntar": {
+      "lat": 31.883,
+      "lon": 77.152,
+      "elevation": 1092.0,
+      "slope_deg": 4.737,
+      "aspect": 247.03,
+      "TWI": 9.423,
+      "TRI": 1.875,
+      "distance_to_river_m": 100.1,
+      "flow_accumulation_cells": 35.0,
+      "drainage_density_km_per_km2": 3.3881
+    }
+  },
+  "Dhemaji": {
+    "Dhemaji_town_district_HQ": {
+      "lat": 27.4833,
+      "lon": 94.5667,
+      "elevation": 105.0,
+      "slope_deg": 3.265,
+      "aspect": 253.53,
+      "TWI": 6.9285,
+      "TRI": 1.0,
+      "distance_to_river_m": 124.0,
+      "flow_accumulation_cells": 1.0,
+      "drainage_density_km_per_km2": 1.6962
+    },
+    "Jonai": {
+      "lat": 27.75,
+      "lon": 95.1167,
+      "elevation": 118.0,
+      "slope_deg": 2.79,
+      "aspect": 311.57,
+      "TWI": 7.0858,
+      "TRI": 0.75,
+      "distance_to_river_m": 27.4,
+      "flow_accumulation_cells": 1.0,
+      "drainage_density_km_per_km2": 2.759
+    },
+    "Gogamukh": {
+      "lat": 27.35,
+      "lon": 94.35,
+      "elevation": 99.0,
+      "slope_deg": 0.0,
+      "aspect": 0.0,
+      "TWI": 10.9723,
+      "TRI": 1.375,
+      "distance_to_river_m": 283.7,
+      "flow_accumulation_cells": 1.0,
+      "drainage_density_km_per_km2": 2.0092
+    }
+  }
+}

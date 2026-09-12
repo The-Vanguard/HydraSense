@@ -1,0 +1,38 @@
+{
+  "n_series": 18,
+  "series_ids": [
+    "Badrinath",
+    "Bhavani_Bridge",
+    "Bhavani_Sagar_Dam",
+    "Byrnihat",
+    "Dibrugarh",
+    "Idamalayar_Reservoir",
+    "Joshimath",
+    "Kabini_Reservoir",
+    "Karnaprayag_A",
+    "Karnaprayag_P",
+    "Kottathara",
+    "Lachen",
+    "Melli",
+    "Nandprayag",
+    "Rudraprayag_A",
+    "Rudraprayag_M",
+    "Rudraprayag_conf",
+    "Subansiri_Lower_Dam"
+  ],
+  "target_column": "target_river_water_level_m",
+  "target_note": "river_discharge was requested in the original brief but does not exist -- confirmed unavailable (no rating curve) at every GUARDIAN station checked. Forecasting river_water_level (WSE) instead, the only real target series available.",
+  "covariate_column": "rainfall_mm",
+  "covariate_note": "rainfall_mm is real ERA5 archive data only where it overlaps GUARDIAN's WSE coverage window (2020+ for all stations); null elsewhere in this file, not filled.",
+  "rainfall_as_covariate_caveat": "Base Chronos-Bolt zero-shot inference (ChronosPipeline.predict()) is UNIVARIATE -- it does not accept rainfall as an input. Genuine covariate support requires AutoGluon-TimeSeries' TimeSeriesPredictor with Chronos-Bolt as the model and rainfall passed via known_covariates. Both real commands given below.",
+  "how_to_run_zero_shot_univariate": {
+    "install": "pip install chronos-forecasting torch",
+    "python": "import pandas as pd, torch\nfrom chronos import ChronosPipeline\n\ndf = pd.read_csv('timeseries_long.csv')\nseries = df[df['item_id']=='Joshimath'].sort_values('timestamp')\ncontext = torch.tensor(series['target_river_water_level_m'].ffill().values, dtype=torch.float32)\n\npipeline = ChronosPipeline.from_pretrained('amazon/chronos-bolt-base', device_map='cpu')\nforecast = pipeline.predict(context=context, prediction_length=24)  # next 24 hours\n# forecast shape: (num_series=1, num_samples, prediction_length)\n",
+    "expected_output_shape": "(1, num_samples, 24) tensor of quantile sample forecasts for the next 24 hours of WSE"
+  },
+  "how_to_run_with_rainfall_covariate": {
+    "install": "pip install autogluon.timeseries",
+    "python": "from autogluon.timeseries import TimeSeriesDataFrame, TimeSeriesPredictor\n\ndf = TimeSeriesDataFrame.from_data_frame(\n    pd.read_csv('timeseries_long.csv'),\n    id_column='item_id', timestamp_column='timestamp',\n)\npredictor = TimeSeriesPredictor(target='target_river_water_level_m', prediction_length=24,\n                                 known_covariates_names=['rainfall_mm'])\npredictor.fit(df, presets='bolt_base', hyperparameters={'Chronos': {'model_path': 'bolt_base'}})\nforecast = predictor.predict(df)\n",
+    "expected_output_shape": "TimeSeriesDataFrame, one row per (item_id, forecast timestamp), columns = quantile forecasts (0.1..0.9) of river_water_level_m"
+  }
+}

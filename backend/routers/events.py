@@ -1,0 +1,56 @@
+"""
+backend/routers/events.py -- Phase 13: real historical multiregion events.
+
+GET /events/map -- sourced historical flood/landslide events for the
+multiregion dataset (see backend/seed_multiregion.py). NOT live model
+output -- every entry carries data_source_note saying so explicitly
+(CLAUDE.md: external-data-only content must be visibly labeled).
+"""
+from __future__ import annotations
+from typing import List, Optional
+
+from fastapi import APIRouter, Query
+from backend.database import get_db
+from backend.models import EventMapEntry
+
+import h3
+
+router = APIRouter(prefix="/events", tags=["events"])
+
+
+@router.get("/map", response_model=List[EventMapEntry])
+def get_events_map(bbox: Optional[str] = Query(None, description="minLon,minLat,maxLon,maxLat")):
+    """GET /events/map?bbox=... -- all real historical events with a resolved hex."""
+    with get_db() as conn:
+        rows = conn.execute(
+            """SELECT event_id, hex_id, date, type, severity, source,
+                      coordinate_precision, region
+               FROM historical_events
+               WHERE hex_id IS NOT NULL"""
+        ).fetchall()
+
+    entries = []
+    for row in rows:
+        try:
+            lat, lon = h3.cell_to_latlng(row["hex_id"])
+        except Exception:
+            continue
+        if bbox:
+            try:
+                min_lon, min_lat, max_lon, max_lat = map(float, bbox.split(","))
+                if not (min_lat <= lat <= max_lat and min_lon <= lon <= max_lon):
+                    continue
+            except Exception:
+                pass
+        entries.append(EventMapEntry(
+            event_id=row["event_id"],
+            hex_id=row["hex_id"],
+            region=row["region"] or "Wayanad",
+            lat=lat, lon=lon,
+            date=row["date"],
+            type=row["type"],
+            severity=row["severity"],
+            source=row["source"],
+            coordinate_precision=row["coordinate_precision"] or "village-level",
+        ))
+    return entries

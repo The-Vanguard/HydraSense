@@ -249,6 +249,18 @@ export default function App() {
           />
           {/* Sensor offline label (SRS §16) */}
           <SensorLabel iotAnomalyFlag={iotOffline} />
+
+          {/* Phase 13 — legend distinguishing live risk from sourced history */}
+          <div className="map-legend-note" style={{
+            position: 'absolute', bottom: 10, left: 10, zIndex: 500,
+            background: 'rgba(13,17,23,0.85)', color: '#c9d1d9',
+            fontSize: 11, padding: '6px 10px', borderRadius: 6,
+            border: '1px solid #30363d', lineHeight: 1.5,
+          }}>
+            <span style={{ color: '#eab308' }}>●</span> Wayanad — live risk (XGBoost model)
+            &nbsp;&nbsp;
+            <span style={{ color: '#38bdf8' }}>●</span> 9 other regions — real historical events (sourced, not live)
+          </div>
         </main>
       </div>
     </div>
