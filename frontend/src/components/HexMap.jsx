@@ -17,6 +17,18 @@ const TIER_COLORS = {
   Red:    '#ef4444',
 };
 
+// Phase 13 — India Flood Inventory v3 dates are "DD-MM-YYYY HH:mm", not ISO.
+// A plain string compare sorts by day-of-month first (e.g. "24-11-2005"
+// would beat "23-11-2015"), so parse into a real Date before comparing.
+function parseEventDate(dateStr) {
+  if (!dateStr) return null;
+  const [datePart, timePart] = dateStr.split(' ');
+  const [day, month, year] = (datePart || '').split('-').map(Number);
+  if (!day || !month || !year) return null;
+  const [hour = 0, minute = 0] = (timePart || '').split(':').map(Number);
+  return new Date(year, month - 1, day, hour, minute);
+}
+
 // Phase 13 — real sourced historical events. Deliberately NOT reusing
 // TIER_COLORS: that palette means "live risk tier," these are historical
 // records with no live model output. Neutral blue/purple family instead.
@@ -377,9 +389,12 @@ export default function HexMap({
         });
 
         Object.values(byPoint).forEach((pt) => {
-          // Sort newest-first (DD-MM-YYYY strings -> parse loosely) so the
-          // "most recent real event" drives the pin color/summary.
-          const sorted = [...pt.items].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+          // Sort newest-first by parsed date (not raw string -- DD-MM-YYYY
+          // sorts wrong lexically) so the "most recent real event" drives
+          // the pin color/summary.
+          const sorted = [...pt.items].sort(
+            (a, b) => (parseEventDate(b.date)?.getTime() || 0) - (parseEventDate(a.date)?.getTime() || 0)
+          );
           const latest = sorted[0];
           const c = EVENT_TYPE_COLORS[latest.type] || EVENT_TYPE_COLORS.unknown;
 
