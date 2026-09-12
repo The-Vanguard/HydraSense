@@ -138,6 +138,9 @@ def get_events_map(bbox: Optional[str] = Query(None, description="minLon,minLat,
             chronos_last_observed_time=river["last_observed_time"] if river else None,
             chronos_last_observed_value_m=river["last_observed_value_m"] if river else None,
             chronos_forecast_median_m=river["forecast_median_m"] if river else None,
+            chronos_forecast_low_m=river["forecast_low_m"] if river else None,
+            chronos_forecast_high_m=river["forecast_high_m"] if river else None,
+            chronos_prediction_length_steps=river["prediction_length_steps"] if river else None,
             chronos_caveat=river["caveat"] if river else None,
         ))
     return entries

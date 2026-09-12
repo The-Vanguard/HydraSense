@@ -71,6 +71,33 @@ function TrendSparkline({ points }) {
   );
 }
 
+// Real Chronos-Bolt 1-day (hourly-step) river-level forecast, with its real
+// low/high quantile band -- no fabricated smoothing, straight from
+// data/multiregion/model_ready/chronos/predictions.json.
+function RiverTrendChart({ median, low, high }) {
+  if (!median || median.length < 2) return null;
+  const W = 220, H = 64, PAD = 6;
+  const all = [...median, ...(low || []), ...(high || [])];
+  const min = Math.min(...all), max = Math.max(...all);
+  const span = max - min || 1;
+  const n = median.length;
+  const x = (i) => PAD + (i * (W - 2 * PAD)) / (n - 1);
+  const y = (v) => H - PAD - ((v - min) / span) * (H - 2 * PAD);
+  const linePath = (vals) => vals.map((v, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+  let bandPath = null;
+  if (low && high && low.length === n && high.length === n) {
+    const top = high.map((v, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+    const bottom = low.map((v, i) => `L${x(n - 1 - i).toFixed(1)},${y(low[n - 1 - i]).toFixed(1)}`).join(' ');
+    bandPath = `${top} ${bottom} Z`;
+  }
+  return (
+    <svg width={W} height={H} style={{ display: 'block' }}>
+      {bandPath && <path d={bandPath} fill="#38bdf8" opacity={0.15} stroke="none" />}
+      <path d={linePath(median)} fill="none" stroke="#38bdf8" strokeWidth="2" />
+    </svg>
+  );
+}
+
 // Real SRTM30m+pysheds terrain fields (data/multiregion/events/terrain_features_points.json)
 // -- label + unit only, no computed/derived risk value.
 const TERRAIN_FIELDS = [
@@ -107,15 +134,20 @@ export default function HistoricalEventPanel({ selectedEvent, onClose }) {
   const anyTabpfn = events.find((ev) => ev.tabpfn_risk_score != null);
   const river = events.find((ev) => ev.chronos_station != null);
 
-  const scoredChrono = events
+  const allScored = events
     .filter((ev) => ev.tabpfn_risk_score != null)
     .map((ev) => ({ ev, d: parseEventDate(ev.date) }))
     .filter((x) => x.d)
     .sort((a, b) => a.d - b.d)
-    .map((x) => ({ score: x.ev.tabpfn_risk_score, tier: x.ev.tabpfn_tier, date: x.ev.date }));
-  const topScored = scoredChrono.length
-    ? scoredChrono.reduce((a, b) => (b.score > a.score ? b : a))
+    .map((x) => ({ score: x.ev.tabpfn_risk_score, tier: x.ev.tabpfn_tier, date: x.ev.date, year: x.d.getFullYear() }));
+  // All-time highest stays all-time (most severe real event on record); the
+  // trend sparkline below is scoped to only the most recent year present in
+  // this location's real data, per request -- older years dropped from the trend.
+  const topScored = allScored.length
+    ? allScored.reduce((a, b) => (b.score > a.score ? b : a))
     : null;
+  const latestYear = allScored.length ? Math.max(...allScored.map((s) => s.year)) : null;
+  const scoredChrono = allScored.filter((s) => s.year === latestYear);
 
   return (
     <div className="panel" style={{ borderColor: '#38bdf8' }}>
@@ -178,7 +210,7 @@ export default function HistoricalEventPanel({ selectedEvent, onClose }) {
           {scoredChrono.length > 1 && (
             <div>
               <div style={{ fontSize: 10, color: '#8b949e', marginBottom: 2 }}>
-                Score trend across {scoredChrono.length} real dated events (chronological)
+                Score trend across {scoredChrono.length} real dated events in {latestYear} (most recent year on record)
               </div>
               <TrendSparkline points={scoredChrono} />
             </div>
@@ -236,13 +268,17 @@ export default function HistoricalEventPanel({ selectedEvent, onClose }) {
           <div style={{ fontSize: 10, fontWeight: 700, color: '#8b949e', marginBottom: 4, letterSpacing: 0.5 }}>
             RIVER LEVEL FORECAST — {river.chronos_station} (Chronos-Bolt, pretrained)
           </div>
-          <div style={{ fontSize: 11, color: '#c9d1d9', marginBottom: 4 }}>
-            Last real reading: <strong>{river.chronos_last_observed_value_m} m</strong>
-            {' '}at {new Date(river.chronos_last_observed_time).toLocaleString()}
-          </div>
           <div style={{ fontSize: 11, color: '#c9d1d9', marginBottom: 6 }}>
-            Next-6h median forecast: {river.chronos_forecast_median_m.slice(0, 6).map((v) => v.toFixed(2)).join(' → ')} m
+            Lead time: <strong>{river.chronos_prediction_length_steps || river.chronos_forecast_median_m.length}h</strong> ahead (hourly steps, zero-shot)
           </div>
+          <div style={{ fontSize: 10, color: '#8b949e', marginBottom: 2 }}>
+            1-day risk trend (river level, median ± real forecast band)
+          </div>
+          <RiverTrendChart
+            median={river.chronos_forecast_median_m}
+            low={river.chronos_forecast_low_m}
+            high={river.chronos_forecast_high_m}
+          />
           <div style={{
             fontSize: 10, color: '#d29922',
             border: '1px solid #92640a', background: 'rgba(146,100,10,0.12)',

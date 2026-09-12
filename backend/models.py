@@ -112,6 +112,9 @@ class EventMapEntry(BaseModel):
     chronos_last_observed_time:  Optional[str] = None
     chronos_last_observed_value_m: Optional[float] = None
     chronos_forecast_median_m:   Optional[List[float]] = None
+    chronos_forecast_low_m:      Optional[List[float]] = None
+    chronos_forecast_high_m:     Optional[List[float]] = None
+    chronos_prediction_length_steps: Optional[int] = None
     chronos_caveat:         Optional[str] = None
 
 
