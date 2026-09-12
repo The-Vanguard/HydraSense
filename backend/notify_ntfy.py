@@ -32,7 +32,11 @@ def send_ntfy_alert(title: str, message: str, tier: str) -> dict:
             f"{NTFY_BASE}/{NTFY_TOPIC}",
             data=message.encode("utf-8"),
             headers={
-                "Title": title,
+                # HTTP header values are ASCII-only by default in httpx --
+                # region labels can contain real non-ASCII characters (e.g.
+                # the em-dash in "Idukki — Munnar_town"), so encode as UTF-8
+                # bytes directly rather than restricting what a title can say.
+                "Title": title.encode("utf-8"),
                 "Priority": TIER_PRIORITY.get(tier, "default"),
                 "Tags": TIER_EMOJI.get(tier, "bell"),
             },

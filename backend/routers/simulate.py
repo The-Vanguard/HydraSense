@@ -248,6 +248,31 @@ def list_simulation_points():
     return out
 
 
+def _resolve_region_label(hex_id: Optional[str]) -> str:
+    """Real region/village name for a scenario's anchor hex -- same lookups
+    GET /simulate/points already uses, never a guess. Falls back to the raw
+    hex_id only if it matches neither real point set (shouldn't happen since
+    the default anchor is a real Wayanad village centroid)."""
+    if not hex_id:
+        return "Wayanad pilot area"
+    wayanad = _wayanad_hex_ids()
+    if hex_id in wayanad:
+        return wayanad[hex_id]
+    for pt in _multiregion_points():
+        if pt.hex_id == hex_id:
+            return pt.label
+    return hex_id
+
+
+def _format_lead_time(lead_time_min: Optional[int]) -> str:
+    if lead_time_min is None:
+        return "No Red crossing in forecast window"
+    h, m = divmod(lead_time_min, 60)
+    if h and m:
+        return f"{h}h {m}min"
+    return f"{h}h" if h else f"{m}min"
+
+
 def _get_alert_state(conn) -> dict:
     row = conn.execute(
         "SELECT last_alert_tier, last_alert_timestamp, consecutive_below_orange_cycles "
@@ -365,12 +390,16 @@ def simulate_risk(scenario: ScenarioInput):
                 should_fire = elapsed >= timedelta(minutes=COOLDOWN_MINUTES)
 
             if should_fire:
+                region_label = _resolve_region_label(hex_id)
+                lead_time_str = _format_lead_time(projection["lead_time_min"])
                 result = send_ntfy_alert(
-                    title=f"HydraSense manual scenario: {tier}",
+                    title=f"HydraSense manual scenario: {region_label} -- {tier}",
                     message=(
-                        f"Manual what-if scenario scored {pred['risk_score']}/100 ({tier}). "
-                        f"Confidence {pred['confidence_score']}%. "
-                        "This is a user-entered hypothetical, not a live sensor reading."
+                        f"Region: {region_label}\n"
+                        f"Tier: {tier}\n"
+                        f"Lead time: {lead_time_str}\n"
+                        f"Risk score: {pred['risk_score']}/100. Confidence {pred['confidence_score']}%.\n"
+                        "Manual what-if scenario -- user-entered hypothetical, not a live sensor reading."
                     ),
                     tier=tier,
                 )
