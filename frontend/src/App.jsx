@@ -18,6 +18,7 @@ import InundationView      from './components/InundationView';
 import FeaturePanel        from './components/FeaturePanel';
 import ValidationPanel     from './components/ValidationPanel';
 import AlertFeed           from './components/AlertFeed';
+import HistoricalEventPanel from './components/HistoricalEventPanel';
 
 const POLL_MS         = 10_000;
 const POLL_MS_INITIAL =  3_000;  // faster first-fetch
@@ -62,6 +63,7 @@ export default function App() {
 
   const [isPinMode,     setIsPinMode]     = useState(true);   // start in pin mode with default
   const [pinData,       setPinData]       = useState(DEFAULT_LOCATION);
+  const [selectedEvent, setSelectedEvent] = useState(null);   // Phase 13 — real historical event pin
 
   const mapPollRef    = useRef(null);
   const detailPollRef = useRef(null);
@@ -129,6 +131,7 @@ export default function App() {
 
   // Selecting a Wayanad hex polygon restores live backend mode
   const handleSelectHex = useCallback((hexId) => {
+    setSelectedEvent(null);
     setIsPinMode(false);
     setPinData(null);
     setSelectedHexId(hexId);
@@ -142,6 +145,7 @@ export default function App() {
 
   // Dropping or moving a custom pin engages regional analysis
   const handlePinDrop = useCallback((data) => {
+    setSelectedEvent(null);
     setIsPinMode(true);
     setPinData(data);
     setSelectedHexId(data.risk.hex_id);
@@ -159,6 +163,13 @@ export default function App() {
     );
   }, []);
 
+  // Clicking a real historical-event pin shows sourced event details instead
+  // of live risk panels (there is no live model output for these regions).
+  const handleEventSelect = useCallback((ev) => {
+    setSelectedEvent(ev);
+  }, []);
+  const handleCloseEventPanel = useCallback(() => setSelectedEvent(null), []);
+
   const iotOffline = risk?.iot_anomaly_flag ?? false;
   const currentTier = risk?.tier ?? 'Green';
 
@@ -171,6 +182,14 @@ export default function App() {
         {/* ── Sidebar panels ── */}
         <aside className="sidebar">
 
+          {selectedEvent ? (
+            // Real sourced historical event selected -- show its own panel
+            // only. The risk/trend/inundation/feature/alert/validation
+            // panels below are all live-model-shaped and would be
+            // misleading here (no live score exists for these regions).
+            <HistoricalEventPanel selectedEvent={selectedEvent} onClose={handleCloseEventPanel} />
+          ) : (
+          <>
           {/* Location selector panel: Custom Pin vs Hex */}
           {isPinMode && pinData ? (
             <div className="panel pin-control-panel">
@@ -235,6 +254,8 @@ export default function App() {
 
           {/* LOEO validation — dynamic metrics */}
           <ValidationPanel validation={validation} />
+          </>
+          )}
 
         </aside>
 
@@ -246,6 +267,7 @@ export default function App() {
             onSelectHex={handleSelectHex}
             onPinDrop={handlePinDrop}
             pinData={pinData}
+            onEventSelect={handleEventSelect}
           />
           {/* Sensor offline label (SRS §16) */}
           <SensorLabel iotAnomalyFlag={iotOffline} />

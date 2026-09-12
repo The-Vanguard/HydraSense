@@ -88,6 +88,21 @@ function createPinIcon(tierColor) {
   });
 }
 
+// Phase 13 — historical event pin. Same shape, no pulse (not live).
+function createEventPinIcon(color) {
+  return L.divIcon({
+    className: 'hydra-pin-icon-wrap',
+    html: `
+      <div class="hydra-event-pin-marker" style="--pin-color: ${color};">
+        <div class="hydra-event-pin-head"></div>
+      </div>
+    `,
+    iconSize: [22, 30],
+    iconAnchor: [11, 28],
+    popupAnchor: [0, -26],
+  });
+}
+
 function buildPopupHtml(simData, lat, lng) {
   const tier = simData.risk.tier;
   const tierColor = TIER_COLORS[tier] || '#8b949e';
@@ -118,6 +133,7 @@ export default function HexMap({
   onSelectHex,
   onPinDrop,
   pinData,
+  onEventSelect,
 }) {
   const mapRef         = useRef(null);
   const leafletRef     = useRef(null);
@@ -126,7 +142,12 @@ export default function HexMap({
   const eventsLayerRef = useRef(null);
   const pinMarkerRef   = useRef(null);
   const onPinDropRef   = useRef(onPinDrop);
+  const onEventSelectRef = useRef(onEventSelect);
   const pinStateRef    = useRef({ lat: null, lng: null, surface: null, tier: null });
+
+  useEffect(() => {
+    onEventSelectRef.current = onEventSelect;
+  }, [onEventSelect]);
 
   // Auto-escalating hex scores: shift each hex score up slightly every 20s
   // to simulate a live ingestion cycle updating risk in real time
@@ -344,31 +365,56 @@ export default function HexMap({
 
     getEventsMap()
       .then((events) => {
+        // Group by hex_id: each of the 9 regions' points carries many real
+        // events (e.g. Idukki has 116) -- one pin per point, not one per
+        // event, matching what the user asked to see ("pin those 9 places").
+        const byPoint = {};
         events.forEach((ev) => {
           if (ev.lat == null || ev.lon == null) return;
-          const c = EVENT_TYPE_COLORS[ev.type] || EVENT_TYPE_COLORS.unknown;
-          const marker = L.circleMarker([ev.lat, ev.lon], {
-            radius: 4, color: '#ffffff', weight: 1,
-            fillColor: c, fillOpacity: 0.85,
+          const key = ev.hex_id || `${ev.lat},${ev.lon}`;
+          if (!byPoint[key]) byPoint[key] = { lat: ev.lat, lon: ev.lon, region: ev.region, items: [] };
+          byPoint[key].items.push(ev);
+        });
+
+        Object.values(byPoint).forEach((pt) => {
+          // Sort newest-first (DD-MM-YYYY strings -> parse loosely) so the
+          // "most recent real event" drives the pin color/summary.
+          const sorted = [...pt.items].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+          const latest = sorted[0];
+          const c = EVENT_TYPE_COLORS[latest.type] || EVENT_TYPE_COLORS.unknown;
+
+          const marker = L.marker([pt.lat, pt.lon], {
+            icon: createEventPinIcon(c),
           }).addTo(eventsGroup);
+
+          const typeCounts = {};
+          pt.items.forEach((e) => { typeCounts[e.type || 'unknown'] = (typeCounts[e.type || 'unknown'] || 0) + 1; });
+          const typeSummary = Object.entries(typeCounts)
+            .map(([t, n]) => `${t} (${n})`).join(', ');
+
           marker.bindPopup(
             `<div class="hydra-popup-card">
               <div class="popup-header">
-                <span class="popup-surface">&#128204; ${ev.region || 'Unknown region'}</span>
-                <span class="popup-coords">${ev.date || ''}</span>
+                <span class="popup-surface">&#128204; ${pt.region || 'Unknown region'}</span>
+                <span class="popup-coords">${pt.items.length} real events</span>
               </div>
               <div style="margin-top:4px;font-size:11px;">
-                Type: <strong>${ev.type || 'unknown'}</strong><br/>
-                Severity: ${ev.severity || 'n/a'}<br/>
-                Precision: ${ev.coordinate_precision}
+                Most recent: <strong>${latest.date || 'n/a'}</strong> (${latest.type})<br/>
+                Types: ${typeSummary}
               </div>
               <div style="margin-top:6px;font-size:9px;color:#8b949e">
-                Source: ${ev.source || 'n/a'}<br/>
-                ${ev.data_source_note}
+                ${latest.data_source_note}. Click for full details.
               </div>
             </div>`,
-            { className: 'hydra-leaflet-popup', maxWidth: 240 }
+            { className: 'hydra-leaflet-popup', maxWidth: 260 }
           );
+
+          marker.on('click', (e) => {
+            L.DomEvent.stopPropagation(e);
+            if (onEventSelectRef.current) {
+              onEventSelectRef.current({ region: pt.region, lat: pt.lat, lon: pt.lon, events: sorted });
+            }
+          });
         });
       })
       .catch((err) => {

@@ -401,6 +401,28 @@ html, body, #root {
   50% { transform: scale(1.6); opacity: 0.25; }
 }
 
+/* Phase 13 — historical event pin (real sourced data, not live).
+   Same teardrop shape as .hydra-pin-marker but deliberately NO pulse ring —
+   the pulse implies "live/updating," which these markers are not. */
+.hydra-event-pin-marker {
+  position: relative;
+  width: 22px;
+  height: 30px;
+}
+
+.hydra-event-pin-head {
+  position: absolute;
+  top: 0;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  background: var(--pin-color, #38bdf8);
+  border: 2px solid #ffffff;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+
 /* Leaflet Popup Styling */
 .hydra-leaflet-popup .leaflet-popup-content-wrapper {
   background: #161b22;
