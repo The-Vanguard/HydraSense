@@ -31,6 +31,10 @@ from backend.risk_engine import get_model
 from backend.notify_ntfy import send_ntfy_alert
 from backend.seed import VILLAGE_COORDS   # real 4-village pilot centroids -- reused, not re-guessed
 from backend.seed_multiregion import REGIONS as MULTIREGION_REGIONS, load_terrain, H3_RES
+from backend.lead_time import (
+    _fetch_live_forecast, _extract_forecast_rainfall,
+    _DEFAULT_LAT, _DEFAULT_LON, _FORECAST_HORIZON_H,
+)
 
 router = APIRouter(prefix="/simulate", tags=["simulate"])
 
@@ -38,9 +42,15 @@ MANUAL_SCENARIO_ID = "MANUAL_SCENARIO"
 TIER_RANK = {"Green": 0, "Yellow": 1, "Orange": 2, "Red": 3}
 COOLDOWN_MINUTES = 30
 RESOLVE_CYCLES = 2
+DEFAULT_SCENARIO_HEX = h3.latlng_to_cell(VILLAGE_COORDS["Mundakkai"]["lat"], VILLAGE_COORDS["Mundakkai"]["lon"], 8)
 
 
 class ScenarioInput(BaseModel):
+    # Real point this scenario is anchored to (for the lead-time/24h forecast
+    # projection below, which needs a real lat/lon to pull real Open-Meteo
+    # rainfall from) -- optional, defaults to a real Wayanad pilot centroid
+    # rather than an arbitrary/fabricated location.
+    hex_id: Optional[str] = None
     # All optional -- FusionModel.predict_one fills missing keys with NaN,
     # which XGBoost handles natively. Matches ml/models/train_fusion_model.py's
     # frozen STATIC_FEATURE_COLS + DYNAMIC_FEATURE_COLS (SRS Section 9).
@@ -71,6 +81,13 @@ class ScenarioInput(BaseModel):
     iot_anomaly_flag: Optional[bool] = None
 
 
+class ProjectedTrendPoint(BaseModel):
+    lead_hours: int
+    timestamp: str          # real future clock time (now + lead_hours), ISO -- for chart x-axis
+    risk_score: float
+    tier: str
+
+
 class ScenarioResponse(BaseModel):
     risk_score: float
     tier: str
@@ -82,6 +99,30 @@ class ScenarioResponse(BaseModel):
     sparse_input_warning: Optional[str] = None
     alert_fired: bool
     alert_detail: str
+    # Same SRS §12 lead-time method used for live hexes (backend/lead_time.py),
+    # run here against real Open-Meteo rainfall for the scenario's anchor
+    # point (hex_id, default Mundakkai) merged with the user's hypothetical
+    # static/soil inputs -- a real forecast walk, not a fabricated countdown.
+    lead_time_min: Optional[int] = None
+    lead_time_basis: str = "pending"
+    forecast_data_source: str = "live"   # "live" | "cached_demo" -- SRS §13 fallback label
+    # Factor of safety: only ever the value(s) the user typed in (Phase 5
+    # frozen field) -- echoed back for the FS gauge, never computed/guessed
+    # here since dynamic_features.py's real FS equation isn't wired into
+    # this manual-input path.
+    factor_of_safety: Optional[float] = None
+    factor_of_safety_min: Optional[float] = None
+    factor_of_safety_max: Optional[float] = None
+    # 24h forward projection (hourly steps, SRS §12) re-running the real
+    # model at each step with real forecast rainfall substituted in -- NOT a
+    # historical trend (there is no history for a one-off hypothetical
+    # scenario), explicitly labeled as such by projected_trend_caveat.
+    projected_trend: list[ProjectedTrendPoint] = []
+    projected_trend_caveat: str = (
+        "Forward 24h projection, not a history -- each point reruns the real "
+        "model with real Open-Meteo forecast rainfall substituted in on top "
+        "of your other hypothetical inputs, which stay fixed across all 24 steps."
+    )
 
 
 class PointSummary(BaseModel):
@@ -229,14 +270,64 @@ def _upsert_alert_state(conn, tier: Optional[str], timestamp: Optional[str], cyc
     )
 
 
+def _compute_forecast_projection(model, hex_id: Optional[str], features: dict) -> dict:
+    """Real SRS §12 forecast walk (same method as backend/lead_time.py's
+    compute_lead_time, reused here so a manual scenario gets one honest,
+    real Open-Meteo call instead of a second duplicate one): pulls the real
+    hourly rainfall forecast for the scenario's anchor point, then reruns
+    the real model at each of the next 24 hourly steps with that step's
+    real forecast rainfall substituted in on top of the user's other
+    hypothetical inputs (which stay fixed). Returns lead time to first Red
+    crossing plus the full 24-point trend, never fabricated."""
+    try:
+        lat, lon = h3.cell_to_latlng(hex_id) if hex_id else (_DEFAULT_LAT, _DEFAULT_LON)
+    except Exception:
+        lat, lon = _DEFAULT_LAT, _DEFAULT_LON
+
+    ref_time = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
+    series, data_source = _fetch_live_forecast(lat, lon)
+
+    trend: list[dict] = []
+    lead_time_min: Optional[int] = None
+    lead_time_basis = "no_red_crossing_in_forecast_window"
+
+    for horizon_h in range(1, _FORECAST_HORIZON_H + 1):
+        forecast_rain = _extract_forecast_rainfall(series, ref_time, horizon_h)
+        features_at_h = dict(features)
+        features_at_h.update({k: v for k, v in forecast_rain.items() if v is not None})
+        try:
+            step_pred = model.predict_one(features_at_h)
+        except Exception:
+            continue
+        step_time = ref_time + timedelta(hours=horizon_h)
+        trend.append({
+            "lead_hours": horizon_h,
+            "timestamp": step_time.isoformat(),
+            "risk_score": step_pred["risk_score"],
+            "tier": step_pred["tier"],
+        })
+        if lead_time_min is None and step_pred["tier"] == "Red":
+            lead_time_min = horizon_h * 60
+            lead_time_basis = "forecast_hourly_crossing"
+
+    return {
+        "lead_time_min": lead_time_min,
+        "lead_time_basis": lead_time_basis,
+        "data_source": data_source,
+        "trend": trend,
+    }
+
+
 @router.post("/risk", response_model=ScenarioResponse)
 def simulate_risk(scenario: ScenarioInput):
     """POST /simulate/risk -- score a manual hypothetical scenario with the
     real trained model, applying the same alert-dedup rule as SRS §26."""
     model = get_model()
     all_fields = scenario.model_dump()
+    hex_id = all_fields.pop("hex_id", None) or DEFAULT_SCENARIO_HEX
     features = {k: v for k, v in all_fields.items() if v is not None}
     pred = model.predict_one(features)
+    projection = _compute_forecast_projection(model, hex_id, features)
 
     # Honest disclosure instead of fabricated defaults: there is no real
     # per-feature training dataset in this repo to source "typical Wayanad"
@@ -309,4 +400,11 @@ def simulate_risk(scenario: ScenarioInput):
         sparse_input_warning=sparse_warning,
         alert_fired=alert_fired,
         alert_detail=alert_detail,
+        lead_time_min=projection["lead_time_min"],
+        lead_time_basis=projection["lead_time_basis"],
+        forecast_data_source=projection["data_source"],
+        factor_of_safety=features.get("factor_of_safety"),
+        factor_of_safety_min=features.get("factor_of_safety_min"),
+        factor_of_safety_max=features.get("factor_of_safety_max"),
+        projected_trend=projection["trend"],
     )
