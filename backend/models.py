@@ -95,9 +95,16 @@ class EventMapEntry(BaseModel):
     coordinate_precision:   str = "village-level"
     data_source_note:       str = "Historical event, sourced -- not a live model output"
     # Real SRTM30m+pysheds terrain, from hexes.static_features -- same for
-    # every event at this hex. No risk_score/tier here: that needs a trained
-    # model this dataset doesn't have (see backend/seed_multiregion.py).
+    # every event at this hex.
     static_features:       Optional[dict] = None
+    # Real TabPFN-computed score for THIS specific historical event's actual
+    # at-event conditions (Step 6a, run_tabpfn_inference.py) -- not a live
+    # score, and only present for events that had a flash_flood/landslide
+    # positive snapshot in the training data. tabpfn_caveat is always shown
+    # alongside the score per CLAUDE.md's labeling rule -- never hide it.
+    tabpfn_risk_score:      Optional[float] = None
+    tabpfn_tier:            Optional[str] = None
+    tabpfn_caveat:          Optional[str] = None
 
 
 # ---------------------------------------------------------------------------

@@ -8,6 +8,7 @@ output -- every entry carries data_source_note saying so explicitly
 """
 from __future__ import annotations
 import json
+from pathlib import Path
 from typing import List, Optional
 
 from fastapi import APIRouter, Query
@@ -18,10 +19,26 @@ import h3
 
 router = APIRouter(prefix="/events", tags=["events"])
 
+ROOT = Path(__file__).resolve().parents[2]
+TABPFN_PREDICTIONS_PATH = ROOT / "data" / "multiregion" / "model_ready" / "tabpfn" / "predictions.json"
+
+
+def _load_tabpfn_predictions() -> dict:
+    """Real per-event TabPFN scores (Step 6a), if the inference has been run.
+    Returns {} if not yet run -- never fabricates a placeholder score."""
+    if not TABPFN_PREDICTIONS_PATH.exists():
+        return {}
+    try:
+        return json.loads(TABPFN_PREDICTIONS_PATH.read_text())
+    except (json.JSONDecodeError, OSError):
+        return {}
+
 
 @router.get("/map", response_model=List[EventMapEntry])
 def get_events_map(bbox: Optional[str] = Query(None, description="minLon,minLat,maxLon,maxLat")):
     """GET /events/map?bbox=... -- all real historical events with a resolved hex."""
+    tabpfn = _load_tabpfn_predictions()
+
     with get_db() as conn:
         rows = conn.execute(
             """SELECT he.event_id, he.hex_id, he.date, he.type, he.severity, he.source,
@@ -48,6 +65,7 @@ def get_events_map(bbox: Optional[str] = Query(None, description="minLon,minLat,
             static_features = json.loads(row["static_features"]) if row["static_features"] else None
         except (json.JSONDecodeError, TypeError):
             static_features = None
+        pred = tabpfn.get(row["event_id"])
         entries.append(EventMapEntry(
             event_id=row["event_id"],
             hex_id=row["hex_id"],
@@ -59,5 +77,8 @@ def get_events_map(bbox: Optional[str] = Query(None, description="minLon,minLat,
             source=row["source"],
             coordinate_precision=row["coordinate_precision"] or "village-level",
             static_features=static_features,
+            tabpfn_risk_score=pred["risk_score"] if pred else None,
+            tabpfn_tier=pred["tier"] if pred else None,
+            tabpfn_caveat=pred["caveat"] if pred else None,
         ))
     return entries

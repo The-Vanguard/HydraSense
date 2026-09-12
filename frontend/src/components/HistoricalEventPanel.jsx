@@ -1,10 +1,16 @@
 /**
  * HistoricalEventPanel.jsx — Phase 13
  * Sidebar detail panel for a real, sourced historical-event pin (multiregion
- * dataset). Deliberately does NOT show a risk_score/tier — that would imply
- * a live model output, which this data is not (CLAUDE.md labeling rule).
+ * dataset). Per-event tabpfn_risk_score/tier (Step 6a, run once explicitly)
+ * is a REAL model output for that event's actual at-disaster conditions --
+ * NOT a live/current score. Its caveat must always render alongside it
+ * (CLAUDE.md labeling rule: never hide a known limitation).
  */
 import React from 'react';
+
+const TIER_COLORS = {
+  Green: '#22c55e', Yellow: '#eab308', Orange: '#f97316', Red: '#ef4444',
+};
 
 const TYPE_LABELS = {
   flash_flood:    'Flash flood',
@@ -47,6 +53,7 @@ export default function HistoricalEventPanel({ selectedEvent, onClose }) {
   const terrainRows = TERRAIN_FIELDS
     .map(([key, label, unit]) => [key, label, unit, staticFeatures?.[key]])
     .filter(([, , , v]) => v !== null && v !== undefined);
+  const anyTabpfn = events.find((ev) => ev.tabpfn_risk_score != null);
 
   return (
     <div className="panel" style={{ borderColor: '#38bdf8' }}>
@@ -81,6 +88,16 @@ export default function HistoricalEventPanel({ selectedEvent, onClose }) {
         {' '}(India Flood Inventory v3, IMD-sourced)
       </div>
 
+      {anyTabpfn && (
+        <div style={{
+          marginBottom: 10, fontSize: 10, color: '#fbbf24',
+          border: '1px solid #92640a', background: 'rgba(146,100,10,0.12)',
+          borderRadius: 4, padding: '6px 8px', lineHeight: 1.4,
+        }}>
+          ⚠ {anyTabpfn.tabpfn_caveat}
+        </div>
+      )}
+
       {terrainRows.length > 0 && (
         <div style={{ marginBottom: 10, borderTop: '1px solid #30363d', paddingTop: 8 }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: '#8b949e', marginBottom: 4, letterSpacing: 0.5 }}>
@@ -109,7 +126,18 @@ export default function HistoricalEventPanel({ selectedEvent, onClose }) {
               paddingLeft: 8, marginBottom: 8, fontSize: 11,
             }}
           >
-            <div style={{ color: '#e6edf3', fontWeight: 600 }}>{ev.date || 'date unknown'}</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ color: '#e6edf3', fontWeight: 600 }}>{ev.date || 'date unknown'}</div>
+              {ev.tabpfn_risk_score != null && (
+                <span style={{
+                  fontSize: 10, fontWeight: 700, borderRadius: 3, padding: '1px 5px',
+                  color: TIER_COLORS[ev.tabpfn_tier] || '#8b949e',
+                  border: `1px solid ${TIER_COLORS[ev.tabpfn_tier] || '#8b949e'}`,
+                }}>
+                  TabPFN {ev.tabpfn_risk_score}/100 · {ev.tabpfn_tier}
+                </span>
+              )}
+            </div>
             <div style={{ color: '#8b949e' }}>
               {TYPE_LABELS[ev.type] || ev.type || 'unknown'}
               {ev.severity ? ` · ${ev.severity}` : ''}
