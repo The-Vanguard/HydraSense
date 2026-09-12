@@ -70,6 +70,7 @@ class RiskHistoryEntry(BaseModel):
 
 class UncertaintyResponse(BaseModel):
     hex_id:              str
+    factor_of_safety:     Optional[float] = None
     factor_of_safety_min: Optional[float]
     factor_of_safety_max: Optional[float]
     confidence_score:    float

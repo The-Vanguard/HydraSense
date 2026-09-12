@@ -6,7 +6,7 @@
  * based on terrain slope, surface classification, and meteorological conditions.
  */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { getRiskMap, getRisk, getRiskHistory, getInundation } from './api/client';
+import { getRiskMap, getRisk, getRiskHistory, getInundation, getUncertainty } from './api/client';
 import { generateValidationForHex } from './utils/pinSimulation';
 
 import DataSourceLabel     from './components/DataSourceLabel';
@@ -75,10 +75,24 @@ export default function App() {
 
     getRisk(selectedHexId)
       .then((r) => {
-        setRisk(r);
         setDemoStage(r.demo_stage || null);
         setDataSource(r.data_source || 'live');
         setValidation(generateValidationForHex(r.tier));
+
+        // Real Phase 5 factor-of-safety (+ band) for this hex, from real
+        // observations -- merged onto the risk object so ConfidenceLeadTime
+        // renders the same FS gauge shape it uses for pin-drop/manual
+        // scenario, but with real values (or an honest note when this hex
+        // has no real terrain data recorded yet, see task_3c7bb605).
+        getUncertainty(selectedHexId)
+          .then((unc) => setRisk({
+            ...r,
+            factor_of_safety: unc.factor_of_safety,
+            factor_of_safety_min: unc.factor_of_safety_min,
+            factor_of_safety_max: unc.factor_of_safety_max,
+            factor_of_safety_note: unc.band_note,
+          }))
+          .catch(() => setRisk(r));
 
         if (['Orange', 'Red'].includes(r.tier)) {
           getInundation(selectedHexId)

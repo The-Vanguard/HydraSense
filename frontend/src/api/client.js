@@ -37,6 +37,15 @@ export const getLoeoResults = () =>
 export const getAlertFeed = () =>
   api.get('/alert/feed').then((r) => r.data);
 
+/**
+ * GET /risk/{hex_id}/uncertainty — real Phase 5 factor-of-safety (+ band) for
+ * a real Wayanad hex, computed from real observations.dynamic_features.
+ * Returns nulls (with an honest band_note) for hexes with no real terrain
+ * static_features recorded yet -- never a fabricated FS value.
+ */
+export const getUncertainty = (hexId) =>
+  api.get(`/risk/${hexId}/uncertainty`).then((r) => r.data);
+
 /** GET /shelters/nearest/{hex_id} — nearest static shelter lookup */
 export const getNearestShelter = (hexId) =>
   api.get(`/shelters/nearest/${hexId}`).then((r) => r.data);

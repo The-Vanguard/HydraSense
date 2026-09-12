@@ -163,11 +163,12 @@ def get_uncertainty(hex_id: str):
             (hex_id,)
         ).fetchone()
 
-    fs_min = fs_max = None
-    band_note = "factor_of_safety_min/max unavailable until Phase 3 DEM rasters run"
+    fs = fs_min = fs_max = None
+    band_note = "factor_of_safety unavailable -- this hex has no real terrain (static_features) recorded yet"
     if obs_row:
         try:
             feats = json.loads(obs_row["dynamic_features"] or "{}")
+            fs = feats.get("factor_of_safety")
             fs_min = feats.get("factor_of_safety_min")
             fs_max = feats.get("factor_of_safety_max")
             if fs_min is not None:
@@ -178,6 +179,7 @@ def get_uncertainty(hex_id: str):
     confidence = rs_row["confidence_score"] if rs_row else 0.0
     return UncertaintyResponse(
         hex_id=hex_id,
+        factor_of_safety=fs,
         factor_of_safety_min=fs_min,
         factor_of_safety_max=fs_max,
         confidence_score=confidence,
