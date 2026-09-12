@@ -8,6 +8,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import { cellToBoundary } from 'h3-js';
 import { sampleMapColor, generatePinSimulation } from '../utils/pinSimulation';
+import { getEventsMap } from '../api/client';
 
 const TIER_COLORS = {
   Green:  '#22c55e',
@@ -19,6 +20,17 @@ const TIER_COLORS = {
 // Map center: India overview so all 10 real (trained/sourced) locations are visible
 const MAP_CENTER = [22, 82];
 const MAP_ZOOM   = 5;
+
+// Phase 13 — real sourced historical events (9 regions outside Wayanad).
+// Deliberately NOT reusing TIER_COLORS: that palette means "live risk tier,"
+// these are historical records with no live model output.
+const EVENT_TYPE_COLORS = {
+  flash_flood:     '#38bdf8',
+  riverine_flood:  '#818cf8',
+  landslide_only:  '#a78bfa',
+  ambiguous:       '#94a3b8',
+  unknown:         '#64748b',
+};
 
 // The fabricated ISRO-top-20 "demo districts" (seeded-random tier/rain/soil,
 // none of it real) have been removed entirely -- only locations covered by
@@ -38,6 +50,21 @@ function createPinIcon(tierColor) {
     iconSize: [28, 38],
     iconAnchor: [14, 36],
     popupAnchor: [0, -34],
+  });
+}
+
+// Phase 13 — historical event pin. Same shape, no pulse (not live).
+function createEventPinIcon(color) {
+  return L.divIcon({
+    className: 'hydra-pin-icon-wrap',
+    html: `
+      <div class="hydra-event-pin-marker" style="--pin-color: ${color};">
+        <div class="hydra-event-pin-head"></div>
+      </div>
+    `,
+    iconSize: [22, 30],
+    iconAnchor: [11, 28],
+    popupAnchor: [0, -26],
   });
 }
 
@@ -242,6 +269,61 @@ export default function HexMap({
 
     layerGroupRef.current = L.layerGroup().addTo(map);
     leafletRef.current = map;
+
+    // ── Real historical events (Phase 13 multiregion dataset) ───────────────
+    // Sourced, one-time fetch -- historical data, not polled like live risk.
+    // Pins only; clicking shows the popup card below, no sidebar panel.
+    const eventsGroup = L.layerGroup().addTo(map);
+
+    getEventsMap()
+      .then((events) => {
+        // Group by hex_id: each of the 9 regions' points carries many real
+        // events (e.g. Idukki has 116) -- one pin per point, not one per event.
+        const byPoint = {};
+        events.forEach((ev) => {
+          if (ev.lat == null || ev.lon == null) return;
+          const key = ev.hex_id || `${ev.lat},${ev.lon}`;
+          if (!byPoint[key]) byPoint[key] = { lat: ev.lat, lon: ev.lon, region: ev.region, items: [] };
+          byPoint[key].items.push(ev);
+        });
+
+        Object.values(byPoint).forEach((pt) => {
+          // Sort newest-first (DD-MM-YYYY strings -> parse loosely) so the
+          // "most recent real event" drives the pin color/summary.
+          const sorted = [...pt.items].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+          const latest = sorted[0];
+          const c = EVENT_TYPE_COLORS[latest.type] || EVENT_TYPE_COLORS.unknown;
+
+          const marker = L.marker([pt.lat, pt.lon], {
+            icon: createEventPinIcon(c),
+          }).addTo(eventsGroup);
+
+          const typeCounts = {};
+          pt.items.forEach((e) => { typeCounts[e.type || 'unknown'] = (typeCounts[e.type || 'unknown'] || 0) + 1; });
+          const typeSummary = Object.entries(typeCounts)
+            .map(([t, n]) => `${t} (${n})`).join(', ');
+
+          marker.bindPopup(
+            `<div class="hydra-popup-card">
+              <div class="popup-header">
+                <span class="popup-surface">${pt.region || 'Unknown region'}</span>
+                <span class="popup-coords">${pt.items.length} real events</span>
+              </div>
+              <div style="margin-top:4px;font-size:11px;">
+                Most recent: <strong>${latest.date || 'n/a'}</strong> (${latest.type})<br/>
+                Types: ${typeSummary}
+              </div>
+              <div style="margin-top:6px;font-size:9px;color:#8b949e">
+                ${latest.data_source_note}
+              </div>
+            </div>`,
+            { className: 'hydra-leaflet-popup', maxWidth: 260 }
+          );
+        });
+      })
+      .catch((err) => {
+        console.warn('[HexMap] /events/map fetch failed (non-fatal, historical layer only):', err);
+      });
 
     // Click inside the real pilot hexes to drop/simulate a custom point.
     // Clicks elsewhere on the India-wide map are ignored (see isWithinPinBounds).
