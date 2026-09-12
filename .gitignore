@@ -61,3 +61,6 @@ data/weather/rainfall_forecast.json
 *.log
 logs/
 
+# Runtime alert delivery logs (Phase 11 mock channels -- regenerated per run)
+data/alerts/
+

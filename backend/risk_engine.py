@@ -23,6 +23,7 @@ sys.path.insert(0, str(ROOT))
 
 from backend.database import get_db
 from backend.lead_time import compute_lead_time
+from backend.alerts.router import trigger_alert, TriggerRequest
 
 # Phase 6 model
 _MODEL_PATH = ROOT / "ml" / "models" / "fusion_model.pkl"
@@ -145,7 +146,7 @@ def compute_and_store_risk(hex_id: str) -> dict[str, Any] | None:
             )
         )
 
-        return {
+        result = {
             "hex_id":                    hex_id,
             "timestamp":                 now_ts,
             "risk_score":                pred["risk_score"],
@@ -156,3 +157,22 @@ def compute_and_store_risk(hex_id: str) -> dict[str, Any] | None:
             "top_contributing_features": top_features,
             "data_source":               data_source,
         }
+
+    # 6. Phase 11 (guru-elight): real CAP alert pipeline. Runs every cycle so
+    # dedup/downgrade state stays current even below Orange; only fires a
+    # real CAP alert on Orange/Red escalation or cooldown (SRS §17). Never
+    # allowed to break risk computation -- the risk_scores row above is
+    # already written regardless of what happens here.
+    try:
+        trigger_alert(TriggerRequest(
+            hex_id=hex_id,
+            tier=pred["tier"],
+            risk_score=pred["risk_score"],
+            confidence_score=pred["confidence_score"],
+            lead_time_min=lead_time_min,
+            lead_time_basis=lead_time_basis,
+        ))
+    except Exception as exc:
+        print(f"[risk_engine] WARNING: alert trigger failed for {hex_id}: {exc}")
+
+    return result

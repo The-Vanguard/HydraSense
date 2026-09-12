@@ -16,9 +16,28 @@ function formatTime(ts) {
   } catch { return ''; }
 }
 
+// Real feed items (backend/alerts/store.py's get_feed()) don't carry a
+// top-level `message`/`nearest_shelter` -- those live inside cap_payload for
+// "cap" items, and downgrades have from_tier/to_tier instead of prose. The
+// local synthetic items (pin-drop demo path) DO set `message` directly.
+// Normalize both shapes here rather than assuming the real backend matches
+// the demo path's ad-hoc fields.
+function getMessage(item) {
+  if (item.message) return item.message;
+  if (item.type === 'downgrade') {
+    return `Tier dropped from ${item.from_tier} to ${item.to_tier}` + (item.resolved ? ' — resolved' : '');
+  }
+  return item.cap_payload?.description || item.cap_payload?.headline || '';
+}
+
+function getShelter(item) {
+  return item.nearest_shelter || item.cap_payload?.nearest_shelter || null;
+}
+
 function AlertItem({ item }) {
   const isDowngrade = item.type === 'downgrade';
   const tierClass   = !isDowngrade && item.tier === 'Red' ? 'cap Red' : 'cap';
+  const shelter     = getShelter(item);
   return (
     <div className={`alert-item ${isDowngrade ? 'downgrade' : tierClass}`}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -36,7 +55,7 @@ function AlertItem({ item }) {
               CAP Alert — {item.tier}
             </span>
           )}
-          <div style={{ marginTop: 3, fontSize: 12 }}>{item.message}</div>
+          <div style={{ marginTop: 3, fontSize: 12 }}>{getMessage(item)}</div>
           <div style={{ marginTop: 2, fontSize: 10, color: '#484f58', fontFamily: 'monospace' }}>
             {item.hex_id}
           </div>
@@ -45,9 +64,9 @@ function AlertItem({ item }) {
           {formatTime(item.timestamp)}
         </div>
       </div>
-      {!isDowngrade && item.nearest_shelter && (
+      {!isDowngrade && shelter && (
         <div style={{ marginTop: 4, fontSize: 10, color: '#8b949e' }}>
-          Nearest shelter: {item.nearest_shelter.name} ({(item.nearest_shelter.distance_m / 1000).toFixed(1)} km)
+          Nearest shelter: {shelter.name} ({(shelter.distance_m / 1000).toFixed(1)} km)
         </div>
       )}
       {!isDowngrade && item.lead_time_min && (
@@ -117,7 +136,7 @@ export default function AlertFeed({ customAlert }) {
         <div className="empty-state">No alerts — system nominal</div>
       ) : (
         [...combined].reverse().map((a, idx) => (
-          <AlertItem key={a.alert_id || `local_${idx}`} item={a} />
+          <AlertItem key={a.alert_id || a.event_id || `local_${idx}`} item={a} />
         ))
       )}
     </div>
