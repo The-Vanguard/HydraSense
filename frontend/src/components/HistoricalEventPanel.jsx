@@ -140,14 +140,14 @@ export default function HistoricalEventPanel({ selectedEvent, onClose }) {
     .filter((x) => x.d)
     .sort((a, b) => a.d - b.d)
     .map((x) => ({ score: x.ev.tabpfn_risk_score, tier: x.ev.tabpfn_tier, date: x.ev.date, year: x.d.getFullYear() }));
-  // All-time highest stays all-time (most severe real event on record); the
-  // trend sparkline below is scoped to only the most recent year present in
-  // this location's real data, per request -- older years dropped from the trend.
-  const topScored = allScored.length
-    ? allScored.reduce((a, b) => (b.score > a.score ? b : a))
-    : null;
+  // Previous-year data dropped entirely, per request -- both the headline
+  // score AND the trend below only ever look at the most recent year present
+  // in this location's real dated data. Older years never show anywhere here.
   const latestYear = allScored.length ? Math.max(...allScored.map((s) => s.year)) : null;
   const scoredChrono = allScored.filter((s) => s.year === latestYear);
+  const topScored = scoredChrono.length
+    ? scoredChrono.reduce((a, b) => (b.score > a.score ? b : a))
+    : null;
 
   return (
     <div className="panel" style={{ borderColor: '#38bdf8' }}>
@@ -189,7 +189,7 @@ export default function HistoricalEventPanel({ selectedEvent, onClose }) {
           border: `1px solid ${TIER_COLORS[topScored.tier] || '#38bdf8'}`,
         }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: '#8b949e', letterSpacing: 0.5, marginBottom: 2 }}>
-            HIGHEST RECORDED TabPFN SCORE AT THIS LOCATION
+            HIGHEST TabPFN SCORE IN {latestYear} (MOST RECENT YEAR ON RECORD)
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
             <span style={{ fontSize: 30, fontWeight: 800, color: TIER_COLORS[topScored.tier] || '#38bdf8' }}>
