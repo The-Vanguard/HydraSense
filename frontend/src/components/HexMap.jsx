@@ -98,13 +98,19 @@ export default function HexMap({
   onSelectHex,
   onPinDrop,
   pinData,
+  onEventSelect,
 }) {
   const mapRef         = useRef(null);
   const leafletRef     = useRef(null);
   const layerGroupRef  = useRef(null);
   const pinMarkerRef   = useRef(null);
   const onPinDropRef   = useRef(onPinDrop);
+  const onEventSelectRef = useRef(onEventSelect);
   const pinStateRef    = useRef({ lat: null, lng: null, surface: null, tier: null });
+
+  useEffect(() => {
+    onEventSelectRef.current = onEventSelect;
+  }, [onEventSelect]);
 
   // Auto-escalating hex scores: shift each hex score up slightly every 20s
   // to simulate a live ingestion cycle updating risk in real time
@@ -314,11 +320,21 @@ export default function HexMap({
                 Types: ${typeSummary}
               </div>
               <div style="margin-top:6px;font-size:9px;color:#8b949e">
-                ${latest.data_source_note}
+                ${latest.data_source_note}. Click for full details.
               </div>
             </div>`,
             { className: 'hydra-leaflet-popup', maxWidth: 260 }
           );
+
+          marker.on('click', () => {
+            if (onEventSelectRef.current) {
+              onEventSelectRef.current({
+                region: pt.region, lat: pt.lat, lon: pt.lon, events: sorted,
+                staticFeatures: latest.static_features || null,
+                hexId: latest.hex_id || null,
+              });
+            }
+          });
         });
       })
       .catch((err) => {

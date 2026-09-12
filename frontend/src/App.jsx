@@ -18,6 +18,7 @@ import InundationView      from './components/InundationView';
 import FeaturePanel        from './components/FeaturePanel';
 import ValidationPanel     from './components/ValidationPanel';
 import AlertFeed           from './components/AlertFeed';
+import HistoricalEventPanel from './components/HistoricalEventPanel';
 import ManualScenarioPanel  from './components/ManualScenarioPanel';
 
 const POLL_MS         = 10_000;
@@ -36,6 +37,7 @@ export default function App() {
   // Nothing selected on load -- just the map, no sidebar panel pre-populated.
   const [isPinMode,     setIsPinMode]     = useState(false);
   const [pinData,       setPinData]       = useState(null);
+  const [selectedEvent, setSelectedEvent] = useState(null);   // Phase 13 — real historical event pin
   const [manualScenarioOpen, setManualScenarioOpen] = useState(false);   // manual what-if simulator
   const [scenarioPointRequest, setScenarioPointRequest] = useState(null);   // {hexId, ts} -- pin clicked while scenario open
 
@@ -125,6 +127,7 @@ export default function App() {
       setScenarioPointRequest({ hexId, ts: Date.now() });
       return;
     }
+    setSelectedEvent(null);
     setIsPinMode(false);
     setPinData(null);
     setSelectedHexId(hexId);
@@ -138,6 +141,7 @@ export default function App() {
 
   // Dropping or moving a custom pin engages regional analysis
   const handlePinDrop = useCallback((data) => {
+    setSelectedEvent(null);
     setManualScenarioOpen(false);
     setIsPinMode(true);
     setPinData(data);
@@ -156,7 +160,21 @@ export default function App() {
     );
   }, []);
 
+  // Clicking a real historical-event pin shows sourced event details instead
+  // of live risk panels (there is no live model output for these regions) --
+  // unless Manual Scenario is open, in which case it means "load this real
+  // point's static data into the form" instead.
+  const handleEventSelect = useCallback((ev) => {
+    if (manualScenarioOpen) {
+      if (ev.hexId) setScenarioPointRequest({ hexId: ev.hexId, ts: Date.now() });
+      return;
+    }
+    setSelectedEvent(ev);
+  }, [manualScenarioOpen]);
+  const handleCloseEventPanel = useCallback(() => setSelectedEvent(null), []);
+
   const handleOpenManualScenario = useCallback(() => {
+    setSelectedEvent(null);
     setManualScenarioOpen(true);
   }, []);
   const handleCloseManualScenario = useCallback(() => setManualScenarioOpen(false), []);
@@ -165,7 +183,7 @@ export default function App() {
   const currentTier = risk?.tier ?? 'Green';
 
   // Nothing picked yet on a fresh load/refresh -- no sidebar at all, just the map.
-  const hasSelection = Boolean(manualScenarioOpen || selectedHexId || (isPinMode && pinData));
+  const hasSelection = Boolean(manualScenarioOpen || selectedEvent || selectedHexId || (isPinMode && pinData));
 
   return (
     <div className="app-shell">
@@ -179,6 +197,12 @@ export default function App() {
 
           {manualScenarioOpen ? (
             <ManualScenarioPanel onClose={handleCloseManualScenario} externalPointRequest={scenarioPointRequest} />
+          ) : selectedEvent ? (
+            // Real sourced historical event selected -- show its own panel
+            // only. The risk/trend/inundation/feature/alert/validation
+            // panels below are all live-model-shaped and would be
+            // misleading here (no live score exists for these regions).
+            <HistoricalEventPanel selectedEvent={selectedEvent} onClose={handleCloseEventPanel} />
           ) : (
           <>
           {/* Location selector panel: Custom Pin vs Hex */}
@@ -259,6 +283,7 @@ export default function App() {
             onSelectHex={handleSelectHex}
             onPinDrop={handlePinDrop}
             pinData={pinData}
+            onEventSelect={handleEventSelect}
           />
           {/* Sensor offline label (SRS §16) */}
           <SensorLabel iotAnomalyFlag={iotOffline} />
