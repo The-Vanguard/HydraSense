@@ -25,6 +25,7 @@ router = APIRouter(prefix="/events", tags=["events"])
 ROOT = Path(__file__).resolve().parents[2]
 TABPFN_PREDICTIONS_PATH = ROOT / "data" / "multiregion" / "model_ready" / "tabpfn" / "predictions.json"
 CHRONOS_PREDICTIONS_PATH = ROOT / "data" / "multiregion" / "model_ready" / "chronos" / "predictions.json"
+TABPFN_IMPORTANCE_PATH = ROOT / "data" / "multiregion" / "model_ready" / "tabpfn" / "feature_importance.json"
 
 # region_key -> representative real GUARDIAN item_id, per
 # data/multiregion/scripts/build_event_centered_samples.py's WSE_FILE_TO_POINTS
@@ -62,6 +63,21 @@ def _load_tabpfn_predictions() -> dict:
         return {}
     try:
         return json.loads(TABPFN_PREDICTIONS_PATH.read_text())
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
+@router.get("/tabpfn-importance")
+def get_tabpfn_importance():
+    """GET /events/tabpfn-importance -- GLOBAL permutation feature importance
+    for the TabPFN model (Step 6c, compute_tabpfn_feature_importance.py).
+    Same ranking for every event -- NOT per-prediction attribution, see
+    caveat. Returns {} if the script hasn't been run yet -- never fabricates
+    a placeholder ranking."""
+    if not TABPFN_IMPORTANCE_PATH.exists():
+        return {}
+    try:
+        return json.loads(TABPFN_IMPORTANCE_PATH.read_text())
     except (json.JSONDecodeError, OSError):
         return {}
 

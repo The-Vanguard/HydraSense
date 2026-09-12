@@ -50,3 +50,24 @@ export const getEventsMap = (bbox = null) => {
   const params = bbox ? { bbox: bbox.join(',') } : {};
   return api.get('/events/map', { params }).then((r) => r.data);
 };
+
+/**
+ * GET /events/tabpfn-importance — GLOBAL permutation feature importance for
+ * the TabPFN model (Step 6c). Same ranking for every event, not a live or
+ * per-prediction value — fetch once, not per event.
+ */
+export const getTabpfnImportance = () =>
+  api.get('/events/tabpfn-importance').then((r) => r.data);
+
+/**
+ * POST /simulate/risk — manual "what-if" scenario, scored by the real
+ * trained Wayanad FusionModel. Fires a real ntfy.sh alert on Orange/Red
+ * (server-side dedup). Fields are all optional; sparse input gets an
+ * honest warning back instead of a silently misleading flat score.
+ */
+export const simulateRisk = (scenario) =>
+  api.post('/simulate/risk', scenario).then((r) => r.data);
+
+/** GET /simulate/points — real Wayanad pilot hexes to start a manual scenario from. */
+export const getSimulationPoints = () =>
+  api.get('/simulate/points').then((r) => r.data);
