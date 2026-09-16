@@ -37,6 +37,15 @@ export const getLoeoResults = () =>
 export const getAlertFeed = () =>
   api.get('/alert/feed').then((r) => r.data);
 
+/**
+ * GET /risk/{hex_id}/uncertainty — real Phase 5 factor-of-safety (+ band) for
+ * a real Wayanad hex, computed from real observations.dynamic_features.
+ * Returns nulls (with an honest band_note) for hexes with no real terrain
+ * static_features recorded yet -- never a fabricated FS value.
+ */
+export const getUncertainty = (hexId) =>
+  api.get(`/risk/${hexId}/uncertainty`).then((r) => r.data);
+
 /** GET /shelters/nearest/{hex_id} — nearest static shelter lookup */
 export const getNearestShelter = (hexId) =>
   api.get(`/shelters/nearest/${hexId}`).then((r) => r.data);
@@ -50,3 +59,24 @@ export const getEventsMap = (bbox = null) => {
   const params = bbox ? { bbox: bbox.join(',') } : {};
   return api.get('/events/map', { params }).then((r) => r.data);
 };
+
+/**
+ * GET /events/{event_id}/rainfall-window — real hourly ERA5 rainfall for the
+ * 24h before this specific event's recorded timestamp. Empty series (with an
+ * honest note) when real ingestion doesn't cover that date -- never faked.
+ */
+export const getEventRainfallWindow = (eventId) =>
+  api.get(`/events/${eventId}/rainfall-window`).then((r) => r.data);
+
+/**
+ * POST /simulate/risk — manual "what-if" scenario, scored by the real
+ * trained Wayanad FusionModel. Fires a real ntfy.sh alert on Orange/Red
+ * (server-side dedup). Fields are all optional; sparse input gets an
+ * honest warning back instead of a silently misleading flat score.
+ */
+export const simulateRisk = (scenario) =>
+  api.post('/simulate/risk', scenario).then((r) => r.data);
+
+/** GET /simulate/points — real Wayanad pilot hexes to start a manual scenario from. */
+export const getSimulationPoints = () =>
+  api.get('/simulate/points').then((r) => r.data);

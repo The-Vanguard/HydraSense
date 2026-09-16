@@ -23,6 +23,7 @@ sys.path.insert(0, str(ROOT))
 
 from backend.database import get_db
 from backend.lead_time import compute_lead_time
+from backend.alerts.router import trigger_alert, TriggerRequest
 
 # Phase 6 model
 _MODEL_PATH = ROOT / "ml" / "models" / "fusion_model.pkl"
@@ -105,10 +106,15 @@ def compute_and_store_risk(hex_id: str) -> dict[str, Any] | None:
         features = _merge_features(static_feats, dynamic_feats)
         pred = model.predict_one(features)
 
-        # 4. Build feature contributions list (top 5)
+        # 4. Build feature contributions list (top 5) -- exclude exactly-zero
+        # contributions rather than padding the list with them. A feature the
+        # model currently assigns zero gain to (e.g. slope_deg while Phase 3
+        # terrain coverage is unavailable) is not a "top contributor," and
+        # listing it as one would misrepresent a real-but-degenerate model
+        # output as if every feature were meaningfully analyzed.
         contributions = pred.get("feature_contributions", {})
         top_features = sorted(
-            [{"feature": k, "contribution": v} for k, v in contributions.items()],
+            [{"feature": k, "contribution": v} for k, v in contributions.items() if v != 0],
             key=lambda x: abs(x["contribution"]),
             reverse=True,
         )[:5]
@@ -140,7 +146,7 @@ def compute_and_store_risk(hex_id: str) -> dict[str, Any] | None:
             )
         )
 
-        return {
+        result = {
             "hex_id":                    hex_id,
             "timestamp":                 now_ts,
             "risk_score":                pred["risk_score"],
@@ -151,3 +157,22 @@ def compute_and_store_risk(hex_id: str) -> dict[str, Any] | None:
             "top_contributing_features": top_features,
             "data_source":               data_source,
         }
+
+    # 6. Phase 11 (guru-elight): real CAP alert pipeline. Runs every cycle so
+    # dedup/downgrade state stays current even below Orange; only fires a
+    # real CAP alert on Orange/Red escalation or cooldown (SRS §17). Never
+    # allowed to break risk computation -- the risk_scores row above is
+    # already written regardless of what happens here.
+    try:
+        trigger_alert(TriggerRequest(
+            hex_id=hex_id,
+            tier=pred["tier"],
+            risk_score=pred["risk_score"],
+            confidence_score=pred["confidence_score"],
+            lead_time_min=lead_time_min,
+            lead_time_basis=lead_time_basis,
+        ))
+    except Exception as exc:
+        print(f"[risk_engine] WARNING: alert trigger failed for {hex_id}: {exc}")
+
+    return result

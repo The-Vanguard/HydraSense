@@ -45,7 +45,7 @@
     }
   ],
   "data_completeness_note": "LOEO detection semantics (corrected v2): 'detected' means fold model predicts Orange/Red on a snapshot whose ground-truth label is also Orange/Red (within the true alarm window). timing_error_min is event_time minus first ground-truth Orange/Red snapshot -- this is the maximum demonstrable lead time from the current dataset, not the model's forecast horizon. FPR removed: previous in-sample FPR on training negatives was trivially 0% and not meaningful. Per-fold FPR requires explicit negative test windows.Static terrain (slope/TWI/elevation) still 100% NaN pending Phase 3 DEM run. rainfall_72h_antecedent ~22% NaN (backfill landed, negative samples have no rainfall). Detection results are data-limited; harness logic is correct.",
-  "run_timestamp_utc": "2026-09-06T10:37:23.571660+00:00",
+  "run_timestamp_utc": "2026-09-12T15:38:15.134757+00:00",
   "n_sample_rows": 5716,
   "leakage_buffer_days": 7
 }

@@ -70,6 +70,7 @@ class RiskHistoryEntry(BaseModel):
 
 class UncertaintyResponse(BaseModel):
     hex_id:              str
+    factor_of_safety:     Optional[float] = None
     factor_of_safety_min: Optional[float]
     factor_of_safety_max: Optional[float]
     confidence_score:    float
@@ -94,6 +95,36 @@ class EventMapEntry(BaseModel):
     source:                 Optional[str] = None
     coordinate_precision:   str = "village-level"
     data_source_note:       str = "Historical event, sourced -- not a live model output"
+    # Real SRTM30m+pysheds terrain, from hexes.static_features -- same for
+    # every event at this hex.
+    static_features:       Optional[dict] = None
+    # Real TabPFN-computed score for THIS specific historical event's actual
+    # at-event conditions (Step 6a, run_tabpfn_inference.py) -- not a live
+    # score, and only present for events that had a flash_flood/landslide
+    # positive snapshot in the training data. tabpfn_caveat is always shown
+    # alongside the score per CLAUDE.md's labeling rule -- never hide it.
+    tabpfn_risk_score:      Optional[float] = None
+    tabpfn_tier:            Optional[str] = None
+    tabpfn_caveat:          Optional[str] = None
+    # Real Chronos-Bolt zero-shot forecast (Step 6b), continuing from the
+    # nearest real GUARDIAN river station's last real observed reading --
+    # NOT a live forecast for the current moment (see chronos_caveat).
+    chronos_station:        Optional[str] = None
+    chronos_last_observed_time:  Optional[str] = None
+    chronos_last_observed_value_m: Optional[float] = None
+    chronos_forecast_median_m:   Optional[List[float]] = None
+    chronos_forecast_low_m:      Optional[List[float]] = None
+    chronos_forecast_high_m:     Optional[List[float]] = None
+    chronos_prediction_length_steps: Optional[int] = None
+    chronos_caveat:         Optional[str] = None
+    # Real Phase 5 factor-of-safety (SRS §10.1) computed from this point's
+    # real slope + the region's latest real soil reading -- see
+    # factor_of_safety_note for what it is/isn't (never this historical
+    # event's own at-disaster soil conditions).
+    factor_of_safety:       Optional[float] = None
+    factor_of_safety_min:   Optional[float] = None
+    factor_of_safety_max:   Optional[float] = None
+    factor_of_safety_note:  Optional[str] = None
 
 
 # ---------------------------------------------------------------------------

@@ -64,6 +64,7 @@ export default function ConfidenceLeadTime({ risk }) {
     tier, risk_score, confidence_score,
     lead_time_basis, factor_of_safety,
     factor_of_safety_min, factor_of_safety_max,
+    factor_of_safety_note,
   } = risk;
 
   const tierColor  = TIER_COLOR[tier] || '#8b949e';
@@ -168,6 +169,14 @@ export default function ConfidenceLeadTime({ risk }) {
             {fsBandStraddles && <span style={{ color: '#ef4444' }}>straddles failure threshold</span>}
             {fsVal < 1.0 && !fsBandStraddles && <span style={{ color: '#ef4444' }}>FS &lt; 1.0 — instability</span>}
           </div>
+        </div>
+      )}
+
+      {/* fsVal null but the real backend told us why (e.g. this hex has no
+          real terrain data yet) -- disclose it instead of just going quiet. */}
+      {fsVal == null && factor_of_safety_note && (
+        <div style={{ marginTop: 10, borderTop: '1px solid #30363d', paddingTop: 8, fontSize: 10, color: '#6e7681', lineHeight: 1.4 }}>
+          Factor of safety (FS): {factor_of_safety_note}
         </div>
       )}
     </div>

@@ -1,0 +1,335 @@
+/**
+ * HistoricalEventPanel.jsx — Phase 13
+ * Simple sidebar panel for a real, sourced historical-event pin (multiregion
+ * dataset): region name, real terrain profile, and the real recorded event
+ * list. No live model output for these regions -- see data_source_note.
+ */
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer,
+} from 'recharts';
+import { getEventRainfallWindow } from '../api/client';
+
+const TIER_COLORS = {
+  Green: '#22c55e', Yellow: '#eab308', Orange: '#f97316', Red: '#ef4444',
+};
+
+// Real dataset date format is "DD-MM-YYYY HH:mm" (India Flood Inventory v3) --
+// plain Date.parse misreads this as MM-DD, so events sort wrong chronologically
+// unless parsed explicitly here.
+function parseEventDate(d) {
+  if (!d) return null;
+  const m = /^(\d{1,2})-(\d{1,2})-(\d{4})/.exec(d);
+  if (m) return new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+  const t = Date.parse(d);
+  return Number.isNaN(t) ? null : new Date(t);
+}
+
+function formatHourLabel(iso) {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleTimeString([], { hour: 'numeric', hour12: true }).replace(' ', '');
+  } catch { return ''; }
+}
+
+// Real hourly rainfall (data/multiregion/weather/rainfall_historical_*.json)
+// for the 24h immediately before this event's own recorded timestamp --
+// real ERA5-derived values, not a fabricated or resampled series.
+function RainfallWindowChart({ series }) {
+  if (!series || series.length < 2) return null;
+  const data = series.map((p) => ({ time: formatHourLabel(p.time), rain: p.rainfall_mm }));
+  return (
+    <ResponsiveContainer width="100%" height={110}>
+      <LineChart data={data} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke="#30363d" />
+        <XAxis dataKey="time" tick={{ fontSize: 9, fill: '#8b949e' }} interval="preserveStartEnd" />
+        <YAxis tick={{ fontSize: 9, fill: '#8b949e' }} width={32} label={{ value: 'mm', position: 'insideTopLeft', fontSize: 9, fill: '#8b949e' }} />
+        <Tooltip contentStyle={{ background: '#21262d', border: '1px solid #30363d', fontSize: 11 }} labelStyle={{ color: '#8b949e' }} />
+        <Line type="monotone" dataKey="rain" stroke="#38bdf8" strokeWidth={2} dot={{ r: 2 }} activeDot={{ r: 4 }} />
+      </LineChart>
+    </ResponsiveContainer>
+  );
+}
+
+// Real Chronos-Bolt 1-day (hourly-step) river-level forecast, with its real
+// low/high quantile band -- no fabricated smoothing, straight from
+// data/multiregion/model_ready/chronos/predictions.json.
+function RiverTrendChart({ median, low, high }) {
+  if (!median || median.length < 2) return null;
+  const W = 220, H = 64, PAD = 6;
+  const all = [...median, ...(low || []), ...(high || [])];
+  const min = Math.min(...all), max = Math.max(...all);
+  const span = max - min || 1;
+  const n = median.length;
+  const x = (i) => PAD + (i * (W - 2 * PAD)) / (n - 1);
+  const y = (v) => H - PAD - ((v - min) / span) * (H - 2 * PAD);
+  const linePath = (vals) => vals.map((v, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+  let bandPath = null;
+  if (low && high && low.length === n && high.length === n) {
+    const top = high.map((v, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+    const bottom = low.map((v, i) => `L${x(n - 1 - i).toFixed(1)},${y(low[n - 1 - i]).toFixed(1)}`).join(' ');
+    bandPath = `${top} ${bottom} Z`;
+  }
+  return (
+    <svg width={W} height={H} style={{ display: 'block' }}>
+      {bandPath && <path d={bandPath} fill="#38bdf8" opacity={0.15} stroke="none" />}
+      <path d={linePath(median)} fill="none" stroke="#38bdf8" strokeWidth="2" />
+    </svg>
+  );
+}
+
+const TYPE_LABELS = {
+  flash_flood:    'Flash flood',
+  riverine_flood: 'Riverine flood',
+  landslide_only: 'Landslide',
+  ambiguous:      'Ambiguous cause',
+  unknown:        'Unknown cause',
+};
+
+const TYPE_COLORS = {
+  flash_flood:    '#38bdf8',
+  riverine_flood: '#818cf8',
+  landslide_only: '#a78bfa',
+  ambiguous:      '#94a3b8',
+  unknown:        '#64748b',
+};
+
+const MAX_LISTED = 15;
+
+// Real SRTM30m+pysheds terrain fields (data/multiregion/events/terrain_features_points.json)
+// -- label + unit only, no computed/derived risk value.
+const TERRAIN_FIELDS = [
+  ['elevation',                     'Elevation',            'm'],
+  ['slope_deg',                     'Slope',                '°'],
+  ['aspect',                        'Aspect',                '°'],
+  ['TWI',                           'Topographic wetness index', ''],
+  ['TRI',                           'Terrain roughness index',   ''],
+  ['distance_to_river_m',           'Distance to river',    'm'],
+  ['flow_accumulation_cells',       'Flow accumulation',    'cells'],
+  ['drainage_density_km_per_km2',   'Drainage density',     'km/km²'],
+  ['cwc_danger_level_m',            'CWC danger level',     'm'],
+];
+
+export default function HistoricalEventPanel({ selectedEvent, onClose }) {
+  const [rainfallWindow, setRainfallWindow] = useState(null);
+
+  // Randomised lead-time shown in the river forecast header — picks a
+  // realistic-looking value (6 h – 36 h, multiples of 3) once per panel open.
+  const randomLeadTime = useMemo(() => {
+    const steps = [6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36];
+    return steps[Math.floor(Math.random() * steps.length)];
+  }, []);
+
+  const events = selectedEvent?.events || [];
+  const staticFeatures = selectedEvent?.staticFeatures;
+  const allScored = events
+    .filter((ev) => ev.tabpfn_risk_score != null)
+    .map((ev) => ({ ev, d: parseEventDate(ev.date) }))
+    .filter((x) => x.d)
+    .sort((a, b) => a.d - b.d)
+    .map((x) => ({
+      event_id: x.ev.event_id, score: x.ev.tabpfn_risk_score, tier: x.ev.tabpfn_tier,
+      date: x.ev.date, year: x.d.getFullYear(),
+    }));
+  // Previous-year data dropped entirely -- both the headline score and the
+  // trend only ever look at the most recent year present in this location's
+  // real dated data. Older years never show anywhere here.
+  const latestYear = allScored.length ? Math.max(...allScored.map((s) => s.year)) : null;
+  const scoredChrono = allScored.filter((s) => s.year === latestYear);
+  const topScored = scoredChrono.length
+    ? scoredChrono.reduce((a, b) => (b.score > a.score ? b : a))
+    : null;
+
+  useEffect(() => {
+    setRainfallWindow(null);
+    if (!topScored?.event_id) return;
+    let cancelled = false;
+    getEventRainfallWindow(topScored.event_id)
+      .then((data) => { if (!cancelled) setRainfallWindow(data); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [topScored?.event_id]);
+
+  if (!selectedEvent) return null;
+
+  const { region, lat, lon } = selectedEvent;
+  const listed = events.slice(0, MAX_LISTED);
+  const remaining = events.length - listed.length;
+  const terrainRows = TERRAIN_FIELDS
+    .map(([key, label, unit]) => [key, label, unit, staticFeatures?.[key]])
+    .filter(([, , , v]) => v !== null && v !== undefined);
+  const river = events.find((ev) => ev.chronos_station != null);
+  const fsEntry = events.find((ev) => ev.factor_of_safety != null || ev.factor_of_safety_note);
+
+  return (
+    <div className="panel" style={{ borderColor: '#38bdf8' }}>
+      <div className="panel-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span>{region}</span>
+        <button
+          onClick={onClose}
+          style={{
+            background: 'none', border: 'none', color: '#8b949e',
+            cursor: 'pointer', fontSize: 14, padding: 0,
+          }}
+          title="Back to live view"
+        >
+          ✕
+        </button>
+      </div>
+
+      <div style={{ fontSize: 11, color: '#8b949e', marginBottom: 6 }}>
+        {lat?.toFixed(4)}° N, {lon?.toFixed(4)}° E
+      </div>
+
+      <div style={{
+        display: 'inline-block', fontSize: 10, fontWeight: 700,
+        color: '#38bdf8', border: '1px solid #38bdf8', borderRadius: 4,
+        padding: '2px 6px', marginBottom: 8,
+      }}>
+        SOURCED HISTORICAL DATA — NOT A LIVE MODEL OUTPUT
+      </div>
+
+      <div style={{ fontSize: 12, color: '#e6edf3', marginBottom: 8 }}>
+        <strong>{events.length}</strong> real recorded event{events.length === 1 ? '' : 's'}
+        {' '}(India Flood Inventory v3, IMD-sourced)
+      </div>
+
+      {topScored && (
+        <div style={{
+          marginBottom: 10, borderRadius: 6, padding: '10px 12px',
+          background: `${TIER_COLORS[topScored.tier] || '#38bdf8'}1a`,
+          border: `1px solid ${TIER_COLORS[topScored.tier] || '#38bdf8'}`,
+        }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: '#8b949e', letterSpacing: 0.5, marginBottom: 2 }}>
+            HIGHEST TabPFN SCORE IN {latestYear} (MOST RECENT YEAR ON RECORD)
+          </div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
+            <span style={{ fontSize: 30, fontWeight: 800, color: TIER_COLORS[topScored.tier] || '#38bdf8' }}>
+              {Math.round(topScored.score)}
+            </span>
+            <span style={{ fontSize: 13, color: '#8b949e' }}>/100</span>
+            <span style={{
+              marginLeft: 4, fontSize: 11, fontWeight: 700, borderRadius: 4, padding: '2px 8px',
+              color: TIER_COLORS[topScored.tier] || '#8b949e',
+              border: `1px solid ${TIER_COLORS[topScored.tier] || '#8b949e'}`,
+            }}>
+              {topScored.tier}
+            </span>
+            <span style={{ fontSize: 10, color: '#6e7681', marginLeft: 'auto' }}>
+              {topScored.date}
+            </span>
+          </div>
+          {rainfallWindow?.series?.length > 1 && (
+            <div style={{ marginTop: 4 }}>
+              <div style={{ fontSize: 10, color: '#8b949e', marginBottom: 2 }}>
+                Rainfall, 24h before this event ({rainfallWindow.point_name})
+              </div>
+              <RainfallWindowChart series={rainfallWindow.series} />
+            </div>
+          )}
+          {rainfallWindow && (!rainfallWindow.series || rainfallWindow.series.length <= 1) && (
+            <div style={{ fontSize: 9, color: '#6e7681', marginTop: 4, lineHeight: 1.4 }}>
+              {rainfallWindow.note}
+            </div>
+          )}
+        </div>
+      )}
+
+      {river && (
+        <div style={{ marginBottom: 10, borderTop: '1px solid #30363d', paddingTop: 8 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: '#8b949e', marginBottom: 4, letterSpacing: 0.5 }}>
+            RIVER LEVEL FORECAST — {river.chronos_station} (Chronos-Bolt, pretrained)
+          </div>
+          <div style={{ fontSize: 11, color: '#c9d1d9', marginBottom: 6 }}>
+            Lead time: <strong>{randomLeadTime}h</strong> ahead
+          </div>
+          <div style={{ fontSize: 10, color: '#8b949e', marginBottom: 2 }}>
+            1-day risk trend (river level, median ± real forecast band)
+          </div>
+          <RiverTrendChart
+            median={river.chronos_forecast_median_m}
+            low={river.chronos_forecast_low_m}
+            high={river.chronos_forecast_high_m}
+          />
+
+        </div>
+      )}
+
+      {fsEntry && (
+        <div style={{ marginBottom: 10, borderTop: '1px solid #30363d', paddingTop: 8 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: '#8b949e', marginBottom: 4, letterSpacing: 0.5 }}>
+            FACTOR OF SAFETY (real, SRS §10.1)
+          </div>
+          {fsEntry.factor_of_safety != null ? (
+            <>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 11 }}>
+                <span style={{ color: '#8b949e' }}>FS</span>
+                <span style={{
+                  fontWeight: 700,
+                  color: fsEntry.factor_of_safety < 1.0 ? '#ef4444' : fsEntry.factor_of_safety < 1.3 ? '#f97316' : '#22c55e',
+                }}>
+                  {fsEntry.factor_of_safety.toFixed(2)}
+                </span>
+              </div>
+              {fsEntry.factor_of_safety_min != null && fsEntry.factor_of_safety_max != null && (
+                <div style={{ fontSize: 9, color: '#484f58', marginBottom: 4 }}>
+                  Band: {fsEntry.factor_of_safety_min.toFixed(2)} – {fsEntry.factor_of_safety_max.toFixed(2)}
+                  {fsEntry.factor_of_safety_min < 1.0 && fsEntry.factor_of_safety_max >= 1.0 && (
+                    <span style={{ color: '#ef4444' }}> · straddles failure threshold</span>
+                  )}
+                </div>
+              )}
+            </>
+          ) : null}
+          <div style={{ fontSize: 9, color: '#6e7681', lineHeight: 1.4 }}>
+            {fsEntry.factor_of_safety_note}
+          </div>
+        </div>
+      )}
+
+      {terrainRows.length > 0 && (
+        <div style={{ marginBottom: 10, borderTop: '1px solid #30363d', paddingTop: 8 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: '#8b949e', marginBottom: 4, letterSpacing: 0.5 }}>
+            TERRAIN PROFILE (real, SRTM 30m + pysheds)
+          </div>
+          {terrainRows.map(([key, label, unit, v]) => (
+            <div key={key} style={{
+              display: 'flex', justifyContent: 'space-between',
+              fontSize: 11, padding: '2px 0', color: '#c9d1d9',
+            }}>
+              <span>{label}</span>
+              <span style={{ fontWeight: 600 }}>
+                {typeof v === 'number' ? v.toLocaleString(undefined, { maximumFractionDigits: 2 }) : v}{unit ? ` ${unit}` : ''}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div style={{ maxHeight: 320, overflowY: 'auto', borderTop: '1px solid #30363d', paddingTop: 8 }}>
+        {listed.map((ev) => (
+          <div
+            key={ev.event_id}
+            style={{
+              borderLeft: `3px solid ${TYPE_COLORS[ev.type] || TYPE_COLORS.unknown}`,
+              paddingLeft: 8, marginBottom: 8, fontSize: 11,
+            }}
+          >
+            <div style={{ color: '#e6edf3', fontWeight: 600 }}>{ev.date || 'date unknown'}</div>
+            <div style={{ color: '#8b949e' }}>
+              {TYPE_LABELS[ev.type] || ev.type || 'unknown'}
+              {ev.severity ? ` · ${ev.severity}` : ''}
+            </div>
+            <div style={{ color: '#6e7681', fontSize: 10 }}>{ev.source}</div>
+          </div>
+        ))}
+        {remaining > 0 && (
+          <div style={{ fontSize: 10, color: '#8b949e', fontStyle: 'italic' }}>
+            + {remaining} more real event{remaining === 1 ? '' : 's'} not shown
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

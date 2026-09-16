@@ -19,8 +19,8 @@ Endpoints:
     GET  /risk/{hex_id}/uncertainty
     GET  /validation/loeo
     GET  /shelters/nearest/{hex_id}
-    POST /alert/trigger              (501 -- Phase 11)
-    GET  /alert/feed                 (501 -- Phase 11)
+    POST /alert/trigger              (Phase 11, guru-elight -- real CAP 1.2 pipeline)
+    GET  /alert/feed                 (Phase 11, guru-elight -- real CAP 1.2 pipeline)
 """
 import sys
 from pathlib import Path
@@ -32,7 +32,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.database import init_db
-from backend.routers import ingest, risk, validation, shelters, alerts, events
+from backend.routers import ingest, risk, validation, shelters, events, simulate
+from backend.alerts.router import router as alerts_router
 from backend.seed import run_seed
 from backend.seed_multiregion import run_seed_multiregion
 
@@ -54,8 +55,9 @@ app.include_router(ingest.router)
 app.include_router(risk.router)
 app.include_router(validation.router)
 app.include_router(shelters.router)
-app.include_router(alerts.router)
+app.include_router(alerts_router)  # Phase 11 (guru-elight) -- real CAP pipeline, replaces the 501 stub
 app.include_router(events.router)
+app.include_router(simulate.router)
 
 
 @app.on_event("startup")

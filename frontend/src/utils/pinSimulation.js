@@ -38,7 +38,7 @@ export function classifyLocationAndColor(r, g, b, lat, lng, isRightSide = undefi
   if (isCoromandelCoast(lat, lng)) {
     return {
       surface: 'coromandel_coast',
-      label: '🌧️ Coromandel Coast (September Rain & Inundation)',
+      label: 'Coromandel Coast (September Rain & Inundation)',
       defaultTier: h < 0.55 ? 'Orange' : 'Red',
       isCoastalRain: true,
     };
@@ -48,7 +48,7 @@ export function classifyLocationAndColor(r, g, b, lat, lng, isRightSide = undefi
   if (b > r + 15 && b > g - 5 && b > 110) {
     return {
       surface: 'water',
-      label: '🌊 Water Body / Inundation Zone',
+      label: 'Water Body / Inundation Zone',
       defaultTier: 'Orange',
     };
   }
@@ -64,8 +64,8 @@ export function classifyLocationAndColor(r, g, b, lat, lng, isRightSide = undefi
       return {
         surface: 'green_slope',
         label: defaultTier === 'Orange'
-          ? '⛰️ Mountain Slope (Eastern Saturated Incline)'
-          : '⛰️ Vegetated Incline (Moderate Slope Runoff)',
+          ? 'Mountain Slope (Eastern Saturated Incline)'
+          : 'Vegetated Incline (Moderate Slope Runoff)',
         defaultTier,
         isSteepSlope: defaultTier === 'Orange',
       };
@@ -75,8 +75,8 @@ export function classifyLocationAndColor(r, g, b, lat, lng, isRightSide = undefi
       return {
         surface: 'green_slope',
         label: defaultTier === 'Yellow'
-          ? '⛰️ Mountain Slope (Western Ridge Moderate Slope)'
-          : '🌲 Mountain Slope (Western Forested Ridge — Stable)',
+          ? 'Mountain Slope (Western Ridge Moderate Slope)'
+          : 'Mountain Slope (Western Forested Ridge — Stable)',
         defaultTier,
         isSteepSlope: false,
       };
@@ -86,7 +86,7 @@ export function classifyLocationAndColor(r, g, b, lat, lng, isRightSide = undefi
   // Non-green: Flat plains, valleys, built-up land, low gradient
   return {
     surface: 'flat_land',
-    label: '🏡 Low Gradient Plains (Stable Terrain)',
+    label: 'Low Gradient Plains (Stable Terrain)',
     defaultTier: h < 0.85 ? 'Green' : 'Yellow',
     isFlatPlain: true,
   };
@@ -116,7 +116,7 @@ export function sampleMapColor(map, latlng) {
   if (isCoromandelCoast(lat, lng)) {
     return {
       surface: 'coromandel_coast',
-      label: '🌧️ Coromandel Coast (September Rain & Inundation)',
+      label: 'Coromandel Coast (September Rain & Inundation)',
       defaultTier: h < 0.55 ? 'Orange' : 'Red',
       isCoastalRain: true,
     };
@@ -169,8 +169,8 @@ export function sampleMapColor(map, latlng) {
       return {
         surface: 'green_slope',
         label: defaultTier === 'Orange'
-          ? '⛰️ Mountain Slope (Eastern Saturated Incline)'
-          : '⛰️ Vegetated Incline (Moderate Slope Runoff)',
+          ? 'Mountain Slope (Eastern Saturated Incline)'
+          : 'Vegetated Incline (Moderate Slope Runoff)',
         defaultTier,
         isSteepSlope: defaultTier === 'Orange',
       };
@@ -179,8 +179,8 @@ export function sampleMapColor(map, latlng) {
       return {
         surface: 'green_slope',
         label: defaultTier === 'Yellow'
-          ? '⛰️ Mountain Slope (Western Ridge Moderate Slope)'
-          : '🌲 Mountain Slope (Western Forested Ridge — Stable)',
+          ? 'Mountain Slope (Western Ridge Moderate Slope)'
+          : 'Mountain Slope (Western Forested Ridge — Stable)',
         defaultTier,
         isSteepSlope: false,
       };
@@ -190,7 +190,7 @@ export function sampleMapColor(map, latlng) {
   // Other areas: predominantly flat plains
   return {
     surface: 'flat_land',
-    label: '🏡 Low Gradient Plains (Stable Terrain)',
+    label: 'Low Gradient Plains (Stable Terrain)',
     defaultTier: 'Green',
     isFlatPlain: true,
   };
@@ -366,60 +366,12 @@ export function generatePinSimulation(lat, lng, forcedTier = null, surfaceInfo =
     is_custom_pin: true,
   };
 
-  // Dynamic validation metrics tailored to region, terrain and tier
-  const baseEvents = surface.surface === 'coromandel_coast' ? 34 : (surface.isSteepSlope || surface.surface === 'green_slope' ? 28 : 22);
-  const eventsEvaluated = baseEvents + Math.floor(h(15) * 4);
-  const missedCount = Math.floor(h(16) * 2) + 1;
-  const eventsDetected = eventsEvaluated - missedCount;
-  const detectionRatePct = ((eventsDetected / eventsEvaluated) * 100).toFixed(1) + '%';
-  const fprPct = (3.4 + h(17) * 2.6).toFixed(1) + '%';
-  const leadMeanMin = Math.round(180 + h(18) * 120);
-  const leadMedMin = Math.round(leadMeanMin - 15);
-  const threshold = tier === 'Red' ? 75.0 : (tier === 'Orange' ? 55.0 : 35.0);
-
-  const validation = {
-    loeo_n_events: eventsEvaluated,
-    loeo_n_detected: eventsDetected,
-    detection_rate_str: detectionRatePct,
-    false_positive_rate_str: fprPct,
-    lead_time_mean_str: `${(leadMeanMin / 60).toFixed(1)}h (${leadMeanMin} min)`,
-    lead_time_median_str: `${(leadMedMin / 60).toFixed(1)}h (${leadMedMin} min)`,
-    leakage_buffer_days: 7,
-    detection_threshold: threshold,
-  };
-
   return {
     risk,
     history,
     inundation,
     alert,
     surface,
-    validation,
-  };
-}
-
-/**
- * Generate dynamic validation metrics for any selected hex
- */
-export function generateValidationForHex(tier = 'Yellow') {
-  const eventsEvaluated = 30;
-  const missedCount = tier === 'Red' ? 1 : 2;
-  const eventsDetected = eventsEvaluated - missedCount;
-  const detectionRatePct = ((eventsDetected / eventsEvaluated) * 100).toFixed(1) + '%';
-  const fprPct = '3.8%';
-  const leadMeanMin = 240;
-  const leadMedMin = 210;
-  const threshold = tier === 'Red' ? 75.0 : (tier === 'Orange' ? 55.0 : 35.0);
-
-  return {
-    loeo_n_events: eventsEvaluated,
-    loeo_n_detected: eventsDetected,
-    detection_rate_str: detectionRatePct,
-    false_positive_rate_str: fprPct,
-    lead_time_mean_str: `${(leadMeanMin / 60).toFixed(1)}h (${leadMeanMin} min)`,
-    lead_time_median_str: `${(leadMedMin / 60).toFixed(1)}h (${leadMedMin} min)`,
-    leakage_buffer_days: 7,
-    detection_threshold: threshold,
   };
 }
 

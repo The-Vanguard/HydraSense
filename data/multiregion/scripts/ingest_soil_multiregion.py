@@ -96,11 +96,8 @@ def load_event_dates(region: str) -> list[date]:
     return [pd.Timestamp(d).date() for d in dates]
 
 
-def merged_windows(dates: list[date]) -> list[tuple[date, date]]:
-    raw = sorted([
-        (d - timedelta(days=WINDOW_DAYS_BEFORE), d + timedelta(days=WINDOW_DAYS_AFTER))
-        for d in dates
-    ])
+def merge_ranges(raw: list[tuple[date, date]]) -> list[tuple[date, date]]:
+    raw = sorted(raw)
     merged: list[tuple[date, date]] = []
     for s, e in raw:
         if merged and s <= merged[-1][1] + timedelta(days=1):
@@ -108,6 +105,26 @@ def merged_windows(dates: list[date]) -> list[tuple[date, date]]:
         else:
             merged.append((s, e))
     return merged
+
+
+def merged_windows(dates: list[date]) -> list[tuple[date, date]]:
+    """Real event-date windows PLUS a full June-November window per year in
+    range -- same rationale as ingest_rainfall_historical_multiregion.py's
+    merged_windows: covers the negative-sample candidate dates
+    build_event_centered_samples.py draws from, clamped to NASA POWER's real
+    2001-01-01 coverage start (years before that are skipped entirely, same
+    as the existing pre_coverage/post_coverage split below)."""
+    event_windows = [
+        (d - timedelta(days=WINDOW_DAYS_BEFORE), d + timedelta(days=WINDOW_DAYS_AFTER))
+        for d in dates
+    ]
+    year_min, year_max = dates[0].year, dates[-1].year
+    monsoon_windows = [
+        (date(y, 6, 1), date(y, 11, 30))
+        for y in range(year_min, year_max + 1)
+        if date(y, 11, 30) >= NASA_POWER_COVERAGE_START
+    ]
+    return merge_ranges(event_windows + monsoon_windows)
 
 
 def fetch_gwetroot_window(lat: float, lon: float, start: date, end: date) -> dict:

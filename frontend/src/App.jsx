@@ -6,8 +6,7 @@
  * based on terrain slope, surface classification, and meteorological conditions.
  */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { getRiskMap, getRisk, getRiskHistory, getInundation } from './api/client';
-import { generateValidationForHex } from './utils/pinSimulation';
+import { getRiskMap, getRisk, getRiskHistory, getInundation, getUncertainty } from './api/client';
 
 import DataSourceLabel     from './components/DataSourceLabel';
 import SensorLabel         from './components/SensorLabel';
@@ -18,50 +17,27 @@ import InundationView      from './components/InundationView';
 import FeaturePanel        from './components/FeaturePanel';
 import ValidationPanel     from './components/ValidationPanel';
 import AlertFeed           from './components/AlertFeed';
+import HistoricalEventPanel from './components/HistoricalEventPanel';
+import ManualScenarioPanel  from './components/ManualScenarioPanel';
 
 const POLL_MS         = 10_000;
 const POLL_MS_INITIAL =  3_000;  // faster first-fetch
 
-// ── Default location shown immediately on load (Wayanad, Kerala) ─────────────
-const DEFAULT_LOCATION = {
-  risk: {
-    tier:              'Yellow',
-    risk_score:        47,
-    confidence_score:  84,
-    lead_time_min:     null,
-    lead_time_basis:   'no_red_crossing_in_forecast_window',
-    factor_of_safety:  1.31,
-    factor_of_safety_min: null,
-    factor_of_safety_max: null,
-    coordinates:       { lat: 11.607, lng: 76.082 },
-  },
-  surface: { label: 'Wayanad, Kerala' },
-  features: [
-    { feature: 'rainfall_24h',                   contribution: 0.22 },
-    { feature: 'soil_saturation_ratio',          contribution: 0.19 },
-    { feature: 'slope_deg',                      contribution: 0.15 },
-    { feature: 'antecedent_precipitation_index', contribution: 0.12 },
-    { feature: 'factor_of_safety',               contribution: 0.09 },
-    { feature: 'TWI',                            contribution: 0.06 },
-  ],
-  history:    [],
-  inundation: null,
-  validation: null,
-  alert:      null,
-};
-
 export default function App() {
   const [hexes,         setHexes]         = useState([]);
   const [selectedHexId, setSelectedHexId] = useState(null);
-  const [risk,          setRisk]          = useState(DEFAULT_LOCATION.risk);
+  const [risk,          setRisk]          = useState(null);
   const [history,       setHistory]       = useState([]);
   const [inundation,    setInundation]    = useState(null);
-  const [validation,    setValidation]    = useState(null);
   const [dataSource,    setDataSource]    = useState('live');
   const [demoStage,     setDemoStage]     = useState(null);
 
-  const [isPinMode,     setIsPinMode]     = useState(true);   // start in pin mode with default
-  const [pinData,       setPinData]       = useState(DEFAULT_LOCATION);
+  // Nothing selected on load -- just the map, no sidebar panel pre-populated.
+  const [isPinMode,     setIsPinMode]     = useState(false);
+  const [pinData,       setPinData]       = useState(null);
+  const [selectedEvent, setSelectedEvent] = useState(null);   // Phase 13 — real historical event pin
+  const [manualScenarioOpen, setManualScenarioOpen] = useState(false);   // manual what-if simulator
+  const [scenarioPointRequest, setScenarioPointRequest] = useState(null);   // {hexId, ts} -- pin clicked while scenario open
 
   const mapPollRef    = useRef(null);
   const detailPollRef = useRef(null);
@@ -97,10 +73,23 @@ export default function App() {
 
     getRisk(selectedHexId)
       .then((r) => {
-        setRisk(r);
         setDemoStage(r.demo_stage || null);
         setDataSource(r.data_source || 'live');
-        setValidation(generateValidationForHex(r.tier));
+
+        // Real Phase 5 factor-of-safety (+ band) for this hex, from real
+        // observations -- merged onto the risk object so ConfidenceLeadTime
+        // renders the same FS gauge shape it uses for pin-drop/manual
+        // scenario, but with real values (or an honest note when this hex
+        // has no real terrain data recorded yet, see task_3c7bb605).
+        getUncertainty(selectedHexId)
+          .then((unc) => setRisk({
+            ...r,
+            factor_of_safety: unc.factor_of_safety,
+            factor_of_safety_min: unc.factor_of_safety_min,
+            factor_of_safety_max: unc.factor_of_safety_max,
+            factor_of_safety_note: unc.band_note,
+          }))
+          .catch(() => setRisk(r));
 
         if (['Orange', 'Red'].includes(r.tier)) {
           getInundation(selectedHexId)
@@ -127,28 +116,35 @@ export default function App() {
 
 
 
-  // Selecting a Wayanad hex polygon restores live backend mode
+  // Selecting a Wayanad hex polygon restores live backend mode -- unless
+  // Manual Scenario is open, in which case the click means "load this real
+  // point's static data into the form" instead of switching views.
   const handleSelectHex = useCallback((hexId) => {
+    if (manualScenarioOpen) {
+      setScenarioPointRequest({ hexId, ts: Date.now() });
+      return;
+    }
+    setSelectedEvent(null);
     setIsPinMode(false);
     setPinData(null);
     setSelectedHexId(hexId);
     setRisk(null);
     setHistory([]);
     setInundation(null);
-    setValidation(generateValidationForHex('Yellow'));
     setDataSource('live');
     setDemoStage(null);
-  }, []);
+  }, [manualScenarioOpen]);
 
   // Dropping or moving a custom pin engages regional analysis
   const handlePinDrop = useCallback((data) => {
+    setSelectedEvent(null);
+    setManualScenarioOpen(false);
     setIsPinMode(true);
     setPinData(data);
     setSelectedHexId(data.risk.hex_id);
     setRisk(data.risk);
     setHistory(data.history);
     setInundation(data.inundation);
-    setValidation(data.validation);
     setDataSource('live');
     setDemoStage(
       data.surface?.surface === 'coromandel_coast'
@@ -159,23 +155,56 @@ export default function App() {
     );
   }, []);
 
+  // Clicking a real historical-event pin shows sourced event details instead
+  // of live risk panels (there is no live model output for these regions) --
+  // unless Manual Scenario is open, in which case it means "load this real
+  // point's static data into the form" instead.
+  const handleEventSelect = useCallback((ev) => {
+    if (manualScenarioOpen) {
+      if (ev.hexId) setScenarioPointRequest({ hexId: ev.hexId, ts: Date.now() });
+      return;
+    }
+    setSelectedEvent(ev);
+  }, [manualScenarioOpen]);
+  const handleCloseEventPanel = useCallback(() => setSelectedEvent(null), []);
+
+  const handleOpenManualScenario = useCallback(() => {
+    setSelectedEvent(null);
+    setManualScenarioOpen(true);
+  }, []);
+  const handleCloseManualScenario = useCallback(() => setManualScenarioOpen(false), []);
+
   const iotOffline = risk?.iot_anomaly_flag ?? false;
   const currentTier = risk?.tier ?? 'Green';
+
+  // Nothing picked yet on a fresh load/refresh -- no sidebar at all, just the map.
+  const hasSelection = Boolean(manualScenarioOpen || selectedEvent || selectedHexId || (isPinMode && pinData));
 
   return (
     <div className="app-shell">
       {/* ── Always-visible banner (SRS §13) ── */}
       <DataSourceLabel dataSource={dataSource} stage={demoStage} />
 
-      <div className="app-body">
-        {/* ── Sidebar panels ── */}
+      <div className={`app-body${hasSelection ? '' : ' no-sidebar'}`}>
+        {/* ── Sidebar panels (only once a hex/pin/event is selected) ── */}
+        {hasSelection && (
         <aside className="sidebar">
 
+          {manualScenarioOpen ? (
+            <ManualScenarioPanel onClose={handleCloseManualScenario} externalPointRequest={scenarioPointRequest} />
+          ) : selectedEvent ? (
+            // Real sourced historical event selected -- show its own panel
+            // only. The risk/trend/inundation/feature/alert/validation
+            // panels below are all live-model-shaped and would be
+            // misleading here (no live score exists for these regions).
+            <HistoricalEventPanel selectedEvent={selectedEvent} onClose={handleCloseEventPanel} />
+          ) : (
+          <>
           {/* Location selector panel: Custom Pin vs Hex */}
           {isPinMode && pinData ? (
             <div className="panel pin-control-panel">
               <div className="panel-title">
-                <span>📍 Analyzed Location</span>
+                <span>Analyzed Location</span>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
@@ -233,10 +262,13 @@ export default function App() {
           {/* Alert feed (displays custom pin alert if Orange/Red) */}
           <AlertFeed customAlert={isPinMode ? pinData?.alert : null} />
 
-          {/* LOEO validation — dynamic metrics */}
-          <ValidationPanel validation={validation} />
+          {/* LOEO validation — real Phase 7 benchmark, model-wide (not per-hex) */}
+          <ValidationPanel />
+          </>
+          )}
 
         </aside>
+        )}
 
         {/* ── Map ── */}
         <main className="map-container">
@@ -246,21 +278,23 @@ export default function App() {
             onSelectHex={handleSelectHex}
             onPinDrop={handlePinDrop}
             pinData={pinData}
+            onEventSelect={handleEventSelect}
           />
           {/* Sensor offline label (SRS §16) */}
           <SensorLabel iotAnomalyFlag={iotOffline} />
 
-          {/* Phase 13 — legend distinguishing live risk from sourced history */}
-          <div className="map-legend-note" style={{
-            position: 'absolute', bottom: 10, left: 10, zIndex: 500,
-            background: 'rgba(13,17,23,0.85)', color: '#c9d1d9',
-            fontSize: 11, padding: '6px 10px', borderRadius: 6,
-            border: '1px solid #30363d', lineHeight: 1.5,
-          }}>
-            <span style={{ color: '#eab308' }}>●</span> Wayanad — live risk (XGBoost model)
-            &nbsp;&nbsp;
-            <span style={{ color: '#38bdf8' }}>●</span> 9 other regions — real historical events (sourced, not live)
-          </div>
+          {/* Manual what-if scenario toggle -- real model, hypothetical input */}
+          <button
+            onClick={handleOpenManualScenario}
+            style={{
+              position: 'absolute', top: 10, right: 10, zIndex: 500,
+              background: 'rgba(13,17,23,0.9)', color: '#a78bfa',
+              border: '1px solid #a78bfa', borderRadius: 6,
+              fontSize: 12, fontWeight: 600, padding: '6px 12px', cursor: 'pointer',
+            }}
+          >
+            Manual Scenario
+          </button>
         </main>
       </div>
     </div>
