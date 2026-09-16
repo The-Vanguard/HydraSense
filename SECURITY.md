@@ -15,10 +15,10 @@ build only.
 
 This policy covers the following components of HydraSense:
 
-- **Backend API** â€” FastAPI application (`backend/`) including all routers, the risk engine, and the alert pipeline
-- **Frontend Dashboard** â€” React + Leaflet application (`frontend/`)
-- **IoT Simulator** â€” MQTT-based sensor ingestion layer (`iot/`)
-- **ML Pipeline** â€” Feature engineering, model training, and inference scripts (`ml/`, `data/multiregion/scripts/`)
+- **Backend API** ” FastAPI application (`backend/`) including all routers, the risk engine, and the alert pipeline
+- **Frontend Dashboard** ” React + Leaflet application (`frontend/`)
+- **IoT Simulator** ” MQTT-based sensor ingestion layer (`iot/`)
+- **ML Pipeline** ” Feature engineering, model training, and inference scripts (`ml/`, `data/multiregion/scripts/`)
 
 The following are out of scope:
 
