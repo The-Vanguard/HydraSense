@@ -13,11 +13,19 @@ name is the shared secret); failures are logged and surfaced in the response,
 never swallowed.
 """
 from __future__ import annotations
+import os
+
 import httpx
 
 NTFY_BASE = "https://ntfy.sh"
-NTFY_TOPIC = "hydrasense-alert-ee886045"
 TIMEOUT_SECONDS = 8.0
+
+
+def ntfy_topic() -> str:
+    """Topic from the NTFY_TOPIC environment variable.  There is deliberately NO default: ntfy.sh
+    topics are public (the name is the only secret), so a hard-coded topic meant any test run that
+    reached Orange/Red published a message to the outside world.  Unset = push disabled."""
+    return os.environ.get("NTFY_TOPIC", "").strip()
 
 TIER_PRIORITY = {"Red": "urgent", "Orange": "high", "Yellow": "default", "Green": "low"}
 TIER_EMOJI = {"Red": "rotating_light", "Orange": "warning", "Yellow": "large_yellow_circle", "Green": "white_check_mark"}
@@ -27,9 +35,12 @@ def send_ntfy_alert(title: str, message: str, tier: str) -> dict:
     """Real HTTP POST to ntfy.sh -- timeout + fallback per CLAUDE.md.
     Returns {"sent": bool, "detail": str} -- never raises, never silently
     pretends success on failure."""
+    topic = ntfy_topic()
+    if not topic:
+        return {"sent": False, "detail": "ntfy push DISABLED: NTFY_TOPIC is not set (nothing was sent)"}
     try:
         resp = httpx.post(
-            f"{NTFY_BASE}/{NTFY_TOPIC}",
+            f"{NTFY_BASE}/{topic}",
             data=message.encode("utf-8"),
             headers={
                 # HTTP header values are ASCII-only by default in httpx --
@@ -43,7 +54,7 @@ def send_ntfy_alert(title: str, message: str, tier: str) -> dict:
             timeout=TIMEOUT_SECONDS,
         )
         resp.raise_for_status()
-        return {"sent": True, "detail": f"ntfy.sh/{NTFY_TOPIC} -> HTTP {resp.status_code}"}
+        return {"sent": True, "detail": f"ntfy.sh/{topic} -> HTTP {resp.status_code}"}
     except httpx.TimeoutException:
         return {"sent": False, "detail": f"ntfy.sh TIMEOUT after {TIMEOUT_SECONDS}s -- alert NOT delivered"}
     except httpx.HTTPStatusError as e:

@@ -17,6 +17,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
+from .gate import open_gate, approve_gate
 from .cap_generator import generate_cap_xml
 from .dedup import evaluate, is_resolved
 from .fanout import fanout
@@ -79,45 +80,21 @@ def trigger_alert(req: TriggerRequest) -> TriggerResponse:
     state = store.get_state(req.hex_id)
     decision, updated_state = evaluate(state, req.tier, now=now)
 
-    # ── FIRE ────────────────────────────────────────────────────────────────
+    # ── FIRE (Hold for Two-Person Approval) ──────────────────────────────────
     if decision == "fire":
-        alert_id          = store.next_alert_id()
-        cap_xml, cap_dict = generate_cap_xml(
-            alert_id       = alert_id,
-            hex_id         = req.hex_id,
-            tier           = req.tier,
-            risk_score     = req.risk_score,
-            confidence_score = req.confidence_score,
-            lead_time_min  = req.lead_time_min,
-            lead_time_basis = req.lead_time_basis,
-            nearest_shelter = req.nearest_shelter,
-        )
-
-        record = AlertRecord(
-            alert_id         = alert_id,
-            hex_id           = req.hex_id,
-            timestamp        = now,
-            tier             = req.tier,
-            risk_score       = req.risk_score,
-            confidence_score = req.confidence_score,
-            lead_time_min    = req.lead_time_min,
-            lead_time_basis  = req.lead_time_basis,
-            cap_xml          = cap_xml,
-            cap_payload      = cap_dict,
-        )
-
-        # Persist alert first, then fan out
-        store.append_alert(record)
-        delivered = fanout(record)
-        record.delivered_channels = delivered
-
-        # Persist updated alert_state (last_alert_tier + timestamp already set by evaluate)
-        store.upsert_state(updated_state)
-
-        logger.info("Alert FIRED: %s hex=%s tier=%s channels=%s",
-                    alert_id, req.hex_id, req.tier, delivered)
-
-        return TriggerResponse(action="fired", alert_id=alert_id)
+        if req.tier in ("Orange", "Red"):
+            open_gate(
+                hex_id=req.hex_id,
+                risk_score=req.risk_score,
+                confidence=req.confidence_score,
+                lead_time_min=req.lead_time_min
+            )
+            logger.info("Alert DRAFTED and HELD for gate approval: hex=%s tier=%s", req.hex_id, req.tier)
+            store.upsert_state(updated_state)
+            return TriggerResponse(action="held", reason="Pending two-person authorization")
+        
+        # If it's Yellow/Green somehow in 'fire'
+        return TriggerResponse(action="skipped", reason="Tier does not require alert")
 
     # ── SKIP (cooldown / same tier within window) ────────────────────────────
     elif decision == "skip":
@@ -178,3 +155,61 @@ def alert_feed() -> list[dict]:
     as visually distinct items per SRS §17.
     """
     return store.get_feed()
+
+
+class ApproveRequest(BaseModel):
+    hex_id: str
+    operator_id: str
+    tier: str
+    risk_score: float
+    confidence_score: float
+    lead_time_basis: str = "no_red_crossing_in_forecast_window"
+    nearest_shelter: Optional[dict] = None
+    trigger_type: str = "UNSPECIFIED"
+
+@router.post("/alert/gate/approve", response_model=TriggerResponse, status_code=200)
+def approve_alert(req: ApproveRequest) -> TriggerResponse:
+    """
+    Phase 7: Two-person authorization gate approval.
+    """
+    res = approve_gate(req.hex_id, req.operator_id)
+    if not res.get("success"):
+        raise HTTPException(status_code=400, detail=res.get("error", "Unknown error"))
+        
+    now = datetime.now(timezone.utc)
+    alert_id = store.next_alert_id()
+    lead_time_min = None # Simplified for now
+    
+    cap_xml, cap_dict = generate_cap_xml(
+        alert_id       = alert_id,
+        hex_id         = req.hex_id,
+        tier           = req.tier,
+        risk_score     = req.risk_score,
+        confidence_score = req.confidence_score,
+        lead_time_min  = lead_time_min,
+        lead_time_basis = req.lead_time_basis,
+        nearest_shelter = req.nearest_shelter,
+        trigger_type   = req.trigger_type,
+    )
+
+    record = AlertRecord(
+        alert_id         = alert_id,
+        hex_id           = req.hex_id,
+        timestamp        = now,
+        tier             = req.tier,
+        risk_score       = req.risk_score,
+        confidence_score = req.confidence_score,
+        lead_time_min    = lead_time_min,
+        lead_time_basis  = req.lead_time_basis,
+        cap_xml          = cap_xml,
+        cap_payload      = cap_dict,
+    )
+
+    store.append_alert(record)
+    delivered = fanout(record)
+    record.delivered_channels = delivered
+
+    logger.info("Alert FIRED (Approved): %s hex=%s tier=%s channels=%s",
+                alert_id, req.hex_id, req.tier, delivered)
+
+    return TriggerResponse(action="fired", alert_id=alert_id)

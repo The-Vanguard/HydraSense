@@ -1,0 +1,48 @@
+{
+  "loro_n_regions_total": 10,
+  "loro_n_regions_scored": 10,
+  "loro_n_regions_skipped": 0,
+  "loro_n_events_total": 578,
+  "loro_n_events_detected": 548,
+  "detection_rate_aggregate": 0.9481,
+  "false_positive_rate_aggregate": 0.0,
+  "timing_error": {
+    "mean_min": null,
+    "median_min": null,
+    "min_min": null,
+    "max_min": null,
+    "n": 548
+  },
+  "c_cal_calibration": {
+    "c_cal_calibrated_mean_detection_rate": 0.97905,
+    "c_cal_uncalibrated_mean_detection_rate": 1.0,
+    "c_cal_empirical": 1.0,
+    "c_cal_placeholder": 0.75,
+    "c_cal_note": "Empirical C_cal=1.000 from LORO. Calibrated regions: 97.9% detection rate. Uncalibrated regions: 100.0% detection rate. Replaces placeholder C_cal=0.75."
+  },
+  "worst_3_regions_by_detection": [
+    {
+      "region_code": "wayanad-kl",
+      "region_label": "Wayanad, Kerala (Western Ghats)",
+      "detection_rate": 0.8324,
+      "n_events": 179,
+      "has_local_calibration": true
+    },
+    {
+      "region_code": "idukki-kl",
+      "region_label": "Idukki, Kerala (Western Ghats)",
+      "detection_rate": 1.0,
+      "n_events": 115,
+      "has_local_calibration": true
+    },
+    {
+      "region_code": "nilgiris-tn",
+      "region_label": "The Nilgiris, Tamil Nadu (Western Ghats)",
+      "detection_rate": 1.0,
+      "n_events": 27,
+      "has_local_calibration": true
+    }
+  ],
+  "methodology_note": "LORO: fold unit = REGION. Model trained on 9 regions, tested on 1. Repeated for all 10 regions. Detection = model predicts Orange/Red on a snapshot whose ground-truth label is also Orange/Red (corrected LOEO semantics). Regions with 0 test samples are skipped and reported honestly. C_cal_empirical derived from ratio of uncalibrated to calibrated detection rates (Final.md \u00a711.3).",
+  "run_timestamp_utc": "2026-09-27T09:03:10.771920+00:00"
+}

@@ -17,9 +17,9 @@ const TIER_COLORS = {
   Red:    '#ef4444',
 };
 
-// Map center: India overview so all 10 real (trained/sourced) locations are visible
-const MAP_CENTER = [22, 82];
-const MAP_ZOOM   = 5;
+// Map center: Wayanad pilot cluster default
+const MAP_CENTER = [11.51, 76.047];
+const MAP_ZOOM   = 13;
 
 // Phase 13 — real sourced historical events (9 regions outside Wayanad).
 // Deliberately NOT reusing TIER_COLORS: that palette means "live risk tier,"
@@ -395,6 +395,28 @@ export default function HexMap({
       group.addLayer(polygon);
     });
   }, [liveHexes, selectedHexId, onSelectHex]);
+
+  // Fit bounds when a new region's hex set arrives
+  const lastHexKeyRef = useRef(null);
+  useEffect(() => {
+    const map = leafletRef.current;
+    if (!map || !hexes?.length) return;
+    const key = `${hexes[0]?.hex_id}-${hexes.length}`;
+    if (lastHexKeyRef.current !== key) {
+      lastHexKeyRef.current = key;
+      try {
+        const bounds = L.latLngBounds([]);
+        hexes.forEach(h => {
+          try {
+            cellToBoundary(h.hex_id).forEach(([lat, lon]) => bounds.extend([lat, lon]));
+          } catch (_) {}
+        });
+        if (bounds.isValid()) {
+          map.fitBounds(bounds, { padding: [30, 30], maxZoom: 14 });
+        }
+      } catch (_) {}
+    }
+  }, [hexes]);
 
   return (
     <div

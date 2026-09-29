@@ -1,0 +1,171 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Inter+Tight:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
+
+:root {
+  --font-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-display: "Inter Tight", "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  --ink: #0e1116;
+  --ink-hover: #1a1f28;
+  --cloud: #ffffff;
+  --mist: #5b6472;
+  --mist-light: #94a3b8;
+
+  --bg: #f4f6fb;
+  --bg-warm: #f7f6f0;
+  --text: var(--ink);
+  --edge: #e3e8ee;
+  --edge-subtle: #edf2f7;
+  --sky: #f8fafc;
+  --sky-tint: #f0f6ff;
+  --sky-accent: #e0f2fe;
+
+  --blue: #2e7def;
+  --blue-hover: #1d68db;
+  --tab-active: #2563eb;
+
+  --success: #10b981;
+  --success-soft: #ecfdf5;
+  --warning: #f59e0b;
+  --warning-soft: #fffbeb;
+  --orange: #f97316;
+  --orange-soft: #fff7ed;
+  --danger: #ef4444;
+  --danger-soft: #fef2f2;
+
+  --r-pill: 999px;
+  --r-card: 22px;
+  --r-inner: 14px;
+  --r-sm: 8px;
+  --r-xs: 6px;
+
+  --sh-sm: 0 1px 2px rgba(14, 17, 22, 0.04);
+  --sh-card: 0 1px 1px rgba(14, 17, 22, 0.04), 0 20px 40px -24px rgba(14, 17, 22, 0.18);
+  --sh-elevated: 0 1px 1px rgba(14, 17, 22, 0.06), 0 24px 48px -18px rgba(14, 17, 22, 0.22);
+  --sh-btn: 0 1px 1px rgba(14, 17, 22, 0.06), 0 14px 28px -18px rgba(14, 17, 22, 0.4);
+
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --dur: 180ms;
+}
+
+[data-theme="dark"] {
+  --bg: #0a0f1d;
+  --bg-warm: #0a0f1d;
+  --text: #f3f4f6;
+  --cloud: #111827;
+  --edge: #1f2937;
+  --edge-subtle: #172032;
+  --sky: #0f172a;
+  --sky-tint: #111c33;
+  --mist: #9aa4b2;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body, #root {
+  margin: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, .display { font-family: var(--font-display); letter-spacing: -0.02em; }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+* { scrollbar-width: thin; scrollbar-color: var(--edge) transparent; }
+.view { height: 100%; overflow-y: auto; }
+.view--warm { background: var(--bg-warm); }
+
+.cir-card {
+  background: var(--cloud);
+  border: 1px solid var(--edge);
+  border-radius: var(--r-card);
+  box-shadow: var(--sh-card);
+  padding: 20px;
+}
+.cir-card__inner {
+  background: var(--sky);
+  border: 1px solid var(--edge-subtle);
+  border-radius: var(--r-inner);
+  padding: 14px;
+}
+
+.cir-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  font: 500 14px var(--font-sans);
+  color: var(--cloud);
+  background: var(--ink);
+  border: 0;
+  border-radius: var(--r-pill);
+  box-shadow: var(--sh-btn);
+  cursor: pointer;
+  transition: transform var(--dur) var(--ease), background-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+.cir-btn:hover { background: var(--ink-hover); transform: translateY(-1px); }
+.cir-btn--accent { background: var(--blue); }
+.cir-btn--accent:hover { background: var(--blue-hover); }
+.cir-btn--ghost { background: var(--cloud); color: var(--ink); border: 1px solid var(--edge); box-shadow: var(--sh-sm); }
+.cir-btn--ghost:hover { background: var(--sky); }
+
+.cir-input {
+  padding: 9px 12px;
+  font: 400 14px var(--font-sans);
+  color: var(--text);
+  background: var(--cloud);
+  border: 1px solid var(--edge);
+  border-radius: var(--r-sm);
+  box-shadow: var(--sh-sm);
+  outline: none;
+  transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+.cir-input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(46, 125, 239, 0.18); }
+
+.cir-tabs { display: flex; gap: 6px; padding: 6px; }
+.cir-tab {
+  padding: 8px 14px;
+  font: 500 13px var(--font-sans);
+  color: #cbd5e1;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: var(--r-sm);
+  backdrop-filter: blur(12px);
+  cursor: pointer;
+  transition: background-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.cir-tab:hover { background: rgba(30, 41, 59, 0.85); color: #fff; }
+.cir-tab.is-active {
+  color: #fff;
+  background: var(--tab-active);
+  border-color: transparent;
+  box-shadow: 0 8px 20px -6px rgba(37, 99, 235, 0.55);
+}
+
+.cir-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  font: 500 12px var(--font-sans);
+  border-radius: var(--r-pill);
+}
+.cir-badge--safe { color: var(--success); background: var(--success-soft); }
+.cir-badge--watch { color: var(--warning); background: var(--warning-soft); }
+.cir-badge--warn { color: var(--orange); background: var(--orange-soft); }
+.cir-badge--critical { color: var(--danger); background: var(--danger-soft); }
+
+.cir-popover {
+  background: var(--cloud);
+  border: 1px solid var(--edge);
+  border-radius: var(--r-inner);
+  box-shadow: var(--sh-elevated);
+}

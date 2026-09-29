@@ -1,49 +1,28 @@
 """
-Phase 6 (Part 2) — XGBoost Fusion Model Training.
+ml/models/train_fusion_model.py — XGBoost Fusion Model Training.
 
-SRS.md references:
-  Section 9   — 25 features (11 static + 14 dynamic)
-  Section 10.2 — risk_score formula (frozen): P(Green)*15 + P(Yellow)*42 + P(Orange)*64 + P(Red)*88
-  Section 10.3 — confidence_score = 100 * model_class_probability * (1 - FS_band_width_penalty)
-  Section 10.4 — tier thresholds: Green 0-29 | Yellow 30-54 | Orange 55-74 | Red 75-100
-  Section 11  — event-centered sample set (Phase 4), 4:1 neg:pos ratio
-  Section 14  — schema: risk_score, confidence_score as derived output fields (not model inputs)
-  Section 25, Phase 6 — acceptance criteria: trains without error, produces risk_score 0-100
-                         and feature-importance breakdown for held-out hex-timestep
+References:
+  HydraSense_Final.md §10.3 — 29 features (15 static + 14 dynamic)
+  HydraSense_Final.md §10.2 — risk_score formula (frozen)
+  HydraSense_Final.md §11.3 — confidence_score = 100 * P_class * (1-FS_penalty) * C_cal
+  HydraSense_Final.md §11.2 — tier thresholds (frozen)
+  HydraSense_Final.md §14.6 — event-centered sample set
 
-HARD CONSTRAINTS (CLAUDE.md):
-  - XGBoost ONLY.  PSO-BP must NEVER be suggested or implemented.
-  - risk_score = P(Green)*15 + P(Yellow)*42 + P(Orange)*64 + P(Red)*88 (frozen formula)
-  - Tier derived from risk_score using §10.4 thresholds — NEVER a separate argmax prediction
-    that could disagree with the score.
-  - antecedent_precipitation_index — NEVER api_score anywhere
-  - Model saved to ml/models/fusion_model.pkl (reused by Phase 7 LOEO + Phase 9 lead-time)
-  - No live recomputation — training is one-time offline, results read statically
+STAGE 3 CHANGES (Final.md §10.3):
+  Feature table expanded from 25 → 29:
+    NEW static features: flow_accumulation, hand_m, curve_number, has_local_calibration
+  confidence_score gains C_cal factor (Final.md §11.3):
+    confidence_score = 100 * P_class * (1 - FS_band_penalty) * C_cal
+    C_cal = 1.0 if has_local_calibration else 0.75 (empirical placeholder; calibrated from LORO)
+  XGBoost handles new features natively — NaN for samples missing these values.
 
-TIER ENCODING (SRS §11, frozen):
-  Green=0, Yellow=1, Orange=2, Red=3
-  Tier-to-midpoint map (for risk_score): {0: 15, 1: 42, 2: 64, 3: 88}
-
-FEATURE SET (25 total — SRS §9):
-  Static (11):  slope_deg, aspect, TWI, TRI, elevation, distance_to_stream_m,
-                drainage_density, land_use_class, ndvi_mean,
-                historical_event_count_500m, gsi_susceptibility_class
-  Dynamic (14): rainfall_1h, rainfall_3h, rainfall_6h, rainfall_24h,
-                rainfall_72h_antecedent, rain_intensity_mm_hr,
-                antecedent_precipitation_index, soil_saturation_ratio,
-                factor_of_safety, factor_of_safety_min, factor_of_safety_max,
-                simulated_ffgs_signal, simulated_gsi_signal, iot_anomaly_flag
-
-  XGBoost handles missing (None/NaN) values natively — do not impute; log missing counts.
-
-OUTPUT FIELDS (derived — not model inputs, SRS §14):
-  risk_score       — 0 to 100, float, P-weighted midpoint formula (§10.2)
-  tier             — string derived from risk_score using §10.4 thresholds
-  confidence_score — 0 to 100, float (§10.3)
-  feature_contributions — per-feature SHAP-style contributions (from XGBoost)
-
-MODEL FILE:
-  ml/models/fusion_model.pkl  — saved after training, loaded by Phase 7 and Phase 9
+HARD CONSTRAINTS (Final.md §10.2 / §11.2 — frozen formulas):
+  - XGBoost ONLY.
+  - risk_score = P(Green)*15 + P(Yellow)*42 + P(Orange)*64 + P(Red)*88 (frozen)
+  - Tier derived from risk_score via thresholds — NEVER a separate argmax.
+  - antecedent_precipitation_index — NEVER api_score.
+  - Model saved to ml/models/fusion_model.pkl
+  - No live recomputation — training is one-time offline.
 """
 
 from __future__ import annotations
@@ -79,7 +58,7 @@ from ml.features.dynamic_features import (
     _SOIL_PATH,
     _GSI_PATH,
 )
-from ml.models.factor_of_safety import compute_factor_of_safety
+from ml.models.factor_of_safety import compute_factor_of_safety, compute_fs_for_region
 
 # ---------------------------------------------------------------------------
 # Constants (frozen — SRS §10.2, §10.4, §11)
@@ -105,15 +84,23 @@ _MODEL_PATH   = ROOT / "ml"   / "models" / "fusion_model.pkl"
 _SAMPLES_PATH = ROOT / "data" / "events" / "event_centered_samples.parquet"
 _FEATURES_DIR = ROOT / "data" / "features"
 
-# Static features — SRS §9 (field names frozen)
+# Static features — Final.md §10.3 (15 total — 4 new vs SRS §9)
+# ADDED in Stage 3: flow_accumulation, hand_m, curve_number, has_local_calibration
 STATIC_FEATURE_COLS: list[str] = [
+    # Original 11 (preserved, field names frozen)
     "slope_deg", "aspect", "TWI", "TRI", "elevation",
     "distance_to_stream_m", "drainage_density",
     "land_use_class", "ndvi_mean", "historical_event_count_500m",
     "gsi_susceptibility_class",
+    # NEW in Stage 3 (Final.md §10.3)
+    "flow_accumulation",       # upstream contributing cells (pysheds D8)
+    "hand_m",                  # Height Above Nearest Drainage (m)
+    "curve_number",            # SCS CN from land cover + slope
+    "has_local_calibration",   # bool → float (1.0/0.0); 29th feature; also drives C_cal
 ]
 
-# Dynamic features — SRS §9 (field names frozen; antecedent_precipitation_index NEVER api_score)
+# Dynamic features — unchanged from SRS §9 (14 total, field names frozen)
+# antecedent_precipitation_index: NEVER api_score (Final.md constraint)
 DYNAMIC_FEATURE_COLS: list[str] = [
     "rainfall_1h", "rainfall_3h", "rainfall_6h", "rainfall_24h",
     "rainfall_72h_antecedent", "rain_intensity_mm_hr",
@@ -172,18 +159,106 @@ def derive_tier(risk_score: float) -> str:
     return "Green"
 
 
+# ---------------------------------------------------------------------------
+# C_cal loader — reads empirical value from LORO summary (Stage 4)
+# ---------------------------------------------------------------------------
+_C_CAL_CACHE: dict[str, float] = {}   # module-level cache, JSON read at most once
+
+def _load_c_cal_uncalibrated() -> float:
+    """
+    Load empirical C_cal for uncalibrated regions from LORO summary.
+    Stage 4 result: C_cal_empirical=1.0 — uncalibrated regions generalise
+    as well as calibrated in 10-fold LORO (94.8% aggregate detection rate).
+    Returns 0.75 placeholder if LORO hasn't been run.
+    """
+    if "_cached" in _C_CAL_CACHE:
+        return _C_CAL_CACHE["_cached"]
+    loro_path = ROOT / "data" / "validation" / "loro_summary.json"
+    try:
+        import json as _json
+        data = _json.loads(loro_path.read_text(encoding="utf-8"))
+        c_cal = data.get("c_cal_calibration", {}).get("c_cal_empirical")
+        if c_cal is not None:
+            _C_CAL_CACHE["_cached"] = float(c_cal)
+            return float(c_cal)
+    except Exception:
+        pass
+    _C_CAL_CACHE["_cached"] = 0.75
+    return 0.75
+
+
 def compute_confidence_score(
     model_class_probability: float,
     fs_band_width_penalty:   float,
+    has_local_calibration:   bool  = True,
+    c_cal_uncalibrated:      float | None = None,   # None = load from LORO
 ) -> float:
     """
-    confidence_score = 100 * model_class_probability * (1 - FS_band_width_penalty)
-    SRS §10.3 formula.
-    This is a confidence index — NEVER present as 'probability of landslide' in UI.
+    3-factor confidence score (Final.md §11.3):
+
+      confidence_score = 100 * P_class * (1 - FS_band_penalty) * C_cal
+
+    where:
+      P_class         = model probability of the DERIVED tier class
+      FS_band_penalty = (FS_max - FS_min) / FS_max, clipped [0, 0.95]
+      C_cal           = 1.0 if has_local_calibration
+                        else empirical value from LORO (Stage 4), default 0.75
+
+    Stage 4 LORO result: C_cal_empirical=1.0 — uncalibrated regions generalise
+    as well as Wayanad in 10-fold LORO. Loaded from data/validation/loro_summary.json.
+
+    This is a confidence INDEX — NEVER present as 'probability of landslide' in UI.
     Result clipped to [0, 100].
     """
-    score = 100.0 * model_class_probability * (1.0 - fs_band_width_penalty)
+    if c_cal_uncalibrated is None:
+        c_cal_uncalibrated = _load_c_cal_uncalibrated()
+    c_cal = 1.0 if has_local_calibration else c_cal_uncalibrated
+    score = 100.0 * model_class_probability * (1.0 - fs_band_width_penalty) * c_cal
     return round(float(max(0.0, min(100.0, score))), 4)
+
+
+def compute_confidence_breakdown(
+    model_class_probability: float,
+    fs_band_width_penalty:   float,
+    has_local_calibration:   bool,
+    c_cal_uncalibrated:      float | None = None,  # None = load from LORO
+) -> dict:
+    """
+    Return the three-factor confidence breakdown (Final.md §13.4 hex tooltip).
+    Also served by GET /confidence/{hex_id}/breakdown (Stage 5).
+
+    c_cal_uncalibrated: if None, loaded from LORO summary (Stage 4 empirical value).
+
+    Returns:
+      {
+        "model_probability_factor": int   0-100  (P_class as integer percentage)
+        "fs_band_penalty":          float 0-0.95 (raw penalty before complement)
+        "fs_uncertainty_factor":    int   0-100  (100 * (1 - fs_band_penalty))
+        "has_local_calibration":    bool
+        "c_cal":                    float         (LORO-derived or 1.0 for calibrated)
+        "c_cal_source":             str           ("loro_empirical" or "placeholder")
+        "confidence_score":         float         (final composite)
+      }
+    """
+    if c_cal_uncalibrated is None:
+        c_cal_uncalibrated = _load_c_cal_uncalibrated()
+        c_cal_source = "loro_empirical"
+    else:
+        c_cal_source = "override"
+    c_cal  = 1.0 if has_local_calibration else c_cal_uncalibrated
+    fs_fac = max(0.0, min(1.0, 1.0 - fs_band_width_penalty))
+    conf   = compute_confidence_score(
+        model_class_probability, fs_band_width_penalty, has_local_calibration, c_cal_uncalibrated
+    )
+    return {
+        "model_probability_factor": round(model_class_probability * 100),
+        "fs_band_penalty":          round(fs_band_width_penalty, 4),
+        "fs_uncertainty_factor":    round(fs_fac * 100),
+        "has_local_calibration":    has_local_calibration,
+        "c_cal":                    c_cal,
+        "c_cal_source":             c_cal_source if not has_local_calibration else "calibrated_region",
+        "confidence_score":         conf,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -307,20 +382,23 @@ class FusionModel:
         self,
         features: dict[str, Any],
         fs_band_width_penalty: float = 0.0,
+        has_local_calibration: bool = True,
     ) -> dict[str, Any]:
         """
         Run inference for a single hex-timestep.
 
         Arguments:
-            features             : dict of feature name -> value (all 25 features)
-            fs_band_width_penalty: from dynamic_features._compute_fs_band_penalty()
+            features              : dict of feature name -> value (all 29 features)
+            fs_band_width_penalty : from dynamic_features._compute_fs_band_penalty()
+            has_local_calibration : 29th feature / C_cal gate (Final.md §11.3)
 
         Returns dict with:
-            risk_score         : float 0-100 (SRS §10.2 frozen formula)
-            tier               : str (derived from risk_score via §10.4 thresholds)
-            confidence_score   : float 0-100 (SRS §10.3)
-            tier_probabilities : {tier_name: probability}
-            feature_contributions : {feature: importance_score}  (model-level)
+            risk_score           : float 0-100 (Final.md §10.2 frozen formula)
+            tier                 : str (derived from risk_score via §11.2 thresholds)
+            confidence_score     : float 0-100 (Final.md §11.3 — 3-factor formula)
+            confidence_breakdown : dict  (three-factor decomposition for tooltip/API)
+            tier_probabilities   : {tier_name: probability}
+            feature_contributions: {feature: importance_score}
         """
         if not self.is_fitted:
             raise RuntimeError("[FusionModel] Model not fitted. Call fit() first.")
@@ -340,7 +418,10 @@ class FusionModel:
         # Confidence: probability of the DERIVED tier class
         tier_int   = TIER_TO_INT[tier]
         class_prob = proba[tier_int]
-        conf  = compute_confidence_score(class_prob, fs_band_width_penalty)
+        # has_local_calibration from features dict (the 29th feature)
+        cal_flag = bool(features.get("has_local_calibration", has_local_calibration))
+        conf  = compute_confidence_score(class_prob, fs_band_width_penalty, cal_flag)
+        breakdown = compute_confidence_breakdown(class_prob, fs_band_width_penalty, cal_flag)
 
         # Feature importances (model-level gain — same for all rows in inference)
         importances = {
@@ -349,11 +430,12 @@ class FusionModel:
         }
 
         return {
-            "risk_score":          risk,
-            "tier":                tier,
-            "confidence_score":    conf,
-            "tier_probabilities":  {INT_TO_TIER[i]: round(float(p), 6) for i, p in proba.items()},
-            "feature_contributions": importances,   # model-level; SHAP available in Phase 9
+            "risk_score":            risk,
+            "tier":                  tier,
+            "confidence_score":      conf,
+            "confidence_breakdown":  breakdown,
+            "tier_probabilities":    {INT_TO_TIER[i]: round(float(p), 6) for i, p in proba.items()},
+            "feature_contributions": importances,
         }
 
     def predict_batch(
@@ -517,9 +599,12 @@ def load_sample_set(path: Path = _SAMPLES_PATH) -> pd.DataFrame:
             synthetic["factor_of_safety"][i]   = float(rng.uniform(1.5, 5.0))
 
     df = pd.DataFrame(synthetic)
-    df["hex_id"]    = [f"8860064000{i:05x}" for i in range(n)]
-    df["village"]   = rng.choice(["Mundakkai", "Attamala", "Punjirimattom"], size=n)
-    df["event_id"]  = [f"E_SYN_{i:03d}" if t > 0 else None for i, t in enumerate(tier_labels)]
+    df["hex_id"]     = ["8860064000%05x" % i for i in range(n)]
+    df["village"]    = rng.choice(["Mundakkai", "Attamala", "Punjirimattom"], size=n)
+    df["event_id"]   = ["E_SYN_%03d" % i if t > 0 else None for i, t in enumerate(tier_labels)]
+    df["region_code"]= rng.choice(["wayanad-kl", "rudraprayag-uk", "darjeeling-wb"], size=n)
+    # has_local_calibration: True for Wayanad rows, False for others in synthetic data
+    df["has_local_calibration"] = df["region_code"].apply(lambda r: 1.0 if r == "wayanad-kl" else 0.0)
     df["is_synthetic"] = True
     return df
 
@@ -772,16 +857,19 @@ def score_hex_cycle(
     timestamp:   str,     # ISO datetime string
     features:    dict[str, Any],
     model_path:  Path = _MODEL_PATH,
+    region_code: str  = "",
 ) -> dict[str, Any]:
     """
     Score a single hex at one ingestion cycle, using the saved model.
 
     Arguments:
-        hex_id     : H3 hex identifier
-        village    : village name (for audit)
-        timestamp  : ISO datetime string of the cycle
-        features   : all 25 feature values (static + dynamic)
-        model_path : path to fusion_model.pkl
+        hex_id      : H3 hex identifier
+        village     : village name (for audit)
+        timestamp   : ISO datetime string of the cycle
+        features    : all 29 feature values (static + dynamic)
+        model_path  : path to fusion_model.pkl
+        region_code : slug from onboarding pipeline (e.g. 'wayanad-kl')
+                      Used to route FS computation through SoilGrids if available.
 
     Returns:
         dict with risk_score, tier, confidence_score, tier_probabilities,
@@ -789,12 +877,27 @@ def score_hex_cycle(
     """
     model = FusionModel.load(model_path)
     band_penalty = features.get("fs_band_width_penalty", 0.0) or 0.0
-    pred = model.predict_one(features, float(band_penalty))
+    has_cal = bool(features.get("has_local_calibration", True))
+    # Re-compute FS via the region-agnostic router (SoilGrids path if available)
+    slope = features.get("factor_of_safety")   # already computed upstream — use as-is
+    # Only override if slope_deg is available and FS not yet present
+    if region_code and features.get("factor_of_safety") is None:
+        slope_deg = features.get("slope_deg")
+        soil_sat  = features.get("soil_saturation_ratio")
+        if slope_deg is not None and soil_sat is not None:
+            fs_result = compute_fs_for_region(slope_deg, soil_sat, region_code, has_cal)
+            features = {**features, **{
+                k: fs_result[k]
+                for k in ("factor_of_safety", "factor_of_safety_min", "factor_of_safety_max")
+                if fs_result.get(k) is not None
+            }}
+    pred = model.predict_one(features, float(band_penalty), has_local_calibration=has_cal)
     return {
         **pred,
-        "hex_id":    hex_id,
-        "village":   village,
-        "timestamp": timestamp,
+        "hex_id":      hex_id,
+        "village":     village,
+        "timestamp":   timestamp,
+        "region_code": region_code,
     }
 
 
@@ -847,11 +950,11 @@ if __name__ == "__main__":
     )
     print(f"  [OK] confidence_score={pred['confidence_score']:.2f} in [0, 100]")
 
-    # Check 5: feature_contributions has all 25 features
+    # Check 5: feature_contributions has all 29 features
     assert len(pred["feature_contributions"]) == len(ALL_FEATURE_COLS), (
-        f"FAIL: {len(pred['feature_contributions'])} contributions, expected {len(ALL_FEATURE_COLS)}"
+        "FAIL: %d contributions, expected %d" % (len(pred["feature_contributions"]), len(ALL_FEATURE_COLS))
     )
-    print(f"  [OK] feature_contributions: {len(pred['feature_contributions'])} features")
+    print("  [OK] feature_contributions: %d features (29-feature Final.md §10.3)" % len(pred["feature_contributions"]))
 
     # Check 6: risk_score formula matches manual calculation
     proba_manual = pred["tier_probabilities"]

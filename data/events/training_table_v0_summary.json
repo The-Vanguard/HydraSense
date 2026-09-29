@@ -1,0 +1,63 @@
+{
+  "rows": 1470,
+  "positives": 245,
+  "negatives": 1225,
+  "events_used": 52,
+  "events_skipped": [
+    [
+      "BANASEPPA-2025-LS-01",
+      "rain fetch failed"
+    ],
+    [
+      "DIMAHASAO-2022-LS-01",
+      "no usable offsets"
+    ]
+  ],
+  "events_by_hazard": {
+    "flash_flood": 13,
+    "landslide": 39
+  },
+  "events_by_region": {
+    "Arunachal Pradesh": 2,
+    "Eastern Ghats": 4,
+    "Himachal Pradesh": 7,
+    "Jammu & Kashmir / Ladakh": 6,
+    "Meghalaya / Assam hills": 2,
+    "Mizoram / Manipur / Nagaland": 4,
+    "Nilgiris-Anamalai-Palani": 4,
+    "Northern Western Ghats": 6,
+    "Sikkim / Darjeeling": 4,
+    "Southern Western Ghats": 8,
+    "Uttarakhand": 5
+  },
+  "events_terrain_reliable": 15,
+  "events_onset_known": 14,
+  "null_pct": {
+    "elevation_m": 0.0,
+    "slope_deg": 0.0,
+    "relief_m_440": 0.0,
+    "rain_1h": 0.0,
+    "rain_3h": 0.0,
+    "rain_6h": 0.0,
+    "rain_12h": 0.0,
+    "rain_24h": 0.0,
+    "antecedent_rain_3d": 0.0,
+    "antecedent_rain_7d": 0.0,
+    "antecedent_rain_15d": 0.0,
+    "rain_max_1h_6h": 0.0,
+    "soil_moisture_0_7": 0.0,
+    "soil_moisture_7_28": 0.0
+  },
+  "v2_features_present": [
+    "elevation_m",
+    "slope_deg",
+    "relief_m_440(proxy)",
+    "rain_1h",
+    "rain_3h",
+    "rain_6h",
+    "rain_12h",
+    "rain_24h",
+    "antecedent_rain_3d/7d/15d"
+  ],
+  "v2_features_missing": "aspect, curvature, twi, hand_m, soil texture/depth, land cover, distance_to_stream/road, gsi_*, historical_event_count, r_int, p_fs_lt1, scs_runoff_mm, tc_min, catchment_area_km2, iot_soil_moisture -- need the onboarding pipeline / engines per event location (next step)"
+}

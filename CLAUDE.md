@@ -1,4 +1,12 @@
-# CLAUDE.md — HydraSense Hard Constraints
+# CLAUDE.md — DEPRECATED
+
+> **DEPRECATED 2026-09-27 — superseded entirely by `HydraSense_Final.md`.**
+> Do NOT use this file as a constraint reference for any new work.
+> Read `HydraSense_Final.md` only. The content below is preserved for historical audit only.
+
+---
+
+# CLAUDE.md — HydraSense Hard Constraints (HISTORICAL — DO NOT APPLY)
 
 **This file is the single source of truth for all coding-session constraints.**
 Every session that touches this repo must read this file before writing any code.

@@ -1,28 +1,45 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// Phase 12 — Vite config
-// Proxy /api to the stub server (port 8001 dev) or real Phase 8 backend (port 8000 prod).
-// Swap the target URL below when Guhan-10's Phase 8 backend is running.
+// Final.md §15.4 Swap #2 — deck.gl H3HexagonLayer + MapLibre GL JS
 export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
     proxy: {
+      // HTTP API proxy only — WebSocket connects directly to backend (no ws proxy)
       '/api': {
-        target: 'http://localhost:8000',   // Phase 8 backend (Guhan-10)
-        // target: 'http://localhost:8001', // stub server (npm run stub)
+        target: 'http://localhost:8000',
         changeOrigin: true,
+        ws: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
+        configure: (proxy) => {
+          proxy.on('error', () => {});   // swallow ECONNREFUSED when backend is off
+        },
       },
     },
   },
+  optimizeDeps: {
+    // Pre-bundle deck.gl ESM packages so Vite doesn't re-transform them on every reload
+    include: [
+      'deck.gl',
+      '@deck.gl/react',
+      '@deck.gl/core',
+      '@deck.gl/layers',
+      '@deck.gl/geo-layers',
+      'react-map-gl',
+      'maplibre-gl',
+    ],
+  },
   build: {
-    chunkSizeWarningLimit: 600,   // Recharts alone is ~525kB — library minimum, not our code
+    chunkSizeWarningLimit: 2000,   // deck.gl + maplibre-gl are legitimately large
     rollupOptions: {
       output: {
         manualChunks: {
           'vendor-react':    ['react', 'react-dom'],
+          'vendor-deck':     ['deck.gl', '@deck.gl/react', '@deck.gl/core',
+                              '@deck.gl/layers', '@deck.gl/geo-layers'],
+          'vendor-maplibre': ['maplibre-gl', 'react-map-gl'],
           'vendor-leaflet':  ['leaflet', 'react-leaflet'],
           'vendor-recharts': ['recharts'],
           'vendor-h3':       ['h3-js'],
@@ -32,4 +49,3 @@ export default defineConfig({
     },
   },
 });
-

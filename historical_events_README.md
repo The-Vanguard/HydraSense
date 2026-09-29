@@ -1,0 +1,77 @@
+# historical_events.csv — method and references
+
+57 real events in 11 hill regions of India. No simulated rows.
+
+## Coding rules
+- **severity** uses dead plus missing as reported: critical is 50 or more, high is 10–49, moderate is 3–9, low is 0–2.
+  - Exception: BEAS-2023 is coded high because its reported toll covers the whole 24 Jun–30 Jul season, not just the flood.
+- **grade**:
+  - A: an agency document was found (GSI, NRSC, MHA, NIDM, State SDMA or DIPR).
+  - B: two or more independent outlets agree.
+  - C: a single source, including syndicated copies of the same wire story, or sources that conflict on date or toll.
+- **provenance**: grade A → REAL_VALIDATED; grades B and C → REAL_RECONSTRUCTED.
+- **time_uncertainty_h**:
+  - 0.5–1 h when a clock time is reported.
+  - 3–6 h for "night of" or "early hours".
+  - 12 h when only the date is known.
+  - 24 h or more when sources give different dates or the event is a multi-day cluster.
+- **position_uncertainty_m**:
+  - 500 m for a single named slope or village.
+  - 1–2 km for a debris-flow runout or town.
+  - 5–30 km for a cluster across several villages or districts.
+- **Extra columns** not in your schema: `region`, `location`, `deaths_reported`, `notes`.
+- **Not filled**: `hex_id` and lat/lon, because coordinates were not verified. Geocode `location` before snapping to H3.
+
+## Key references (by event)
+- WAYANAD-2024: GSI FIR https://bhusanket.gsi.gov.in/Public_Portal_News_pdf/FIR_Mundakkai-Chooralmala.cleaned.pdf ; https://eos.org/thelandslideblog/wayanad-landslides ; https://www.sciencedirect.com/science/article/pii/S2666592125000472
+- KAVALAPPARA-2019: https://blogs.agu.org/landslideblog/2019/08/21/kavalappara-landslide-1/
+- PETTIMUDI-2020: https://www.deccanherald.com/india/munnar-landslide-death-toll-reaches-55-governor-and-cm-likely-to-visit-872621.html
+- KOOTTICKAL-2021 / PUTHUMALA-2019: https://www.onmanorama.com/news/kerala/2024/07/30/wayanad-landslides-heaviest-loss-witnessed-kerala-july-august.html
+- KATTIPPARA-2018: https://link.springer.com/chapter/10.1007/978-981-19-4055-2_41
+- KODAGU-2018: https://blogs.agu.org/landslideblog/2018/09/19/kodagu-landslides-1/
+- TALACAUVERY-2020: https://www.thenewsminute.com/article/talacauvery-temple-priest-and-family-still-missing-after-landslide-kodagu-130237
+- MALIN / TALIYE / IRSHALWADI: https://theprint.in/statedraft/why-landslides-continue-to-wipe-out-maharashtra-villages-mahad-malin-and-now-irshalwadi-tragedy/1692455/ ; https://www.sciencedirect.com/science/article/pii/S2666592124000040
+- SATARA-2021: https://www.deccanherald.com/india/six-bodies-recovered-as-death-toll-in-satara-landslide-rises-to-28-1012556.html
+- CANACONA-2009: https://sdma.goa.gov.in/node/227
+- SATTARI-2021: https://floodlist.com/asia/india-floods-maharashtra-july-2021-update
+- MARAPPALAM-1993: https://ascelibrary.org/doi/10.1061/(ASCE)GM.1943-5622.0001218
+- NILGIRIS-2009: https://link.springer.com/article/10.1007/s11069-012-0432-x ; https://serc.carleton.edu/integrate/workshops/risk_resilience/case/82086.html
+- AVALANCHE-2019: https://india.mongabay.com/2019/10/hills-of-peril-southwest-monsoon-inflicts-severe-damage-in-the-nilgiris/
+- MEDARASOLA-2014: https://www.downtoearth.org.in/natural-disasters/hudhud-five-tribals-buried-alive-in-landslide-in-andhra-pradesh-s-araku-46934
+- BARAGHARA-2018: https://reliefweb.int/report/india/12-killed-landslide-cyclone-titli-hit-odisha
+- ANNAMAYYA-2021: https://sandrp.in/2021/12/05/andhra-pradesh-dam-induced-flood-disaster-in-november-2021/
+- MOGALRAJAPURAM-2024: https://en.wikipedia.org/wiki/2024_Vijayawada_floods
+- KOTRUPI-2017: https://www.tribuneindia.com/news/himachal/bilaspur-landslide-revives-painful-memories-of-himachals-kotrupi-tragedy-that-killed-48-in-2017
+- NIGULSARI / BATSERI-2021: https://www.researchgate.net/publication/356603887_Recent_Landslide_News_Of_Himachal
+- BEAS-2023: https://www.sciencedirect.com/science/article/pii/S2666592125000770
+- SUMMERHILL-2023: https://eos.org/thelandslideblog/the-14-august-2023-landslides-in-himachal-pradesh-india
+- SAMEJ-2024: https://www.tribuneindia.com/news/himachal/himachal-death-toll-in-samej-cloudburst-rises-to-21-after-recovery-of-missing-girls-body
+- SERAJ-2025: https://www.downtoearth.org.in/natural-disasters/cloudbursts-devastate-himachals-mandi-at-least-10-dead-34-missing-after-1900-excess-rain-on-july-1
+- LEH-2010: https://nidm.gov.in/PDF/Newsletter/25_jul_2010.pdf ; https://en.wikipedia.org/wiki/2010_Ladakh_floods
+- HUNZAR-2021: https://en.wikipedia.org/wiki/2021_Hunzar_Kishtwar_cloudburst
+- AMARNATH-2022: https://en.wikipedia.org/wiki/2022_Amarnath_floods
+- CHASOTI-2025: https://en.wikipedia.org/wiki/2025_Kishtwar_district_flash_flood
+- JODHGHATI-2025: https://www.business-standard.com/india-news/cloudburst-cuts-off-remote-village-in-j-k-s-kathua-amid-heavy-rain-125081700063_1.html
+- VAISHNODEVI-2025: https://eos.org/thelandslideblog/vaishno-devi-1
+- MALPA-1998: https://en.wikipedia.org/wiki/1998_Malpa_landslide
+- UKHIMATH-2012: https://bhuvan-app1.nrsc.gov.in/disaster/usrtasks/landslide/doc/okhimath_ls.pdf
+- KEDARNATH-2013: https://en.wikipedia.org/wiki/Chorabari_Lake ; https://ui.adsabs.harvard.edu/abs/2016NatHa..81..227C/abstract
+- CHAMOLI-2021: https://www.science.org/doi/10.1126/science.abh4455 ; https://en.wikipedia.org/wiki/2021_Uttarakhand_flood
+- GAURIKUND-2023: https://www.downtoearth.org.in/governance/three-dead-17-missing-in-uttarakhand-s-gaurikund-landslide-questions-raised-again-on-disaster-management-91024
+- DHARALI-2025: https://eos.org/thelandslideblog/dharali-disaster-in-india ; https://link.springer.com/article/10.1007/s10346-026-02747-4
+- THARALI-2025: https://www.business-standard.com/india-news/cloudburst-uttarakhand-chamoli-landslide-deaths-houses-damaged-monsoon-rain-125082300111_1.html
+- MIRIK-2015: https://www.tribuneindia.com/news/archive/nation/38-killed-in-darjeeling-landslides-100967
+- SOUTHLHONAK-2023: https://www.science.org/doi/10.1126/science.ads2659 ; https://www.nature.com/articles/s41598-026-35895-7
+- MANGAN-2024: https://www.business-standard.com/india-news/six-dead-1-500-tourists-stranded-as-landslides-rain-wreak-havoc-in-sikkim-124061301024_1.html
+- CHATEN-2025: https://eos.org/thelandslideblog/chaten-1
+- DARJEELING-2025: https://thefederal.com/category/states/east/west-bengal/darjeeling-mirik-kalimpong-landslides-rain-210168
+- PHAMLA-2016: https://science.thewire.in/environment/at-least-16-killed-in-arunachal-pradesh-landslide/
+- LAPTAP-2017: https://employee.gsi.gov.in/cs/groups/public/documents/document/b3zp/mtu5/~edisp/dcport1gsigovi159453~9.html
+- BANASEPPA-2025: https://archive.arunachaltimes.in/index.php/2025/06/01/9-dead-in-flash-floods-landslides-in-arunachal/
+- TUPUL-2022: https://blogs.agu.org/landslideblog/2022/07/04/tupul-1/ ; https://en.wikipedia.org/wiki/2022_Manipur_landslide
+- AIZAWL-2024: https://dipr.mizoram.gov.in/post/cyclone-remal-claims-27-lives-in-aizawl-district-landslides-and-floods-cause-damage-to-public-infrastructure ; https://link.springer.com/article/10.1007/s10346-025-02477-z
+- PAKALAPAHAR-2023: https://www.etvbharat.com/english/state/assam/rock-crushes-car-in-nagaland-two-killed/na20230704222806651651462
+- NH29-2024: https://newsonair.gov.in/6-dead-3-injured-in-nagaland-landslides
+- BARAK-2020: https://www.aljazeera.com/news/2020/6/2/landslides-kill-at-least-20-in-indias-assam-state
+- DIMAHASAO-2022: https://link.springer.com/article/10.1007/s10346-022-01977-6
+- GAROHILLS-2024: https://ddnews.gov.in/en/meghalaya-10-dead-in-flash-floods-landslides-in-garo-hills-heavy-rains-continue/

@@ -1,29 +1,59 @@
 /**
- * App.jsx — HydraSense Main Dashboard
- * Top-level layout: always-visible DataSourceLabel banner, sidebar panels, interactive Leaflet map.
- * Polling: GET /risk/map every 10s; GET /risk/{hex_id} + /history + /inundation on hex selection.
- * Interactive Geospatial Analysis: Dropping or dragging pins enables regional hazard evaluation
- * based on terrain slope, surface classification, and meteorological conditions.
+ * App.jsx — HydraSense Command Dashboard
+ * Final.md §13.4 — Three-zone layout:
+ *   Header | Body (LeftColumn + CenterMap + RightStack) | Footer
+ *
+ * Roles (§13.2):
+ *   Decision Authority — full console (default)
+ *   Response Unit     — ResponseUnitView (narrower, read-only)
+ *
+ * WebSocket: direct connection to ws://localhost:8000/ws/alerts (§14.6)
+ *   - Full state snapshot on connect/reconnect before any delta
+ *   - Exponential back-off: 5s → 10s → 20s → 60s (cap)
  */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { getRiskMap, getRisk, getRiskHistory, getInundation, getUncertainty } from './api/client';
 
-import DataSourceLabel     from './components/DataSourceLabel';
-import SensorLabel         from './components/SensorLabel';
-import HexMap              from './components/HexMap';
-import ConfidenceLeadTime  from './components/ConfidenceLeadTime';
-import TrendLine           from './components/TrendLine';
-import InundationView      from './components/InundationView';
-import FeaturePanel        from './components/FeaturePanel';
-import ValidationPanel     from './components/ValidationPanel';
-import AlertFeed           from './components/AlertFeed';
-import HistoricalEventPanel from './components/HistoricalEventPanel';
-import ManualScenarioPanel  from './components/ManualScenarioPanel';
+import {
+  getRiskMap, getRisk, getRiskHistory, getInundation, getUncertainty,
+  createAlertWebSocket, getLoroResults, approveGate, getConfidenceBreakdown,
+  getPersistentThreat, getEventsMap, resolveRegion, toggleIoTSensor,
+} from './api/client';
+
+// Layout components (Final.md §13.4)
+import AppHeader          from './components/AppHeader';
+import AppFooter          from './components/AppFooter';
+import LeftColumn         from './components/LeftColumn';
+import HazardToggle       from './components/HazardToggle';
+import TimeScrubber       from './components/TimeScrubber';
+import ResponseUnitView   from './components/ResponseUnitView';
+import IncidentActionPlan from './components/IncidentActionPlan';
+
+// Map: deck.gl 3D (primary) + Leaflet 2D (fallback/switchable)
+import DeckHexMap from './components/DeckHexMap';
+import HexMap     from './components/HexMap';
+import ErrorBoundary from './components/ErrorBoundary';
+
+// Right-stack panels
+import ConfidenceLeadTime    from './components/ConfidenceLeadTime';
+import TrendLine             from './components/TrendLine';
+import InundationView        from './components/InundationView';
+import FeaturePanel          from './components/FeaturePanel';
+import ValidationPanel       from './components/ValidationPanel';
+import AlertFeed             from './components/AlertFeed';
+import HistoricalEventPanel  from './components/HistoricalEventPanel';
+import ManualScenarioPanel   from './components/ManualScenarioPanel';
+import GatePanel             from './components/GatePanel';
+import LoroPanel             from './components/LoroPanel';
+import PersistentThreatBadge from './components/PersistentThreatBadge';
+import CitizenPreviewPanel   from './components/CitizenPreviewPanel';
+import DataSourceLabel       from './components/DataSourceLabel';
+import SensorLabel           from './components/SensorLabel';
 
 const POLL_MS         = 10_000;
-const POLL_MS_INITIAL =  3_000;  // faster first-fetch
+const POLL_MS_INITIAL =  3_000;
 
 export default function App() {
+  // ── Core state ────────────────────────────────────────────────────────
   const [hexes,         setHexes]         = useState([]);
   const [selectedHexId, setSelectedHexId] = useState(null);
   const [risk,          setRisk]          = useState(null);
@@ -31,272 +61,419 @@ export default function App() {
   const [inundation,    setInundation]    = useState(null);
   const [dataSource,    setDataSource]    = useState('live');
   const [demoStage,     setDemoStage]     = useState(null);
+  const [persistState,  setPersistState]  = useState({ declared: false, cycles: 0 });
+  const [selectedRegionCode, setSelectedRegionCode] = useState('wayanad-kl');
+  const [isResolving,        setIsResolving]        = useState(false);
+  const [iotOffline,         setIotOffline]         = useState(false);
 
-  // Nothing selected on load -- just the map, no sidebar panel pre-populated.
-  const [isPinMode,     setIsPinMode]     = useState(false);
-  const [pinData,       setPinData]       = useState(null);
-  const [selectedEvent, setSelectedEvent] = useState(null);   // Phase 13 — real historical event pin
-  const [manualScenarioOpen, setManualScenarioOpen] = useState(false);   // manual what-if simulator
-  const [scenarioPointRequest, setScenarioPointRequest] = useState(null);   // {hexId, ts} -- pin clicked while scenario open
+  // ── Layout / role state ───────────────────────────────────────────────
+  const [role,         setRole]         = useState('Decision Authority');
+  const [hazardMode,   setHazardMode]   = useState('compound');   // §13.4
+  const [timeOffset,   setTimeOffset]   = useState(0);            // hours, 0 = live
+  const [coldStart,    setColdStart]    = useState(false);
 
+  // ── WS messages buffer (fed to LeftColumn) ────────────────────────────
+  const [wsMessages,   setWsMessages]   = useState([]);
+
+  // ── Footer data sources ───────────────────────────────────────────────
+  const [dataSources,  setDataSources]  = useState({});
+
+  // ── LORO frozen date ──────────────────────────────────────────────────
+  const [loroFrozen,   setLoroFrozen]   = useState(null);
+
+  // ── Scenario / pin state ──────────────────────────────────────────────
+  const [isPinMode,    setIsPinMode]    = useState(false);
+  const [pinData,      setPinData]      = useState(null);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [events,        setEvents]        = useState([]);
+  const [mapEngine,     setMapEngine]     = useState('deck');
+  const [manualScenarioOpen, setManualOpen] = useState(false);
+  const [scenarioPointRequest, setScenReq] = useState(null);
+
+  // ── Gate data ─────────────────────────────────────────────────────────
+  const [pendingGates, setPendingGates] = useState([]);
+
+  const wsRef         = useRef(null);
   const mapPollRef    = useRef(null);
   const detailPollRef = useRef(null);
+  // The WebSocket snapshot always describes the default region; keep the selected region in a ref so a
+  // snapshot for a DIFFERENT region never overwrites what the user is looking at.
+  const selectedRegionRef = useRef(null);
 
-  // ── Map polling — fast initial, then normal cadence ──────────────────────
-  const fetchMap = useCallback(() => {
-    getRiskMap()
-      .then((data) => {
+  // ── WebSocket: direct connection, exponential back-off (§14.6) ───────
+  useEffect(() => {
+    let ws;
+    let reconnectTimer;
+    let retryDelay = 5_000;
+    const MAX_DELAY = 60_000;
+
+    function connect() {
+      try {
+        ws = createAlertWebSocket();
+        wsRef.current = ws;
+        ws.onopen = () => { retryDelay = 5_000; };
+
+        ws.onmessage = (evt) => {
+          try {
+            const msg = JSON.parse(evt.data);
+            // Feed all messages to LeftColumn
+            setWsMessages(prev => [msg, ...prev].slice(0, 200));
+
+            if (msg.type === 'snapshot') {
+              // Full state snapshot on reconnect (§14.6)
+              if (Array.isArray(msg.hexes) &&
+                  (!msg.hexes.length || !selectedRegionRef.current ||
+                   msg.hexes[0].region_code === selectedRegionRef.current)) setHexes(msg.hexes);
+              if (msg.cold_start !== undefined) setColdStart(msg.cold_start);
+              return;
+            }
+            if (msg.type === 'tier_change') {
+              setHexes(prev => prev.map(h =>
+                h.hex_id === msg.hex_id
+                  ? { ...h, tier: msg.tier, risk_score: msg.risk_score }
+                  : h
+              ));
+              if (msg.hex_id === selectedHexId)
+                setPersistState({ declared: msg.persistent || false, cycles: 0 });
+            } else if (msg.type === 'persist_declared') {
+              if (msg.hex_id === selectedHexId)
+                setPersistState({ declared: true, cycles: msg.cycles });
+            } else if (msg.type === 'gate_pending') {
+              setPendingGates(prev => [...prev.filter(g => g.hex_id !== msg.hex_id), msg]);
+            } else if (msg.type === 'gate_approved') {
+              setPendingGates(prev => prev.filter(g => g.hex_id !== msg.hex_id));
+            }
+          } catch (_) {}
+        };
+        ws.onerror = () => {};
+        ws.onclose = () => {
+          reconnectTimer = setTimeout(connect, retryDelay);
+          retryDelay = Math.min(retryDelay * 2, MAX_DELAY);
+        };
+      } catch (_) {}
+    }
+    connect();
+    return () => { clearTimeout(reconnectTimer); if (ws) ws.close(); };
+  }, [selectedHexId]);
+
+  useEffect(() => { selectedRegionRef.current = selectedRegionCode; }, [selectedRegionCode]);
+
+  // ── Map fetch & poll (loads current region hexes and auto-selects top-risk hex) ───
+  const fetchMap = useCallback(async (regCode = selectedRegionCode) => {
+    try {
+      const data = await getRiskMap(null, regCode);
+      if (Array.isArray(data) && data.length === 0) {
+        // A region with no scored hexes shows NO hexes (never the previously selected region's).
+        setHexes([]);
+        setSelectedHexId(null);
+        return;
+      }
+      if (Array.isArray(data) && data.length > 0) {
         setHexes(data);
-        if (data.length > 0 && !isPinMode) {
-          setDataSource(data[0].data_source || 'live');
+        // Auto-select primary high-risk hex so entire explainability stack lights up immediately (§13.4)
+        setSelectedHexId(prev => {
+          if (prev && data.some(h => h.hex_id === prev)) return prev;
+          const top = data.find(h => h.tier === 'Red' || h.tier === 'Orange' || h.tier === 'Yellow') || data[0];
+          return top.hex_id;
+        });
+        if (data[0]?.data_source) {
+          setDataSources(typeof data[0].data_source === 'object' ? data[0].data_source : { rainfall: data[0].data_source });
+          setDataSource(typeof data[0].data_source === 'object' ? (data[0].data_source?.rainfall || 'live') : data[0].data_source);
         }
-      })
-      .catch(() => {});
-  }, [isPinMode]);
+      }
+    } catch (_) {}
+  }, [selectedRegionCode]);
 
   useEffect(() => {
-    // First fetch immediately, second after 3s, then settle to 10s cadence
-    fetchMap();
-    const fastTimer = setTimeout(() => {
-      fetchMap();
-      mapPollRef.current = setInterval(fetchMap, POLL_MS);
-    }, POLL_MS_INITIAL);
-    return () => {
-      clearTimeout(fastTimer);
-      clearInterval(mapPollRef.current);
-    };
-  }, [fetchMap]);
+    fetchMap(selectedRegionCode);
+    mapPollRef.current = setInterval(() => fetchMap(selectedRegionCode), POLL_MS);
+    return () => clearInterval(mapPollRef.current);
+  }, [selectedRegionCode, fetchMap]);
 
-  // ── Detail polling for selected hex (paused during pin mode) ─────────────
-  const fetchDetail = useCallback(() => {
-    if (!selectedHexId || isPinMode) return;
+  // ── Region change handler ─────────────────────────────────────────────
+  const handleRegionChange = async (regCode) => {
+    setSelectedRegionCode(regCode);
+    setSelectedHexId(null);
+    await fetchMap(regCode);
+  };
 
-    getRisk(selectedHexId)
-      .then((r) => {
-        setDemoStage(r.demo_stage || null);
-        setDataSource(r.data_source || 'live');
+  // ── Any-Hilly-Location Onboarding handler (§6, §14.2) ──────────────────
+  const handleResolveQuery = async (query) => {
+    setIsResolving(true);
+    try {
+      const res = await resolveRegion(query);
+      if (res?.success && res?.region_code) {
+        setSelectedRegionCode(res.region_code);
+        setSelectedHexId(null);
+        await fetchMap(res.region_code);
+        setWsMessages(prev => [{
+          type: 'region_onboarded',
+          region: res.label || res.region_code,
+          hex_count: res.hex_count,
+          timestamp: new Date().toISOString(),
+        }, ...prev]);
+      }
+    } catch (err) {
+      console.warn('Failed to resolve region:', err);
+    } finally {
+      setIsResolving(false);
+    }
+  };
 
-        // Real Phase 5 factor-of-safety (+ band) for this hex, from real
-        // observations -- merged onto the risk object so ConfidenceLeadTime
-        // renders the same FS gauge shape it uses for pin-drop/manual
-        // scenario, but with real values (or an honest note when this hex
-        // has no real terrain data recorded yet, see task_3c7bb605).
-        getUncertainty(selectedHexId)
-          .then((unc) => setRisk({
-            ...r,
-            factor_of_safety: unc.factor_of_safety,
-            factor_of_safety_min: unc.factor_of_safety_min,
-            factor_of_safety_max: unc.factor_of_safety_max,
-            factor_of_safety_note: unc.band_note,
-          }))
-          .catch(() => setRisk(r));
+  // ── Deliberate IoT sensor failure demonstration (§14.5) ────────────────
+  const handleToggleIoT = async () => {
+    try {
+      const res = await toggleIoTSensor();
+      const offline = res?.status === 'offline';
+      setIotOffline(offline);
+      setDataSources(prev => ({
+        ...prev,
+        rainfall: offline ? 'satellite_fallback' : 'live_iot',
+      }));
+      setWsMessages(prev => [{
+        type: 'sensor_status_changed',
+        sensor_id: res?.sensor_id || 'IOT_WAYANAD_001',
+        status: res?.status || (offline ? 'offline' : 'healthy'),
+        timestamp: new Date().toISOString(),
+      }, ...prev]);
+    } catch (err) {
+      console.warn('Failed to toggle IoT:', err);
+    }
+  };
 
-        if (['Orange', 'Red'].includes(r.tier)) {
-          getInundation(selectedHexId)
-            .then(setInundation)
-            .catch(() => setInundation(null));
-        } else {
-          setInundation(null);
-        }
-      })
-      .catch(() => {});
+  // ── LORO frozen date ──────────────────────────────────────────────────
+  useEffect(() => {
+    getLoroResults().then(r => {
+      setLoroFrozen(r?.summary?.frozen_at || r?.frozen_at || 'Stage 4');
+    }).catch(() => {});
+  }, []);
 
-    getRiskHistory(selectedHexId)
-      .then(setHistory)
-      .catch(() => {});
-  }, [selectedHexId, isPinMode]);
+  // ── Historical events for map pins (510 real multiregion events) ──────
+  useEffect(() => {
+    getEventsMap().then(data => {
+      if (Array.isArray(data)) setEvents(data);
+    }).catch(() => {});
+  }, []);
 
+  // ── Detail poll on hex select ─────────────────────────────────────────
   useEffect(() => {
     clearInterval(detailPollRef.current);
-    if (!selectedHexId || isPinMode) return;
+    if (!selectedHexId) { setRisk(null); setHistory([]); setInundation(null); return; }
+
+    const fetchDetail = async () => {
+      try {
+        const r = await getRisk(selectedHexId);
+        setRisk(r);
+        if (r?.data_source) setDataSources(r.data_source);
+      } catch (_) {}
+      try {
+        const h = await getRiskHistory(selectedHexId);
+        setHistory(Array.isArray(h) ? h : []);
+      } catch (_) {}
+      if (risk?.tier === 'Orange' || risk?.tier === 'Red') {
+        try {
+          const inv = await getInundation(selectedHexId);
+          setInundation(inv);
+        } catch (_) {}
+      }
+    };
     fetchDetail();
     detailPollRef.current = setInterval(fetchDetail, POLL_MS);
     return () => clearInterval(detailPollRef.current);
-  }, [selectedHexId, isPinMode, fetchDetail]);
+  }, [selectedHexId]);
 
+  // ── Current region (first onboarded region from hexes) ───────────────
+  const currentRegion = hexes.length > 0
+    ? { region_code: hexes[0].region_code, region_label: hexes[0].region_label,
+        state: hexes[0].state, district: hexes[0].district }
+    : null;
 
+  const selectedHex = hexes.find(h => h.hex_id === selectedHexId) || null;
 
-  // Selecting a Wayanad hex polygon restores live backend mode -- unless
-  // Manual Scenario is open, in which case the click means "load this real
-  // point's static data into the form" instead of switching views.
-  const handleSelectHex = useCallback((hexId) => {
-    if (manualScenarioOpen) {
-      setScenarioPointRequest({ hexId, ts: Date.now() });
-      return;
-    }
-    setSelectedEvent(null);
-    setIsPinMode(false);
-    setPinData(null);
-    setSelectedHexId(hexId);
-    setRisk(null);
-    setHistory([]);
-    setInundation(null);
-    setDataSource('live');
-    setDemoStage(null);
-  }, [manualScenarioOpen]);
-
-  // Dropping or moving a custom pin engages regional analysis
-  const handlePinDrop = useCallback((data) => {
-    setSelectedEvent(null);
-    setManualScenarioOpen(false);
-    setIsPinMode(true);
-    setPinData(data);
-    setSelectedHexId(data.risk.hex_id);
-    setRisk(data.risk);
-    setHistory(data.history);
-    setInundation(data.inundation);
-    setDataSource('live');
-    setDemoStage(
-      data.surface?.surface === 'coromandel_coast'
-        ? 'Coromandel Coastal'
-        : data.surface?.surface === 'flat_land'
-        ? 'Plains Region'
-        : 'Western Ghats Slope'
+  // ── Response Unit view ────────────────────────────────────────────────
+  if (role === 'Response Unit') {
+    return (
+      <div className="app-shell">
+        <AppHeader
+          pendingGates={pendingGates.length}
+          coldStart={coldStart}
+          region={currentRegion}
+          selectedRegionCode={selectedRegionCode}
+          onRegionChange={handleRegionChange}
+          onResolveQuery={handleResolveQuery}
+          isResolving={isResolving}
+          iotOffline={iotOffline}
+          onToggleIoT={handleToggleIoT}
+          onRoleChange={setRole}
+        />
+        <div className="app-body ru-mode">
+          <ResponseUnitView hexes={hexes} alerts={pendingGates} region={currentRegion} />
+        </div>
+        <AppFooter dataSources={dataSources} frozenDate={loroFrozen} />
+      </div>
     );
-  }, []);
+  }
 
-  // Clicking a real historical-event pin shows sourced event details instead
-  // of live risk panels (there is no live model output for these regions) --
-  // unless Manual Scenario is open, in which case it means "load this real
-  // point's static data into the form" instead.
-  const handleEventSelect = useCallback((ev) => {
-    if (manualScenarioOpen) {
-      if (ev.hexId) setScenarioPointRequest({ hexId: ev.hexId, ts: Date.now() });
-      return;
-    }
-    setSelectedEvent(ev);
-  }, [manualScenarioOpen]);
-  const handleCloseEventPanel = useCallback(() => setSelectedEvent(null), []);
-
-  const handleOpenManualScenario = useCallback(() => {
-    setSelectedEvent(null);
-    setManualScenarioOpen(true);
-  }, []);
-  const handleCloseManualScenario = useCallback(() => setManualScenarioOpen(false), []);
-
-  const iotOffline = risk?.iot_anomaly_flag ?? false;
-  const currentTier = risk?.tier ?? 'Green';
-
-  // Nothing picked yet on a fresh load/refresh -- no sidebar at all, just the map.
-  const hasSelection = Boolean(manualScenarioOpen || selectedEvent || selectedHexId || (isPinMode && pinData));
-
+  // ── Decision Authority console (default) ──────────────────────────────
   return (
     <div className="app-shell">
-      {/* ── Always-visible banner (SRS §13) ── */}
-      <DataSourceLabel dataSource={dataSource} stage={demoStage} />
 
-      <div className={`app-body${hasSelection ? '' : ' no-sidebar'}`}>
-        {/* ── Sidebar panels (only once a hex/pin/event is selected) ── */}
-        {hasSelection && (
-        <aside className="sidebar">
+      {/* ── Header (§13.4) ── */}
+      <AppHeader
+        pendingGates={pendingGates.length}
+        coldStart={coldStart}
+        region={currentRegion}
+        selectedRegionCode={selectedRegionCode}
+        onRegionChange={handleRegionChange}
+        onResolveQuery={handleResolveQuery}
+        isResolving={isResolving}
+        iotOffline={iotOffline}
+        onToggleIoT={handleToggleIoT}
+        onRoleChange={setRole}
+      />
 
-          {manualScenarioOpen ? (
-            <ManualScenarioPanel onClose={handleCloseManualScenario} externalPointRequest={scenarioPointRequest} />
-          ) : selectedEvent ? (
-            // Real sourced historical event selected -- show its own panel
-            // only. The risk/trend/inundation/feature/alert/validation
-            // panels below are all live-model-shaped and would be
-            // misleading here (no live score exists for these regions).
-            <HistoricalEventPanel selectedEvent={selectedEvent} onClose={handleCloseEventPanel} />
-          ) : (
-          <>
-          {/* Location selector panel: Custom Pin vs Hex */}
-          {isPinMode && pinData ? (
-            <div className="panel pin-control-panel">
-              <div className="panel-title">
-                <span>Analyzed Location</span>
-              </div>
+      {/* ── Body: Left | Center | Right ── */}
+      <div className="app-body">
 
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: '#e6edf3' }}>
-                    {pinData.surface?.label || 'Placed Point'}
-                  </div>
-                  <div style={{ fontSize: 11, color: '#8b949e', marginTop: 2 }}>
-                    {pinData.risk.coordinates?.lat.toFixed(4)}° N, {pinData.risk.coordinates?.lng.toFixed(4)}° E
-                  </div>
-                </div>
-                {risk?.tier && (
-                  <span className={`tier-badge ${risk.tier}`}>
-                    <span className="pulse-dot" />
-                    {risk.tier}
-                  </span>
-                )}
-              </div>
+        {/* Left column — institutional record (§13.4) */}
+        <LeftColumn wsAlerts={wsMessages} pendingGates={pendingGates} />
+
+        {/* Center — map zone */}
+        <div className="center-map-zone">
+          {/* Map controls bar */}
+          <div className="map-controls-bar">
+            <HazardToggle mode={hazardMode} onChange={setHazardMode} />
+            <TimeScrubber
+              offsetHours={timeOffset}
+              onChange={setTimeOffset}
+            />
+            {/* Map Engine Toggle */}
+            <button
+              className={`map-engine-btn ${mapEngine === 'leaflet' ? 'active' : ''}`}
+              onClick={() => setMapEngine(e => e === 'deck' ? 'leaflet' : 'deck')}
+              title="Toggle Map Engine (3D deck.gl H3 / 2D Leaflet)"
+            >
+              {mapEngine === 'deck' ? '⬡ 3D deck.gl' : '🗺️ 2D Leaflet'}
+            </button>
+            <SensorLabel />
+          </div>
+
+          {hexes.length === 0 && (
+            <div style={{ padding: '8px 14px', background: '#3b2f0b', color: '#fcd34d', fontSize: 12, lineHeight: 1.4 }}>
+              No scored hexes for this region yet. Scores appear after the scoring cycle has run for it
+              (set HYDRASENSE_SCORE_REGIONS on the backend). Nothing is estimated in the meantime.
             </div>
-          ) : selectedHexId ? (
-            <div className="panel" style={{ paddingBottom: 8 }}>
-              <div className="panel-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>Selected Hex</span>
-                <span style={{ fontSize: 10, color: '#8b949e' }}>Click map to drop pin</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <code className="hex-id-text">{selectedHexId}</code>
-                {risk?.tier && (
-                  <span className={`tier-badge ${risk.tier}`}>
-                    <span className="pulse-dot" />
-                    {risk.tier}
-                  </span>
-                )}
-              </div>
-              {risk && (
-                <div style={{ fontSize: 10, color: '#8b949e', marginTop: 4 }}>
-                  {hexes.find(h => h.hex_id === selectedHexId)?.village ?? ''}
-                </div>
-              )}
-            </div>
-          ) : null}
-
-          {/* Risk score + confidence + lead time */}
-          <ConfidenceLeadTime risk={risk} />
-
-          {/* 1D trend */}
-          <TrendLine history={history} />
-
-          {/* Inundation — only renders at Orange/Red (code gate inside component) */}
-          <InundationView tier={currentTier} inundation={inundation} />
-
-          {/* Feature contributions */}
-          <FeaturePanel features={risk?.top_contributing_features ?? []} />
-
-          {/* Alert feed (displays custom pin alert if Orange/Red) */}
-          <AlertFeed customAlert={isPinMode ? pinData?.alert : null} />
-
-          {/* LOEO validation — real Phase 7 benchmark, model-wide (not per-hex) */}
-          <ValidationPanel />
-          </>
           )}
 
-        </aside>
-        )}
+          {/* Map display */}
+          <div className="map-container">
+            {mapEngine === 'deck' ? (
+              <DeckHexMap
+                hexes={hexes}
+                selectedHexId={selectedHexId}
+                onSelectHex={setSelectedHexId}
+                onPinDrop={setPinData}
+                pinData={pinData}
+                onEventSelect={setSelectedEvent}
+                events={events}
+                hazardMode={hazardMode}
+              />
+            ) : (
+              <HexMap
+                hexes={hexes}
+                selectedHexId={selectedHexId}
+                onSelectHex={setSelectedHexId}
+                onPinDrop={setPinData}
+                pinData={pinData}
+                onEventSelect={setSelectedEvent}
+                events={events}
+                hazardMode={hazardMode}
+              />
+            )}
+          </div>
+        </div>
 
-        {/* ── Map ── */}
-        <main className="map-container">
-          <HexMap
-            hexes={hexes}
-            selectedHexId={isPinMode ? null : selectedHexId}
-            onSelectHex={handleSelectHex}
-            onPinDrop={handlePinDrop}
-            pinData={pinData}
-            onEventSelect={handleEventSelect}
+        {/* Right column — explainability stack (§13.4) */}
+        <div className="right-stack">
+          {/* Persistent Threat Badge */}
+          {selectedHexId && (
+            <PersistentThreatBadge
+              declared={persistState.declared}
+              cycles={persistState.cycles}
+              tier={risk?.tier}
+            />
+          )}
+
+          {/* Three threat products (§13.1) */}
+          {risk && (
+            <ConfidenceLeadTime risk={risk} />
+          )}
+
+          {/* FS uncertainty band with widened tag (§13.4) */}
+          {risk && (
+            <div className="panel" style={{ margin: '0 12px 8px', padding: '10px 12px' }}>
+              <div className="panel-title">Factor of Safety</div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                <span className="metric-value fs-value">
+                  {risk.factor_of_safety?.toFixed(2) ?? '—'}
+                </span>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                  [{risk.factor_of_safety_min?.toFixed(2) ?? '—'} –
+                   {risk.factor_of_safety_max?.toFixed(2) ?? '—'}]
+                </span>
+                {risk.fs_band_widened_for_no_calibration && (
+                  <span className="stale-badge" style={{ marginLeft: 4 }}>
+                    widened
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Feature contributions */}
+          {risk && <FeaturePanel features={risk.top_contributing_features} />}
+
+          {/* Trend sparkline */}
+          {history.length > 0 && <TrendLine history={history} />}
+
+          {/* Inundation (gated Orange/Red) */}
+          {inundation && <InundationView tier={risk?.tier} inundation={inundation} />}
+
+          {/* Two-person gate */}
+          {selectedHexId && <GatePanel hexId={selectedHexId} onApprove={() => {}} />}
+
+          {/* Incident Action Plan (IAP) with dashed live document border (§13.4) */}
+          <IncidentActionPlan selectedHex={selectedHex} region={currentRegion} />
+
+          {/* LORO validation + data-source health panel (§13.4 / §16.8) */}
+          <ValidationPanel />
+          <LoroPanel />
+
+          {/* Historical event */}
+          {selectedEvent && <HistoricalEventPanel event={selectedEvent} />}
+
+          {/* Alert feed */}
+          <AlertFeed />
+
+          {/* Citizen preview panel (§13.7) */}
+          <CitizenPreviewPanel selectedHex={selectedHex} region={currentRegion} />
+
+          {/* Data source label */}
+          <div style={{ padding: '8px 12px' }}>
+            <DataSourceLabel source={dataSource} />
+          </div>
+
+          {/* Manual scenario */}
+          <ManualScenarioPanel
+            open={manualScenarioOpen}
+            onClose={() => setManualOpen(false)}
+            pointRequest={scenarioPointRequest}
           />
-          {/* Sensor offline label (SRS §16) */}
-          <SensorLabel iotAnomalyFlag={iotOffline} />
-
-          {/* Manual what-if scenario toggle -- real model, hypothetical input */}
-          <button
-            onClick={handleOpenManualScenario}
-            style={{
-              position: 'absolute', top: 10, right: 10, zIndex: 500,
-              background: 'rgba(13,17,23,0.9)', color: '#a78bfa',
-              border: '1px solid #a78bfa', borderRadius: 6,
-              fontSize: 12, fontWeight: 600, padding: '6px 12px', cursor: 'pointer',
-            }}
-          >
-            Manual Scenario
-          </button>
-        </main>
+        </div>
       </div>
+
+      {/* ── Footer — agency dots (§13.4) ── */}
+      <AppFooter dataSources={dataSources} frozenDate={loroFrozen} />
     </div>
   );
 }

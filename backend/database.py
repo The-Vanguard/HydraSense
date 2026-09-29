@@ -1,5 +1,5 @@
-﻿"""
-backend/database.py -- SQLite database layer for HydraSense Phase 8.
+"""
+backend/database.py -- SQLite database layer for HydraSense.
 
 Schema matches SRS.md Section 14 exactly (column names are frozen).
 DB engine: SQLite (portable, no Postgres/PostGIS setup needed for 3-day build).
@@ -9,6 +9,13 @@ see endpoints, not the DB engine.
 SRS.md Section 14 tables implemented:
   hexes, observations, risk_scores, historical_events,
   loeo_results, alerts, alert_state, shelters
+
+v2 additions (Gap Analysis Phase 0, §0.2 / §0.3):
+  - provenance column on historical_events, observations, risk_scores
+  - grade, time_uncertainty_h, position_uncertainty_m, sources_used on
+    historical_events (event reconstruction audit trail)
+  All additions are backwards-compatible: existing rows keep NULL and the
+  migration block at the bottom of init_db() patches the live DB safely.
 """
 
 from __future__ import annotations
@@ -57,12 +64,19 @@ def init_db() -> None:
             id               INTEGER PRIMARY KEY AUTOINCREMENT,
             hex_id           TEXT NOT NULL,
             timestamp        TEXT NOT NULL,    -- ISO UTC
+            -- Gap Analysis §0.2: provenance tag required on every row.
+            -- SIMULATED is the safe default for IoT replay rows;
+            -- the feature pipeline filters these out before training.
+            provenance       TEXT DEFAULT 'SIMULATED'
+                             CHECK(provenance IN
+                                   ('REAL_VALIDATED','REAL_RECONSTRUCTED','SIMULATED')),
             dynamic_features TEXT DEFAULT '{}' -- JSONB: factor_of_safety_min/max, antecedent_precipitation_index, etc.
         );
         CREATE INDEX IF NOT EXISTS obs_hex_ts ON observations(hex_id, timestamp);
 
         -- risk_scores(hex_id, timestamp, risk_score, tier, confidence_score,
-        --             lead_time_min, lead_time_basis, feature_contributions JSONB, data_source)
+        --             lead_time_min, lead_time_basis, feature_contributions JSONB,
+        --             data_source, provenance)
         CREATE TABLE IF NOT EXISTS risk_scores (
             id                   INTEGER PRIMARY KEY AUTOINCREMENT,
             hex_id               TEXT NOT NULL,
@@ -73,19 +87,41 @@ def init_db() -> None:
             lead_time_min        INTEGER,       -- NULL until Phase 9
             lead_time_basis      TEXT,          -- "live_forecast_crossing" | "no_red_crossing_in_forecast_window" | "pending_phase_9"
             feature_contributions TEXT DEFAULT '{}', -- JSONB
-            data_source          TEXT DEFAULT 'live'  -- "live" | "cached_demo"
+            data_source          TEXT DEFAULT 'live',  -- "live" | "cached_demo"
+            -- Gap Analysis §0.2: provenance tag on every scored row.
+            -- Rows produced from SIMULATED inputs must be tagged SIMULATED and
+            -- excluded from all validation queries.
+            provenance           TEXT DEFAULT 'SIMULATED'
+                                 CHECK(provenance IN
+                                       ('REAL_VALIDATED','REAL_RECONSTRUCTED','SIMULATED')),
+            sensor_adjusted      INTEGER DEFAULT 0
         );
         CREATE INDEX IF NOT EXISTS rs_hex_ts ON risk_scores(hex_id, timestamp);
 
-        -- historical_events(event_id, hex_id, date, type, severity, source, coordinate_precision)
+        -- historical_events(event_id, hex_id, date, type, severity, source,
+        --                   coordinate_precision, provenance, grade, ...)
+        -- Gap Analysis §0.3: every event must carry a provenance tag and grade.
+        --   provenance = REAL_VALIDATED | REAL_RECONSTRUCTED | SIMULATED
+        --   grade      = A (agency-validated) | B (two sources) | C (single/conflicting)
+        --   time_uncertainty_h: NULL = timing well constrained.
+        --                       > a few hours = drop -3h and -1h sampling offsets.
+        --   position_uncertainty_m: positional precision in metres.
+        --   sources_used: JSON array of citation strings used for reconstruction.
         CREATE TABLE IF NOT EXISTS historical_events (
-            event_id             TEXT PRIMARY KEY,
-            hex_id               TEXT,
-            date                 TEXT,
-            type                 TEXT,
-            severity             TEXT,
-            source               TEXT,
-            coordinate_precision TEXT DEFAULT 'village-level'
+            event_id                TEXT PRIMARY KEY,
+            hex_id                  TEXT,
+            date                    TEXT,
+            type                    TEXT,
+            severity                TEXT,
+            source                  TEXT,
+            coordinate_precision    TEXT DEFAULT 'village-level',
+            provenance              TEXT
+                                    CHECK(provenance IN
+                                          ('REAL_VALIDATED','REAL_RECONSTRUCTED','SIMULATED')),
+            grade                   TEXT CHECK(grade IN ('A','B','C')),
+            time_uncertainty_h      REAL,
+            position_uncertainty_m  REAL,
+            sources_used            TEXT  -- JSON array of citation strings
         );
 
         -- loeo_results(event_id, detected, crossing_tier, timing_error_min, notes)
@@ -125,11 +161,52 @@ def init_db() -> None:
             lon         REAL
         );
         """)
-        # Additive, nullable column -- lets historical_events carry a region
-        # label (e.g. "Dhemaji") without parsing free-text source strings.
-        # Existing Wayanad rows stay NULL (frontend falls back to "Wayanad").
-        # Safe no-op if it already exists.
-        cols = [r["name"] for r in conn.execute("PRAGMA table_info(historical_events)").fetchall()]
-        if "region" not in cols:
+        # -----------------------------------------------------------------
+        # Additive column migrations (safe no-op if column already exists).
+        # Pattern: check PRAGMA table_info, ALTER TABLE only if missing.
+        # New v2 columns are listed here with the phase they were added.
+        # -----------------------------------------------------------------
+
+        # historical_events — pre-v2 columns
+        cols_he = [r["name"] for r in conn.execute(
+            "PRAGMA table_info(historical_events)"
+        ).fetchall()]
+        # region column (added in an earlier phase)
+        if "region" not in cols_he:
             conn.execute("ALTER TABLE historical_events ADD COLUMN region TEXT")
+        # v2 Phase 0 — Gap Analysis §0.3
+        for col, defn in [
+            ("provenance",             "TEXT CHECK(provenance IN ('REAL_VALIDATED','REAL_RECONSTRUCTED','SIMULATED'))"),
+            ("grade",                   "TEXT CHECK(grade IN ('A','B','C'))"),
+            ("time_uncertainty_h",      "REAL"),
+            ("position_uncertainty_m",  "REAL"),
+            ("sources_used",            "TEXT"),
+        ]:
+            if col not in cols_he:
+                conn.execute(f"ALTER TABLE historical_events ADD COLUMN {col} {defn}")
+
+        # observations — v2 Phase 0
+        cols_obs = [r["name"] for r in conn.execute(
+            "PRAGMA table_info(observations)"
+        ).fetchall()]
+        if "provenance" not in cols_obs:
+            conn.execute(
+                "ALTER TABLE observations ADD COLUMN provenance TEXT "
+                "DEFAULT 'SIMULATED' "
+                "CHECK(provenance IN ('REAL_VALIDATED','REAL_RECONSTRUCTED','SIMULATED'))"
+            )
+
+        # risk_scores — v2 Phase 0 / Phase 8
+        cols_rs = [r["name"] for r in conn.execute(
+            "PRAGMA table_info(risk_scores)"
+        ).fetchall()]
+        if "provenance" not in cols_rs:
+            conn.execute(
+                "ALTER TABLE risk_scores ADD COLUMN provenance TEXT "
+                "DEFAULT 'SIMULATED' "
+                "CHECK(provenance IN ('REAL_VALIDATED','REAL_RECONSTRUCTED','SIMULATED'))"
+            )
+        if "sensor_adjusted" not in cols_rs:
+            conn.execute("ALTER TABLE risk_scores ADD COLUMN sensor_adjusted INTEGER DEFAULT 0")
+
     print(f"[db] Schema initialised -> {DB_PATH}")

@@ -1,0 +1,174 @@
+{
+  "table": "data\\events\\training_table_v0p.parquet",
+  "validation": "leave-one-event-out; I-D threshold refitted inside every training fold",
+  "physics_constants": {
+    "theta_r": 0.05,
+    "theta_sat": 0.55,
+    "soil": {
+      "soil_depth_m": 2.5,
+      "cohesion_kpa": 8.0,
+      "friction_angle_deg": 28.0,
+      "unit_weight_kn_m3": 18.5
+    },
+    "fs_param_source": "generic_default"
+  },
+  "caveats": [
+    "FS uses GENERIC soil parameters and a default depth, not local measurements",
+    "theta_r / theta_sat are provisional; slope from a 90 m DEM (unreliable when position uncertainty > 3 km)",
+    "small table; reanalysis rain under-reads extreme events"
+  ],
+  "heads": [
+    {
+      "hazard": "landslide",
+      "events": 39,
+      "rows": 1074,
+      "note": "",
+      "xgb_dyn": {
+        "auc": 0.545,
+        "pr_auc": 0.241,
+        "brier": 0.154,
+        "n": 1074,
+        "base_rate": 0.167
+      },
+      "xgb_dyn_plus_phys": {
+        "auc": 0.553,
+        "pr_auc": 0.239,
+        "brier": 0.153,
+        "n": 1074,
+        "base_rate": 0.167
+      },
+      "xgb_phys_only": {
+        "auc": 0.557,
+        "pr_auc": 0.24,
+        "brier": 0.151,
+        "n": 1074,
+        "base_rate": 0.167
+      },
+      "logit_phys_baseline": {
+        "auc": 0.631,
+        "pr_auc": 0.264,
+        "brier": 0.142,
+        "n": 1074,
+        "base_rate": 0.167
+      },
+      "r_int_caine_alone_auc": 0.639,
+      "p_fs_lt1_alone_auc": 0.51,
+      "rain_24h_alone_auc": 0.659,
+      "control_shuffled_labels_auc": [
+        0.573,
+        0.502,
+        0.472
+      ],
+      "id_threshold_full_fit_descriptive": {
+        "alpha": 0.26,
+        "beta": 0.247,
+        "caine": {
+          "alpha": 14.82,
+          "beta": 0.39
+        }
+      },
+      "top_features_full_fit_descriptive": [
+        [
+          "rain_1h",
+          0.118
+        ],
+        [
+          "rain_12h",
+          0.095
+        ],
+        [
+          "rain_3h",
+          0.093
+        ],
+        [
+          "rain_6h",
+          0.084
+        ],
+        [
+          "rain_24h",
+          0.07
+        ],
+        [
+          "antecedent_rain_15d",
+          0.064
+        ]
+      ]
+    },
+    {
+      "hazard": "flash_flood",
+      "events": 13,
+      "rows": 396,
+      "note": "illustrative: very few events",
+      "xgb_dyn": {
+        "auc": 0.564,
+        "pr_auc": 0.18,
+        "brier": 0.162,
+        "n": 396,
+        "base_rate": 0.167
+      },
+      "xgb_dyn_plus_phys": {
+        "auc": 0.556,
+        "pr_auc": 0.176,
+        "brier": 0.165,
+        "n": 396,
+        "base_rate": 0.167
+      },
+      "xgb_phys_only": {
+        "auc": 0.626,
+        "pr_auc": 0.231,
+        "brier": 0.146,
+        "n": 396,
+        "base_rate": 0.167
+      },
+      "logit_phys_baseline": {
+        "auc": 0.444,
+        "pr_auc": 0.153,
+        "brier": 0.145,
+        "n": 396,
+        "base_rate": 0.167
+      },
+      "r_int_caine_alone_auc": 0.55,
+      "p_fs_lt1_alone_auc": 0.499,
+      "rain_24h_alone_auc": 0.572,
+      "control_shuffled_labels_auc": [
+        0.558,
+        0.466,
+        0.54
+      ],
+      "id_threshold_full_fit_descriptive": {
+        "alpha": 0.02,
+        "beta": -0.319,
+        "caine": {
+          "alpha": 14.82,
+          "beta": 0.39
+        }
+      },
+      "top_features_full_fit_descriptive": [
+        [
+          "antecedent_rain_3d",
+          0.129
+        ],
+        [
+          "r_int_caine",
+          0.106
+        ],
+        [
+          "antecedent_rain_7d",
+          0.101
+        ],
+        [
+          "soil_moisture_0_7",
+          0.092
+        ],
+        [
+          "rain_24h",
+          0.092
+        ],
+        [
+          "antecedent_rain_15d",
+          0.075
+        ]
+      ]
+    }
+  ]
+}

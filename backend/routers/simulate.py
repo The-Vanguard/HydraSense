@@ -296,7 +296,7 @@ def _upsert_alert_state(conn, tier: Optional[str], timestamp: Optional[str], cyc
     )
 
 
-def score_manual_scenario(features: dict) -> dict:
+def _score_manual_scenario_legacy(features: dict) -> dict:
     """
     Computes responsive, dynamic hazard scoring for manual "what-if" scenarios.
     
@@ -544,6 +544,24 @@ def _compute_forecast_projection(hex_id: Optional[str], features: dict, target_p
     }
 
 
+def score_manual_scenario(features: dict) -> dict:
+    """What-if scoring with the SAME physics-first index as the live map (backend/physics_risk.py), so a
+    scenario and a live hex are directly comparable.  The old hand-set weighted sum is kept as
+    _score_manual_scenario_legacy.  `tier_probabilities` is one-hot: the index assigns exactly one tier
+    and does not produce probabilities (the legacy Gaussian softmax was not a probability either)."""
+    from backend.physics_risk import PhysicsRiskModel
+    out = PhysicsRiskModel().predict_one(features)
+    tier = out["tier"]
+    return {
+        "risk_score": out["risk_score"],
+        "tier": tier,
+        "confidence_score": out["confidence_score"],
+        "tier_probabilities": {t: (1.0 if t == tier else 0.0) for t in ("Green", "Yellow", "Orange", "Red")},
+        "method": out["method"],
+        "missing_inputs": out["missing_inputs"],
+    }
+
+
 @router.post("/risk", response_model=ScenarioResponse)
 def simulate_risk(scenario: ScenarioInput):
     """POST /simulate/risk -- score a manual hypothetical scenario with dynamic
@@ -628,3 +646,23 @@ def simulate_risk(scenario: ScenarioInput):
         factor_of_safety_max=features.get("factor_of_safety_max"),
         projected_trend=projection["trend"],
     )
+
+
+@router.post("/iot-toggle")
+def toggle_iot_sensor(offline: Optional[bool] = None):
+    """
+    Final.md §14.5 deliberate IoT sensor-failure demonstration.
+    Toggles sensor between ONLINE and OFFLINE to demonstrate graceful degradation.
+    """
+    from backend.ingest.iot_sim import set_sensor_offline, is_sensor_offline
+    current = is_sensor_offline()
+    new_state = (not current) if offline is None else offline
+    set_sensor_offline(new_state)
+    from backend.alerts.websocket_manager import broadcast_sync
+    broadcast_sync({
+        "type": "sensor_status_changed",
+        "offline": new_state,
+        "message": "IoT Sensor offline — graceful fallback to satellite/forecast active" if new_state else "IoT Sensor restored to live MQTT stream",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    })
+    return {"sensor_offline": new_state, "message": "Sensor offline demo active" if new_state else "Sensor online"}

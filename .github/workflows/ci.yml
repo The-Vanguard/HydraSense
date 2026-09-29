@@ -1,0 +1,91 @@
+# .github/workflows/ci.yml
+# HydraSense v2 CI — Gap Analysis Phase 0 gate
+#
+# Two jobs run on every push and pull request:
+#
+#   provenance-leakage-gate
+#     The Phase 0 mandatory gate (Gap Analysis §0.2 rule 5).
+#     Fails the build if any SIMULATED row is found in the feature table,
+#     if the provenance enum is incomplete, or if any scored row has NULL
+#     provenance.  This job MUST pass before any merge.
+#
+#   backend-unit-tests
+#     Runs the rest of the test suite.  Failures here block merge but do
+#     not count as a provenance leakage violation.
+#
+# Both jobs use Python 3.11 on ubuntu-latest.
+# Dependencies are installed from backend/requirements.txt.
+
+name: HydraSense CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  # ── Mandatory provenance leakage gate ─────────────────────────────────────
+  provenance-leakage-gate:
+    name: "Phase 0 Gate — Provenance Leakage Test"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      - name: Run provenance leakage test
+        # This step MUST exit 0 on every push.
+        # A non-zero exit means SIMULATED data has leaked into a science path
+        # or the provenance policy module itself is broken.
+        # Fix the data source or filter before merging.
+        run: |
+          pytest tests/test_provenance_leakage.py \
+            -v \
+            --tb=short \
+            --no-header \
+            -q
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+
+  # ── General backend tests ──────────────────────────────────────────────────
+  backend-unit-tests:
+    name: "Backend Unit Tests"
+    runs-on: ubuntu-latest
+    needs: provenance-leakage-gate   # only run if the leakage gate passes
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      - name: Run backend tests
+        run: |
+          pytest tests/ \
+            --ignore=tests/test_provenance_leakage.py \
+            -v \
+            --tb=short \
+            -q
+        env:
+          PYTHONPATH: ${{ github.workspace }}

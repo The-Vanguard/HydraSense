@@ -1,0 +1,296 @@
+{
+  "rows": 1868,
+  "by_type": {
+    "temporal": 1225,
+    "spatial": 398,
+    "positive": 245
+  },
+  "events_with_spatial": 29,
+  "events_without_spatial": [
+    "BARAK-2020-LS-01",
+    "MEDARASOLA-2014-LS-01",
+    "MOGALRAJAPURAM-2024-LS-01",
+    "NH29-2024-LS-01",
+    "NIGULSARI-2021-LS-01",
+    "NILGIRIS-2009-LS-01",
+    "PAKALAPAHAR-2023-LS-01",
+    "PETTIMUDI-2020-LS-01",
+    "PHAMLA-2016-LS-01",
+    "PUTHUMALA-2019-LS-01",
+    "SAMEJ-2024-FF-01",
+    "SATARA-2021-LS-01",
+    "SATTARI-2021-FF-01",
+    "SERAJ-2025-FF-01",
+    "SUMMERHILL-2023-LS-01",
+    "TALACAUVERY-2020-LS-01",
+    "TALIYE-2021-LS-01",
+    "THARALI-2025-FF-01",
+    "TUPUL-2022-LS-01",
+    "UKHIMATH-2012-LS-01",
+    "VAISHNODEVI-2025-LS-01",
+    "VALPARAI-2024-LS-01",
+    "WAYANAD-2024-LS-01"
+  ],
+  "per_event": {
+    "AIZAWL-2024-LS-01": {
+      "candidates": 10,
+      "hilly_chosen": 3,
+      "rows": 15
+    },
+    "AMARNATH-2022-FF-01": {
+      "candidates": 10,
+      "hilly_chosen": 3,
+      "rows": 21
+    },
+    "ANNAMAYYA-2021-FF-01": {
+      "candidates": 10,
+      "hilly_chosen": 3,
+      "rows": 15
+    },
+    "AVALANCHE-2019-LS-01": {
+      "candidates": 10,
+      "hilly_chosen": 3,
+      "rows": 6
+    },
+    "BARAGHARA-2018-LS-01": {
+      "candidates": 10,
+      "hilly_chosen": 3,
+      "rows": 9
+    },
+    "BARAK-2020-LS-01": {
+      "candidates": 10,
+      "hilly_chosen": 0,
+      "rows": 0
+    },
+    "BATSERI-2021-LS-01": {
+      "candidates": 10,
+      "hilly_chosen": 3,
+      "rows": 12
+    },
+    "BEAS-2023-FF-01": {
+      "candidates": 10,
+      "hilly_chosen": 3,
+      "rows": 9
+    },
+    "CANACONA-2009-FF-01": {
+      "candidates": 10,
+      "hilly_chosen": 3,
+      "rows": 9
+    },
+    "CHASOTI-2025-FF-01": {
+      "candidates": 10,
+      "hilly_chosen": 3,
+      "rows": 21
+    },
+    "CHATEN-2025-LS-01": {
+      "candidates": 10,
+      "hilly_chosen": 3,
+      "rows": 21
+    },
+    "DARJEELING-2025-LS-01": {
+      "candidates": 10,
+      "hilly_chosen": 3,
+      "rows": 15
+    },
+    "DHARALI-2025-FF-01": {
+      "candidates": 10,
+      "hilly_chosen": 3,
+      "rows": 21
+    },
+    "GAROHILLS-2024-LS-01": {
+      "candidates": 10,
+      "hilly_chosen": 3,
+      "rows": 12
+    },
+    "GAURIKUND-2023-LS-01": {
+      "candidates": 10,
+      "hilly_chosen": 3,
+      "rows": 15
+    },
+    "HUNZAR-2021-FF-01": {
+      "candidates": 10,
+      "hilly_chosen": 3,
+      "rows": 12
+    },
+    "IRSHALWADI-2023-LS-01": {
+      "candidates": 10,
+      "hilly_chosen": 2,
+      "rows": 14
+    },
+    "JODHGHATI-2025-FF-01": {
+      "candidates": 10,
+      "hilly_chosen": 3,
+      "rows": 15
+    },
+    "KATTIPPARA-2018-LS-01": {
+      "candidates": 10,
+      "hilly_chosen": 3,
+      "rows": 15
+    },
+    "KAVALAPPARA-2019-LS-01": {
+      "candidates": 10,
+      "hilly_chosen": 3,
+      "rows": 12
+    },
+    "KODAGU-2018-LS-01": {
+      "candidates": 10,
+      "hilly_chosen": 3,
+      "rows": 4
+    },
+    "KOOTTICKAL-2021-LS-01": {
+      "candidates": 10,
+      "hilly_chosen": 1,
+      "rows": 4
+    },
+    "KOTRUPI-2017-LS-01": {
+      "candidates": 10,
+      "hilly_chosen": 3,
+      "rows": 12
+    },
+    "LAPTAP-2017-LS-01": {
+      "candidates": 10,
+      "hilly_chosen": 3,
+      "rows": 21
+    },
+    "LEH-2010-FF-01": {
+      "candidates": 10,
+      "hilly_chosen": 3,
+      "rows": 21
+    },
+    "MALIN-2014-LS-01": {
+      "candidates": 10,
+      "hilly_chosen": 3,
+      "rows": 12
+    },
+    "MALPA-1998-LS-01": {
+      "candidates": 10,
+      "hilly_chosen": 3,
+      "rows": 21
+    },
+    "MANGAN-2024-LS-01": {
+      "candidates": 10,
+      "hilly_chosen": 3,
+      "rows": 12
+    },
+    "MARAPPALAM-1993-LS-01": {
+      "candidates": 10,
+      "hilly_chosen": 3,
+      "rows": 12
+    },
+    "MEDARASOLA-2014-LS-01": {
+      "candidates": 10,
+      "hilly_chosen": 0,
+      "rows": 0
+    },
+    "MIRIK-2015-LS-01": {
+      "candidates": 10,
+      "hilly_chosen": 2,
+      "rows": 10
+    },
+    "MOGALRAJAPURAM-2024-LS-01": {
+      "candidates": 10,
+      "hilly_chosen": 0,
+      "rows": 0
+    },
+    "NH29-2024-LS-01": {
+      "candidates": 10,
+      "hilly_chosen": 0,
+      "rows": 0
+    },
+    "NIGULSARI-2021-LS-01": {
+      "candidates": 10,
+      "hilly_chosen": 0,
+      "rows": 0
+    },
+    "NILGIRIS-2009-LS-01": {
+      "candidates": 10,
+      "hilly_chosen": 0,
+      "rows": 0
+    },
+    "PAKALAPAHAR-2023-LS-01": {
+      "candidates": 10,
+      "hilly_chosen": 0,
+      "rows": 0
+    },
+    "PETTIMUDI-2020-LS-01": {
+      "candidates": 10,
+      "hilly_chosen": 0,
+      "rows": 0
+    },
+    "PHAMLA-2016-LS-01": {
+      "candidates": 10,
+      "hilly_chosen": 0,
+      "rows": 0
+    },
+    "PUTHUMALA-2019-LS-01": {
+      "candidates": 10,
+      "hilly_chosen": 0,
+      "rows": 0
+    },
+    "SAMEJ-2024-FF-01": {
+      "candidates": 10,
+      "hilly_chosen": 0,
+      "rows": 0
+    },
+    "SATARA-2021-LS-01": {
+      "candidates": 10,
+      "hilly_chosen": 0,
+      "rows": 0
+    },
+    "SATTARI-2021-FF-01": {
+      "candidates": 10,
+      "hilly_chosen": 0,
+      "rows": 0
+    },
+    "SERAJ-2025-FF-01": {
+      "candidates": 10,
+      "hilly_chosen": 0,
+      "rows": 0
+    },
+    "SUMMERHILL-2023-LS-01": {
+      "candidates": 10,
+      "hilly_chosen": 0,
+      "rows": 0
+    },
+    "TALACAUVERY-2020-LS-01": {
+      "candidates": 10,
+      "hilly_chosen": 0,
+      "rows": 0
+    },
+    "TALIYE-2021-LS-01": {
+      "candidates": 10,
+      "hilly_chosen": 0,
+      "rows": 0
+    },
+    "THARALI-2025-FF-01": {
+      "candidates": 10,
+      "hilly_chosen": 0,
+      "rows": 0
+    },
+    "TUPUL-2022-LS-01": {
+      "candidates": 10,
+      "hilly_chosen": 0,
+      "rows": 0
+    },
+    "UKHIMATH-2012-LS-01": {
+      "candidates": 10,
+      "hilly_chosen": 0,
+      "rows": 0
+    },
+    "VAISHNODEVI-2025-LS-01": {
+      "candidates": 10,
+      "hilly_chosen": 0,
+      "rows": 0
+    },
+    "VALPARAI-2024-LS-01": {
+      "candidates": 10,
+      "hilly_chosen": 0,
+      "rows": 0
+    },
+    "WAYANAD-2024-LS-01": {
+      "candidates": 10,
+      "hilly_chosen": 0,
+      "rows": 0
+    }
+  }
+}

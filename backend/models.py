@@ -1,4 +1,4 @@
-﻿"""
+"""
 backend/models.py -- Pydantic request/response models for all SRS.md Section 15 endpoints.
 
 Field names are FROZEN per SRS.md Section 14/15 -- do not rename without team flag.
@@ -7,6 +7,7 @@ Field names are FROZEN per SRS.md Section 14/15 -- do not rename without team fl
 from __future__ import annotations
 from typing import Any, List, Optional
 from pydantic import BaseModel, Field
+from backend.provenance import ProvenanceTag  # Gap Analysis §0.2 — provenance policy
 
 
 # ---------------------------------------------------------------------------
@@ -47,21 +48,49 @@ class IoTIngest(BaseModel):
 # ---------------------------------------------------------------------------
 
 class RiskResponse(BaseModel):
-    hex_id:                  str
-    timestamp:               str
-    risk_score:              float
-    tier:                    str
-    confidence_score:        float
-    lead_time_min:           Optional[int]   = None   # null until Phase 9
-    lead_time_basis:         str             = "pending_phase_9"
-    top_contributing_features: List[dict]   = Field(default_factory=list)
-    data_source:             str             = "live"  # "live" | "cached_demo"
+    hex_id:                             str
+    timestamp:                          str
+    risk_score:                         float
+    tier:                               str
+    confidence_score:                   float
+    lead_time_min:                      Optional[int] = None
+    lead_time_basis:                    str = "forecast_projection"
+    # None = not available. These used to default to 0.96 / 0.82 / 1.15 for every hex, i.e. made-up values.
+    factor_of_safety:                   Optional[float] = None
+    factor_of_safety_min:               Optional[float] = None
+    factor_of_safety_max:               Optional[float] = None
+    fs_band_widened_for_no_calibration: bool = False
+    top_contributing_features:          List[dict] = Field(default_factory=list)
+    data_source:                        Any = "live"
+    # v2 provenance field (Gap Analysis §0.2) — REAL_VALIDATED | REAL_RECONSTRUCTED | SIMULATED
+    provenance:                         Optional[ProvenanceTag] = None
 
 class RiskMapEntry(BaseModel):
-    hex_id:     str
-    risk_score: float
-    tier:       str
-    data_source: str = "live"
+    hex_id:                             str
+    risk_score:                         float
+    tier:                               str
+    confidence_score:                   Optional[float] = None      # was 85.0: an invented default
+    lead_time_min:                      Optional[int] = None
+    data_source:                        Any = "live"
+    flood_tier:                         Optional[str] = None
+    landslide_tier:                     Optional[str] = None
+    has_local_calibration:              bool = False                # was True: an optimistic default
+    fs_band_widened_for_no_calibration: bool = False
+    instrumented_hex:                   bool = False
+    village:                            Optional[str] = None
+    lat:                                Optional[float] = None
+    lng:                                Optional[float] = None
+    region_code:                        Optional[str] = "wayanad-kl"
+    region_label:                       Optional[str] = "Wayanad"
+    state:                              Optional[str] = "Kerala"
+    district:                           Optional[str] = "Wayanad"
+    # v2 provenance field (Gap Analysis §0.2) — drives UI badge in hydrasense-theme.css
+    # Values: REAL_VALIDATED | REAL_RECONSTRUCTED | SIMULATED
+    # SIMULATED rows must show the page-wide simulated banner (Gap Analysis §0.4.4)
+    provenance:                         Optional[ProvenanceTag] = None
+    # v2 confidence fields for UI desaturation and reason line (Gap Analysis §0.4.2)
+    conf_reason:                        Optional[str] = None   # "no_local_calibration" | "wide_fs_band" | None
+    sensor_adjusted:                    bool = False           # True when a real sensor overrode the gridded value
 
 class RiskHistoryEntry(BaseModel):
     timestamp:  str
@@ -95,6 +124,16 @@ class EventMapEntry(BaseModel):
     source:                 Optional[str] = None
     coordinate_precision:   str = "village-level"
     data_source_note:       str = "Historical event, sourced -- not a live model output"
+    # v2 provenance fields (Gap Analysis §0.3) ────────────────────────────
+    # provenance: one of REAL_VALIDATED | REAL_RECONSTRUCTED | SIMULATED
+    # grade:      A (agency-validated) | B (two sources agree) | C (single/conflicting)
+    # time_uncertainty_h: if > few hours, the -3h and -1h samples are excluded
+    # sources_used: list of source citations used to reconstruct this record
+    provenance:                 Optional[ProvenanceTag] = None
+    grade:                      Optional[str] = None           # "A" | "B" | "C"
+    time_uncertainty_h:         Optional[float] = None         # hours
+    position_uncertainty_m:     Optional[float] = None         # metres
+    sources_used:               Optional[List[str]] = None     # citation list
     # Real SRTM30m+pysheds terrain, from hexes.static_features -- same for
     # every event at this hex.
     static_features:       Optional[dict] = None

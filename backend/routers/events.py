@@ -17,7 +17,7 @@ from fastapi import APIRouter, HTTPException, Query
 from backend.database import get_db
 from backend.models import EventMapEntry
 from backend.seed_multiregion import REGIONS, load_terrain, H3_RES  # {region_key: (target_location, default_point)}
-from ml.models.factor_of_safety import compute_factor_of_safety
+from ml.models.factor_of_safety import compute_fs_for_region  # Stage 2: region-agnostic FS router
 
 import h3
 
@@ -204,19 +204,22 @@ def get_events_map(bbox: Optional[str] = Query(None, description="minLon,minLat,
         item_id = REGION_TO_CHRONOS_ITEM_ID.get(region_key)
         river = chronos.get(item_id) if item_id else None
 
-        # Real Phase 5 factor-of-safety (SRS §10.1: beta=slope_deg,
-        # m=soil_saturation_ratio, no Monte Carlo) using this point's real
-        # SRTM slope + the region's latest real GWETROOT reading. NOT this
-        # historical event's own at-disaster soil conditions -- a present-day
-        # estimate at a real terrain point, always disclosed as such.
-        slope_deg = static_features.get("slope_deg") if static_features else None
-        soil_val = _latest_soil_for_region(region_key) if region_key else None
-        fs = compute_factor_of_safety(slope_deg, soil_val)
+        # Real Phase 5 factor-of-safety using region-agnostic parameter path.
+        # compute_fs_for_region() selects SoilGrids-derived params if available,
+        # falls back to Wayanad Scientific Reports params (Final.md §9.2).
+        slope_deg  = static_features.get("slope_deg") if static_features else None
+        soil_val   = _latest_soil_for_region(region_key) if region_key else None
+        has_cal    = bool(static_features.get("has_local_calibration")) if static_features else True
+        # Derive region_code from region_key (slug used in onboarding pipeline)
+        from backend.onboarding.pipeline import REGION_BY_CODE
+        region_code_map = {v["label"].split(",")[0].lower(): k for k, v in REGION_BY_CODE.items()}
+        region_slug = region_code_map.get((row["region"] or "").lower(), "")
+        fs = compute_fs_for_region(slope_deg, soil_val, region_slug, has_local_calibration=has_cal)
 
         entries.append(EventMapEntry(
             event_id=row["event_id"],
             hex_id=row["hex_id"],
-            region=row["region"] or "Wayanad",
+            region=row["region"] or row.get("region_code", "unknown"),
             lat=lat, lon=lon,
             date=row["date"],
             type=row["type"],

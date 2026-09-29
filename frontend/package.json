@@ -1,7 +1,7 @@
 {
   "name": "hydrasense-frontend",
-  "version": "0.1.0",
-  "description": "HydraSense dashboard — React + Leaflet (SRS.md Section 7, frozen stack).",
+  "version": "0.2.0",
+  "description": "HydraSense dashboard — React + deck.gl H3HexagonLayer + MapLibre GL JS (Final.md §15.4 Swap #2).",
   "private": true,
   "scripts": {
     "dev": "vite",
@@ -14,6 +14,13 @@
     "react-dom": "^18.3.1",
     "leaflet": "^1.9.4",
     "react-leaflet": "^4.2.1",
+    "deck.gl": "^9.0.0",
+    "@deck.gl/react": "^9.0.0",
+    "@deck.gl/geo-layers": "^9.0.0",
+    "@deck.gl/layers": "^9.0.0",
+    "@deck.gl/core": "^9.0.0",
+    "react-map-gl": "^7.1.7",
+    "maplibre-gl": "^4.7.1",
     "recharts": "^2.12.7",
     "axios": "^1.7.2",
     "h3-js": "^4.1.0"
@@ -27,7 +34,7 @@
     "express": "^4.19.2"
   },
   "notes": {
-    "map_library": "Leaflet only — CLAUDE.md hard constraint. Never switch to Mapbox."
+    "map_library": "deck.gl H3HexagonLayer + MapLibre GL JS — Final.md §15.4 Swap #2. Leaflet kept as fallback only."
   },
   "allowScripts": {
     "esbuild@0.21.5": true

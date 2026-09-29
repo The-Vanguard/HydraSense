@@ -22,77 +22,95 @@ router = APIRouter(prefix="/risk", tags=["risk"])
 ORANGE_RED = {"Orange", "Red"}
 
 
-@router.get("/map", response_model=List[RiskMapEntry])
-def get_risk_map(bbox: Optional[str] = Query(None, description="minLon,minLat,maxLon,maxLat")):
-    """GET /risk/map?bbox=... -- all hex risk scores in bounding box."""
-    with get_db() as conn:
-        # Get latest score per hex (SQLite window-function compatible)
-        rows = conn.execute("""
-            SELECT rs.hex_id, rs.risk_score, rs.tier, rs.data_source, rs.timestamp,
-                   h.geom
-            FROM risk_scores rs
-            JOIN (
-                SELECT hex_id, MAX(timestamp) AS max_ts FROM risk_scores GROUP BY hex_id
-            ) latest ON rs.hex_id = latest.hex_id AND rs.timestamp = latest.max_ts
-            LEFT JOIN hexes h ON rs.hex_id = h.hex_id
-        """).fetchall()
+VILLAGE_CENTROIDS = [
+    ("Mundakkai", 11.5185, 76.0524),
+    ("Chooralmala", 11.5143, 76.0498),
+    ("Attamala", 11.5220, 76.0570),
+    ("Punjirimattom", 11.5100, 76.0450),
+]
 
-    entries = []
-    for row in rows:
-        # Basic bbox filter if provided (parse geom centroid from hex_id via h3)
-        if bbox:
-            try:
-                min_lon, min_lat, max_lon, max_lat = map(float, bbox.split(","))
-                import h3 as _h3
-                lat, lon = _h3.cell_to_latlng(row["hex_id"])
-                if not (min_lat <= lat <= max_lat and min_lon <= lon <= max_lon):
-                    continue
-            except Exception:
-                pass  # if bbox parse fails, include all
-        entries.append(RiskMapEntry(
-            hex_id=row["hex_id"],
-            risk_score=row["risk_score"],
-            tier=row["tier"],
-            data_source=row["data_source"] or "live",
-        ))
-    return entries
+def _nearest_village(lat: float, lon: float) -> str:
+    best_dist = float("inf")
+    best_name = "Wayanad Sector"
+    for name, vlat, vlon in VILLAGE_CENTROIDS:
+        d = (lat - vlat)**2 + (lon - vlon)**2
+        if d < best_dist:
+            best_dist = d
+            best_name = name
+    return best_name
+
+from backend.repository import get_risk_map_data as _get_risk_map_data
+
+
+@router.get("/map", response_model=List[RiskMapEntry])
+def get_risk_map(
+    region: Optional[str] = Query(None, description="Region code e.g. wayanad-kl"),
+    bbox: Optional[str] = Query(None, description="minLon,minLat,maxLon,maxLat")
+):
+    """GET /risk/map?region=...&bbox=... -- all hex risk scores with rich explainability attributes."""
+    data = _get_risk_map_data(region_code=region, bbox=bbox)
+    return [RiskMapEntry(**d) for d in data]
+
 
 
 @router.get("/{hex_id}", response_model=RiskResponse)
 def get_risk(hex_id: str):
-    """GET /risk/{hex_id} -- current risk score for a hex.
+    """GET /risk/{hex_id} -- current risk score for a hex."""
+    from datetime import datetime, timezone
 
-    Phase 9: always recomputes via compute_and_store_risk so lead_time_min
-    and data_source reflect the live (or cached_demo) forecast rather than
-    a stale DB row. DB write still happens inside compute_and_store_risk
-    so the /history endpoint remains populated.
-    Falls back to last DB row only if model is unavailable.
-    """
-    result = compute_and_store_risk(hex_id)
-    if result is not None:
-        return RiskResponse(**result)
-
-    # Model unavailable -- fall back to last DB row
+    # Serve the stored score while it is fresh (default 10 min; the scoring cycle is 15 min) instead of
+    # recomputing from live weather on every click (4-12 s, longer than the UI's 8 s timeout).
+    import os
+    from backend import risk_engine
+    ttl_s = float(os.environ.get("HYDRASENSE_RISK_TTL_S", "600"))
     with get_db() as conn:
         row = conn.execute(
             "SELECT * FROM risk_scores WHERE hex_id=? ORDER BY timestamp DESC LIMIT 1",
             (hex_id,)
         ).fetchone()
-    if row is None:
-        raise HTTPException(status_code=404,
-            detail=f"No risk score for {hex_id} and model not available")
-    contribs = json.loads(row["feature_contributions"] or "[]")
-    return RiskResponse(
-        hex_id=row["hex_id"],
-        timestamp=row["timestamp"],
-        risk_score=row["risk_score"],
-        tier=row["tier"],
-        confidence_score=row["confidence_score"],
-        lead_time_min=row["lead_time_min"],
-        lead_time_basis=row["lead_time_basis"] or "model_unavailable",
-        top_contributing_features=contribs,
-        data_source=row["data_source"] or "cached_demo",
-    )
+
+    if row is not None:
+        try:
+            row_ts = datetime.fromisoformat(row["timestamp"])
+            age_s = (datetime.now(timezone.utc) - row_ts).total_seconds()
+            if age_s < ttl_s:
+                mem = risk_engine.LAST_RESULTS.get(hex_id)
+                if mem and mem.get("timestamp") == row["timestamp"]:
+                    return RiskResponse(**mem)                       # real FS values from this process
+                contribs = json.loads(row["feature_contributions"] or "[]")
+                return RiskResponse(
+                    hex_id=row["hex_id"],
+                    timestamp=row["timestamp"],
+                    risk_score=row["risk_score"],
+                    tier=row["tier"],
+                    confidence_score=row["confidence_score"],
+                    lead_time_min=row["lead_time_min"],
+                    lead_time_basis=row["lead_time_basis"] or "forecast_projection",
+                    top_contributing_features=contribs,              # FS left None: not stored, not invented
+                    data_source=row["data_source"] or "live",
+                )
+        except Exception:
+            pass
+
+    result = compute_and_store_risk(hex_id)
+    if result is not None:
+        return RiskResponse(**result)
+
+    if row is not None:
+        contribs = json.loads(row["feature_contributions"] or "[]")
+        return RiskResponse(
+            hex_id=row["hex_id"],
+            timestamp=row["timestamp"],
+            risk_score=row["risk_score"],
+            tier=row["tier"],
+            confidence_score=row["confidence_score"],
+            lead_time_min=row["lead_time_min"],
+            lead_time_basis=row["lead_time_basis"] or "model_unavailable",
+            top_contributing_features=contribs,
+            data_source=row["data_source"] or "cached_demo",
+        )
+
+    raise HTTPException(status_code=404, detail=f"No risk score for {hex_id}")
 
 
 @router.get("/{hex_id}/history", response_model=List[RiskHistoryEntry])

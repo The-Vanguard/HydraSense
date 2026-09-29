@@ -9,10 +9,24 @@ import axios from 'axios';
 const api = axios.create({ baseURL: '/api', timeout: 8000 });
 
 /** GET /risk/map — all pilot hex risk scores */
-export const getRiskMap = (bbox = null) => {
-  const params = bbox ? { bbox: bbox.join(',') } : {};
+export const getRiskMap = (bbox = null, region = null) => {
+  const params = {};
+  if (bbox) params.bbox = Array.isArray(bbox) ? bbox.join(',') : bbox;
+  if (region) params.region = region;
   return api.get('/risk/map', { params }).then((r) => r.data);
 };
+
+/** GET /region/list — list of all 10 onboarded regions */
+export const getRegionsList = () =>
+  api.get('/region/list').then((r) => r.data);
+
+/** POST /region/resolve — autonomous region onboarding */
+export const resolveRegion = (query, force = false) =>
+  api.post(`/region/resolve?query=${encodeURIComponent(query)}${force ? '&force=true' : ''}`).then((r) => r.data);
+
+/** POST /simulate/iot-toggle — deliberate IoT sensor failure demonstration (§14.5) */
+export const toggleIoTSensor = (sensorId = 'IOT_WAYANAD_001') =>
+  api.post(`/simulate/iot-toggle?sensor_id=${encodeURIComponent(sensorId)}`).then((r) => r.data);
 
 /** GET /risk/{hex_id} — full risk record for one hex */
 export const getRisk = (hexId) =>
@@ -80,3 +94,42 @@ export const simulateRisk = (scenario) =>
 /** GET /simulate/points — real Wayanad pilot hexes to start a manual scenario from. */
 export const getSimulationPoints = () =>
   api.get('/simulate/points').then((r) => r.data);
+
+// ── Stage 6 additions ──────────────────────────────────────────────────────
+
+/** GET /validation/loro — LORO (Leave-One-Region-Out) 10-fold results */
+export const getLoroResults = () =>
+  api.get('/validation/loro').then((r) => r.data);
+
+/** GET /confidence/{hex_id}/breakdown — 3-factor confidence breakdown */
+export const getConfidenceBreakdown = (hexId) =>
+  api.get(`/confidence/${hexId}/breakdown`).then((r) => r.data);
+
+/** GET /confidence/{hex_id}/persistent — Persistent Threat state */
+export const getPersistentThreat = (hexId) =>
+  api.get(`/confidence/${hexId}/persistent`).then((r) => r.data);
+
+/** GET /alert/gate/pending — pending Red alert gate requests */
+export const getPendingGates = () =>
+  api.get('/alert/gate/pending').then((r) => r.data);
+
+/** GET /alert/gate/{hex_id} — gate state for a specific hex */
+export const getGateState = (hexId) =>
+  api.get(`/alert/gate/${hexId}`).then((r) => r.data);
+
+/** POST /alert/gate/approve — second-operator gate approval */
+export const approveGate = (hexId, operatorId) =>
+  api.post('/alert/gate/approve', { hex_id: hexId, operator_id: operatorId }).then((r) => r.data);
+
+/**
+ * createAlertWebSocket — connect directly to the FastAPI backend WebSocket.
+ * Bypasses the Vite dev proxy (which cannot reliably handle WS upgrades).
+ * In dev: ws://localhost:8000/ws/alerts
+ * In prod: wss://<same-host>/ws/alerts
+ */
+export const createAlertWebSocket = () => {
+  const isDev  = window.location.port === '5173';
+  const proto  = window.location.protocol === 'https:' ? 'wss' : 'ws';
+  const host   = isDev ? 'localhost:8000' : window.location.host;
+  return new WebSocket(`${proto}://${host}/ws/alerts`);
+};

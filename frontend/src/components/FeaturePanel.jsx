@@ -15,6 +15,10 @@ const FEATURE_LABELS = {
   antecedent_precipitation_index: 'Antecedent precip. index',
   soil_saturation_ratio:          'Soil saturation (proxy)',
   factor_of_safety:               'Factor of safety',
+  rain_trigger:                   'Rainfall trigger (I-D threshold)',
+  p_fs_lt1:                       'P(FS<1) slope stability',
+  slope:                          'Slope',
+  hand_m:                         'Height above drainage (HAND)',
   factor_of_safety_min:           'FS min (band)',
   factor_of_safety_max:           'FS max (band)',
   simulated_ffgs_signal:          'Simulated FFGS signal',
@@ -58,7 +62,7 @@ export default function FeaturePanel({ features }) {
 
   return (
     <div className="panel">
-      <div className="panel-title">Top Contributing Features</div>
+      <div className="panel-title">Top Contributing Features (risk points)</div>
       {features.map((f, i) => {
         const pct   = Math.round((Math.abs(f.contribution) / max) * 100);
         const label = FEATURE_LABELS[f.feature] || f.feature;
@@ -74,7 +78,7 @@ export default function FeaturePanel({ features }) {
                 }}
               />
             </div>
-            <div className="feat-val">{(f.contribution * 100).toFixed(0)}%</div>
+            <div className="feat-val">{f.contribution.toFixed(1)} pts</div>
           </div>
         );
       })}

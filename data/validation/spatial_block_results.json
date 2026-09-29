@@ -1,0 +1,28 @@
+[
+  {
+    "cluster_id": "cluster_0",
+    "fold": 1,
+    "n_train": 1667,
+    "n_test": 4049,
+    "n_alarm": 2120,
+    "n_detected": 0,
+    "n_neg": 1929,
+    "n_fp": 0,
+    "detection_rate": 0.0,
+    "fp_rate": 0.0,
+    "notes": ""
+  },
+  {
+    "cluster_id": "cluster_3",
+    "fold": 2,
+    "n_train": 4049,
+    "n_test": 1667,
+    "n_alarm": 848,
+    "n_detected": 0,
+    "n_neg": 819,
+    "n_fp": 0,
+    "detection_rate": 0.0,
+    "fp_rate": 0.0,
+    "notes": ""
+  }
+]

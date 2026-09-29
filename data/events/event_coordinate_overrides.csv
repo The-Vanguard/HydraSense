@@ -1,0 +1,9 @@
+event_id,lat,lon,position_uncertainty_m,source_url,checked_by
+AMARNATH-2022-FF-01,34.2149,75.5008,3000,https://en.wikipedia.org/wiki/Amarnath_Temple (cave shrine coordinates; flood struck at/near the cave),web-search 2026-09-29; matches OSM/Wikipedia
+DHARALI-2025-FF-01,31.0333,78.7333,5000,https://en.wikipedia.org/wiki/Harsil (Harsil village coordinate; Dharali adjoins Harsil),web-search 2026-09-29; within 2 km of OSM Harsil match
+CHASOTI-2025-FF-01,33.3779,76.2783,2892,"OSM hamlet 'Chositi, Atholi (Paddar), Kishtwar' via Nominatim",web-search 2026-09-29; village named in Wikipedia/Newsonair event reports
+KOTRUPI-2017-LS-01,31.9131,76.8875,2912,"OSM hamlet 'Kotrupi, Urla, Padhar, Mandi' via Nominatim",web-search 2026-09-29; same place named in The Tribune/ThePrint
+THARALI-2025-FF-01,30.0745,79.5,3000,"OSM village 'Tharali, Chamoli' via Nominatim",web-search 2026-09-29; town named in event reports
+KATTIPPARA-2018-LS-01,11.4593,75.9211,1500,OSM 'Karinchola Aryankulam stream' via Nominatim (Karinchola hill landslide named in Springer chapter),web-search 2026-09-29
+MARAPPALAM-1993-LS-01,11.3352,76.8177,3109,"OSM hamlet 'Marapalam, Coonoor' via Nominatim (Coonoor-Mettupalayam ghat road)",web-search 2026-09-29
+PHAMLA-2016-LS-01,27.5883,91.8653,5000,https://science.thewire.in/environment/at-least-16-killed-in-arunachal-pradesh-landslide/ (site ~4 km from Tawang town; another report says 2 km; Tawang town coordinate used),web-search 2026-09-29

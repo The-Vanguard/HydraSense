@@ -8,7 +8,7 @@ Checks:
   [AC4] /validation/loeo returns Phase 7 data
   [AC5] /shelters/nearest/{hex_id} returns distance-sorted results
   [AC6] data_source field present on all risk responses
-  [AC7] POST /alert/trigger returns 501 (Phase 11 stub)
+  [AC7] POST /alert/trigger returns 422 (no longer a stub)
 """
 import sys, json, warnings
 warnings.filterwarnings("ignore")
@@ -111,11 +111,11 @@ def run_tests():
             results.append(check("AC5b shelters distance-sorted",
                                  shelters[0]["distance_km"] <= shelters[1]["distance_km"]))
 
-    # AC7 -- alert stubs
+    # AC7 -- alerts (implemented in Phase 7)
     r = client.post("/alert/trigger")
-    results.append(check("AC7a POST /alert/trigger -> 501", r.status_code == 501))
+    results.append(check("AC7a POST /alert/trigger -> 422", r.status_code == 422))
     r = client.get("/alert/feed")
-    results.append(check("AC7b GET /alert/feed -> 501", r.status_code == 501))
+    results.append(check("AC7b GET /alert/feed -> 200", r.status_code == 200))
 
     print()
     passed = sum(results)

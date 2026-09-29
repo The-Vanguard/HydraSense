@@ -1,0 +1,63 @@
+{
+  "frozen_date": "2026-09-29",
+  "freeze_note": "These figures are frozen. The validation panel reads them once at startup and NEVER recomputes them live (SRS \u00a711 / Migration Plan \u00a76).",
+  "loeo": {
+    "n_events": 30,
+    "detection_rate": 1.0,
+    "timing_error": {
+      "mean_min": 1440.0,
+      "median_min": 1440.0,
+      "min_min": 1440.0,
+      "max_min": 1440.0,
+      "n": 30
+    },
+    "leakage_buffer_days": 7,
+    "run_timestamp_utc": "2026-09-12T15:38:15.134757+00:00"
+  },
+  "loro": {
+    "n_regions_total": 10,
+    "n_regions_scored": 10,
+    "detection_rate": 0.9481,
+    "fp_rate": 0.0,
+    "c_cal_empirical": 1.0,
+    "c_cal_placeholder": 0.75,
+    "c_cal_note": "Empirical C_cal=1.000 from LORO. Calibrated regions: 97.9% detection rate. Uncalibrated regions: 100.0% detection rate. Replaces placeholder C_cal=0.75.",
+    "run_timestamp_utc": "2026-09-27T09:03:10.771920+00:00"
+  },
+  "spatial_block": {
+    "mean_detection_rate": 0.0,
+    "cluster_method": "hash_mid_5fold_fallback",
+    "n_clusters": 2,
+    "n_scored": 2,
+    "run_timestamp_utc": "2026-09-29T10:29:08.581783+00:00"
+  },
+  "tier_thresholds": {
+    "source": "srs_10.4_baseline_unchanged",
+    "note": "LOEO DR=100.0% >= 70%. Baseline SRS \u00a710.4 thresholds retained unchanged.",
+    "thresholds": {
+      "green_max": 29.0,
+      "yellow_min": 30.0,
+      "yellow_max": 54.0,
+      "orange_min": 55.0,
+      "orange_max": 74.0,
+      "red_min": 75.0
+    }
+  },
+  "confidence_factors": {
+    "c_cal_calibrated_regions": 1.0,
+    "c_cal_uncalibrated_regions": 0.75,
+    "fs_band_penalty_stats": {
+      "status": "fs_columns_missing",
+      "missing_cols": [
+        "fs_high",
+        "fs_low",
+        "fs_mean"
+      ],
+      "penalty_mean": null,
+      "penalty_p90": null
+    },
+    "confidence_formula": "confidence_score = 100 * P_class * (1 - FS_band_penalty) * C_cal"
+  },
+  "produced_by": "ml/validation/calibrate_thresholds.py",
+  "run_timestamp_utc": "2026-09-29T10:29:24.001966+00:00"
+}

@@ -1,0 +1,69 @@
+{
+  "rows": 1470,
+  "table": "data\\events\\training_table_v0p.parquet",
+  "caveat": "structure chosen after seeing rain_24h is the best single feature on this table; generic soil parameters; flood term unavailable (no HAND for these events)",
+  "heads": [
+    {
+      "hazard": "landslide",
+      "events": 39,
+      "rows": 1074,
+      "auc": {
+        "index": 0.511,
+        "trigger_only": 0.638,
+        "susceptibility_only": 0.503,
+        "rain_24h_alone": 0.659,
+        "r_int_caine_alone": 0.639
+      },
+      "pr_auc_index": 0.183,
+      "base_rate": 0.167,
+      "tier_counts_positive": {
+        "Green": 178,
+        "Yellow": 1
+      },
+      "tier_counts_negative": {
+        "Green": 891,
+        "Yellow": 4
+      },
+      "median_index_by_offset_h": {
+        "72.0": 0.1,
+        "48.0": 0.1,
+        "24.0": 1.1,
+        "12.0": 1.5,
+        "6.0": 2.8,
+        "3.0": 11.5,
+        "1.0": 7.6
+      }
+    },
+    {
+      "hazard": "flash_flood",
+      "events": 13,
+      "rows": 396,
+      "auc": {
+        "index": 0.49,
+        "trigger_only": 0.552,
+        "susceptibility_only": 0.499,
+        "rain_24h_alone": 0.572,
+        "r_int_caine_alone": 0.55
+      },
+      "pr_auc_index": 0.162,
+      "base_rate": 0.167,
+      "tier_counts_positive": {
+        "Green": 64,
+        "Yellow": 2
+      },
+      "tier_counts_negative": {
+        "Green": 317,
+        "Yellow": 13
+      },
+      "median_index_by_offset_h": {
+        "72.0": 0.0,
+        "48.0": 0.0,
+        "24.0": 0.0,
+        "12.0": 4.7,
+        "6.0": 0.7,
+        "3.0": 12.0,
+        "1.0": 12.0
+      }
+    }
+  ]
+}

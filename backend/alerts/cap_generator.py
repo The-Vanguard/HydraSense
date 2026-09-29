@@ -129,6 +129,7 @@ def generate_cap_xml(
     lead_time_basis: str,
     nearest_shelter: Optional[dict] = None,
     sent_ist: Optional[str] = None,
+    trigger_type: str = "UNSPECIFIED",
 ) -> tuple[str, dict]:
     """
     Returns (cap_xml_string, cap_payload_dict).
@@ -141,12 +142,23 @@ def generate_cap_xml(
     severity  = "Severe" if tier == "Red" else "Moderate"
     polygon   = _hex_polygon(hex_id)
 
-    headline    = f"High flash-flood/landslide risk: {village}, Wayanad"
-    lead_text   = _lead_time_text(lead_time_min, lead_time_basis)
+    # Trigger-specific templates
+    trigger_actions = {
+        "CLOUDBURST_FLASH": "Leave stream banks/low ground now.",
+        "SATURATION_FLOOD": "Move from riverbank/low ground before peak.",
+        "SATURATION_LANDSLIDE": "Move away from steep slopes and below cuts.",
+        "LANDSLIDE_DAM": "Evacuate downstream of the blocked reach; expect delayed surge.",
+        "COMPOUND_CASCADE": "Move away from steep slopes AND low ground now. Highest priority."
+    }
+    action_text = trigger_actions.get(trigger_type, "Take immediate precaution.")
+
+    headline = f"High {trigger_type} risk: {village}, Wayanad"
+    lead_text = _lead_time_text(lead_time_min, lead_time_basis)
     shelter_txt = _shelter_text(nearest_shelter)
     description = (
         f"Risk score {int(risk_score)}/100 ({tier.upper()}), "
         f"confidence {int(confidence_score)}/100. "
+        f"{action_text} "
         f"{lead_text} "
         f"{shelter_txt}"
     )
@@ -198,6 +210,7 @@ def generate_cap_xml(
         "hex_id":            hex_id,
         "polygon":           polygon,
         "nearest_shelter":   nearest_shelter,
+        "trigger_type":      trigger_type,
     }
 
     return cap_xml, cap_payload

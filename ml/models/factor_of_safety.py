@@ -1,14 +1,28 @@
 """
-Phase 5 — Factor of Safety physics model (infinite-slope).
+ml/models/factor_of_safety.py
+Factor of Safety physics model (infinite-slope).
 
-SRS.md references:
-  Section 10.1  — equation, parameter sourcing, frozen formula for soil_saturation_ratio
-  Section 9     — factor_of_safety / factor_of_safety_min / factor_of_safety_max are dynamic
-                  features, written into observations.dynamic_features JSONB (Section 14)
-  Section 14    — schema (field names frozen)
-  Section 18    — primary source: Mundakkai-Chooralmala Scientific Reports (2025) paper
+References:
+  HydraSense_Final.md §9.1  — frozen formula (unchanged)
+  HydraSense_Final.md §9.2  — parameters sourced from SoilGrids pedotransfer (Stage 2)
+  HydraSense_Final.md §11.3 — FS band widened when has_local_calibration=False
+  Ramesh et al. (2025) Sci Rep — original Wayanad parameter source (now the fallback)
 
-HARD CONSTRAINTS (CLAUDE.md):
+STAGE 2 UPGRADE (Final.md §9.2):
+  The PRIMARY parameter path is now SoilGrids-derived (compute_fs_from_soilgrids).
+  The original Mundakkai-Chooralmala Scientific Reports parameters (_PARAMS_MID/WORST/BEST)
+  become the FALLBACK used only when SoilGrids rasters are unavailable for a region.
+  Both paths use the identical _fs() formula and output schema — no behavioral change
+  for the existing Wayanad hexes; only the parameter source changes.
+
+HARD CONSTRAINTS (Final.md §9.1 — frozen formula):
+  - No Monte Carlo, no random sampling. Two deterministic evaluations: worst-case and
+    best-case parameter sets, giving factor_of_safety_min and factor_of_safety_max.
+  - soil_saturation_ratio = GWETROOT directly from NASA POWER. Never derive or transform.
+  - Field names frozen: factor_of_safety, factor_of_safety_min, factor_of_safety_max.
+  - If slope_deg is missing (None / NaN), flag it — never silently default.
+  - If soil_saturation_ratio is missing, flag it — never silently default.
+
   - No Monte Carlo, no random sampling.  Two deterministic evaluations only: worst-case and
     best-case parameter sets, giving factor_of_safety_min and factor_of_safety_max directly.
   - soil_saturation_ratio = GWETROOT directly from NASA POWER (Phase 1 output).
@@ -525,3 +539,206 @@ if __name__ == "__main__":
         )
     else:
         print("Phase 5 standalone run: PASS")
+
+
+# ===========================================================================
+# STAGE 2 ADDITIONS — HydraSense_Final.md §9.2 / §11.3
+# Region-agnostic FS computation using SoilGrids-derived parameters.
+# The functions below are NEW. Everything above this line is unchanged.
+# ===========================================================================
+
+def _make_param_set(
+    c_prime: float, phi_deg: float, z: float, gamma: float,
+) -> dict[str, float]:
+    """Helper: build a parameter dict compatible with _fs()."""
+    return {"c_prime": c_prime, "phi_deg": phi_deg, "z": z, "gamma": gamma}
+
+
+def widen_fs_band(
+    fs_mid: float,
+    fs_min: float,
+    fs_max: float,
+    widen_factor: float = 1.2,
+) -> tuple[float, float, float]:
+    """
+    Widen the FS uncertainty band when has_local_calibration=False (Final.md §11.3).
+
+    The band [fs_min, fs_max] is expanded by widen_factor around fs_mid:
+      new_fs_min = fs_mid - (fs_mid - fs_min) * widen_factor
+      new_fs_max = fs_mid + (fs_max - fs_mid) * widen_factor
+
+    Then clipped to [FS_MIN_CLIP, FS_MAX_CLIP].
+    fs_mid itself is NOT changed — only the uncertainty envelope grows.
+
+    Returns: (fs_mid, new_fs_min, new_fs_max)
+    """
+    half_lo = max(fs_mid - fs_min, 0.0)
+    half_hi = max(fs_max - fs_mid, 0.0)
+    new_min = max(FS_MIN_CLIP, fs_mid - half_lo * widen_factor)
+    new_max = min(FS_MAX_CLIP, fs_mid + half_hi * widen_factor)
+    return fs_mid, new_min, new_max
+
+
+def compute_fs_from_soilgrids(
+    slope_deg: float | None,
+    soil_saturation_ratio: float | None,
+    soil_params,          # SoilParams from backend.onboarding.soilgrids
+    has_local_calibration: bool = True,
+    widen_factor: float = 1.2,
+) -> dict[str, Any]:
+    """
+    Compute FS using SoilGrids-derived geotechnical parameters (Final.md §9.2).
+
+    This is the PRIMARY FS computation path for all onboarded regions.
+    Uses parameters from SoilParams (output of backend.onboarding.soilgrids.derive_soil_params).
+
+    When has_local_calibration=False, the uncertainty band is additionally widened
+    by widen_factor=1.2 (20%) per Final.md §11.3. The central FS estimate is NOT changed.
+
+    Args:
+        slope_deg:              DEM-derived slope angle (degrees)
+        soil_saturation_ratio:  GWETROOT from NASA POWER (0-1), used as-is
+        soil_params:            SoilParams dataclass from soilgrids.derive_soil_params()
+        has_local_calibration:  from history_check.py — 29th feature in Final.md §10.3
+        widen_factor:           band widening multiplier when not calibrated (default 1.2)
+
+    Returns:
+        Same schema as compute_factor_of_safety() plus two additional keys:
+          "parameter_source":    "soilgrids_wcs" | "fallback_wayanad" | "fallback_default"
+          "band_widened":        bool — True if widen_factor was applied
+          "has_local_calibration": bool — echoed for the confidence breakdown endpoint
+    """
+    missing: list[str] = []
+    if slope_deg is None or (isinstance(slope_deg, float) and math.isnan(slope_deg)):
+        missing.append("slope_deg")
+    if soil_saturation_ratio is None or (
+        isinstance(soil_saturation_ratio, float) and math.isnan(soil_saturation_ratio)
+    ):
+        missing.append("soil_saturation_ratio")
+
+    if missing:
+        return {
+            "factor_of_safety":           None,
+            "factor_of_safety_min":       None,
+            "factor_of_safety_max":       None,
+            "fs_band_straddles_one":      None,
+            "slope_deg_used":             slope_deg,
+            "soil_saturation_ratio_used": soil_saturation_ratio,
+            "missing_inputs":             missing,
+            "parameter_source":           getattr(soil_params, "data_source", "unknown"),
+            "band_widened":               False,
+            "has_local_calibration":      has_local_calibration,
+        }
+
+    m        = float(max(0.0, min(1.0, soil_saturation_ratio)))
+    beta_deg = float(min(slope_deg, FS_SLOPE_CAP)) if slope_deg > 0 else None
+
+    if beta_deg is None or slope_deg <= 0.0:
+        return {
+            "factor_of_safety":           FS_FLAT,
+            "factor_of_safety_min":       FS_FLAT,
+            "factor_of_safety_max":       FS_FLAT,
+            "fs_band_straddles_one":      False,
+            "slope_deg_used":             float(slope_deg),
+            "soil_saturation_ratio_used": m,
+            "missing_inputs":             [],
+            "parameter_source":           getattr(soil_params, "data_source", "unknown"),
+            "band_widened":               False,
+            "has_local_calibration":      has_local_calibration,
+        }
+
+    # Three deterministic evaluations using SoilGrids-derived parameters
+    params_mid   = _make_param_set(
+        soil_params.c_prime_kpa,  soil_params.phi_deg,  soil_params.z_m,   soil_params.gamma_kn_m3,
+    )
+    params_worst = _make_param_set(
+        soil_params.c_prime_min,  soil_params.phi_min,  soil_params.z_min, soil_params.gamma_max,
+    )
+    params_best  = _make_param_set(
+        soil_params.c_prime_max,  soil_params.phi_max,  soil_params.z_max, soil_params.gamma_min,
+    )
+
+    fs_mid   = _fs(**params_mid,   m=m, beta_deg=beta_deg)
+    fs_worst = _fs(**params_worst, m=m, beta_deg=beta_deg)
+    fs_best  = _fs(**params_best,  m=m, beta_deg=beta_deg)
+
+    fs_min = min(fs_worst, fs_mid, fs_best)
+    fs_max = max(fs_worst, fs_mid, fs_best)
+
+    # Widen band for uncalibrated regions (Final.md §11.3)
+    band_widened = False
+    if not has_local_calibration:
+        fs_mid, fs_min, fs_max = widen_fs_band(fs_mid, fs_min, fs_max, widen_factor)
+        band_widened = True
+
+    straddles = (fs_min < 1.0 <= fs_max)
+
+    return {
+        "factor_of_safety":           round(fs_mid,   4),
+        "factor_of_safety_min":       round(fs_min,   4),
+        "factor_of_safety_max":       round(fs_max,   4),
+        "fs_band_straddles_one":      straddles,
+        "slope_deg_used":             round(beta_deg, 4),
+        "soil_saturation_ratio_used": round(m,        4),
+        "missing_inputs":             [],
+        "parameter_source":           getattr(soil_params, "data_source", "soilgrids_wcs"),
+        "band_widened":               band_widened,
+        "has_local_calibration":      has_local_calibration,
+    }
+
+
+def compute_fs_for_region(
+    slope_deg: float | None,
+    soil_saturation_ratio: float | None,
+    region_code: str = "",
+    has_local_calibration: bool = True,
+) -> dict[str, Any]:
+    """
+    Unified router: selects SoilGrids path if rasters are available, otherwise
+    falls back to the original Wayanad parameters.
+
+    This is the function that risk_engine.py calls — it automatically picks the
+    right parameter source per region without any per-region branching in the caller.
+
+    Args:
+        slope_deg:              DEM-derived slope (degrees) or None
+        soil_saturation_ratio:  GWETROOT (0-1) or None
+        region_code:            slug from onboarding pipeline (e.g. "wayanad-kl")
+        has_local_calibration:  29th feature flag
+
+    Returns:
+        Same dict schema as compute_factor_of_safety() + "parameter_source" + "band_widened"
+    """
+    # Try SoilGrids-derived path first
+    try:
+        from backend.onboarding.soilgrids import derive_soil_params
+        soil_params = derive_soil_params(region_code, has_local_calibration)
+        if soil_params.success:
+            return compute_fs_from_soilgrids(
+                slope_deg, soil_saturation_ratio, soil_params,
+                has_local_calibration=has_local_calibration,
+            )
+    except Exception:
+        pass   # fall through to hardcoded fallback
+
+    # Fallback: original Wayanad Scientific Reports parameters
+    result = compute_factor_of_safety(slope_deg, soil_saturation_ratio)
+    # Apply band widening even on fallback when not calibrated (Final.md §11.3)
+    if (not has_local_calibration
+            and result.get("factor_of_safety") is not None
+            and result.get("factor_of_safety_min") is not None
+            and result.get("factor_of_safety_max") is not None):
+        fs_mid, fs_min, fs_max = widen_fs_band(
+            result["factor_of_safety"],
+            result["factor_of_safety_min"],
+            result["factor_of_safety_max"],
+        )
+        result["factor_of_safety_min"] = round(fs_min, 4)
+        result["factor_of_safety_max"] = round(fs_max, 4)
+        result["fs_band_straddles_one"] = (fs_min < 1.0 <= fs_max)
+        result["band_widened"] = True
+    else:
+        result["band_widened"] = False
+    result["parameter_source"]       = "fallback_wayanad"
+    result["has_local_calibration"]  = has_local_calibration
+    return result

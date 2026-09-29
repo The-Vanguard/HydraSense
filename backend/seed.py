@@ -1,4 +1,4 @@
-﻿"""
+"""
 backend/seed.py -- Seeds the SQLite database with pilot data.
 
 Seeds:
@@ -81,14 +81,27 @@ def seed_historical_events(conn):
         reader = csv.DictReader(f)
         count = 0
         for row in reader:
-            # Resolve hex from village name
-            village = row.get("village", row.get("location", ""))
-            coords  = VILLAGE_COORDS.get(village)
-            hid = h3.latlng_to_cell(coords["lat"], coords["lon"], 8) if coords else None
+            # Resolve hex from village/location name if available in VILLAGE_COORDS
+            location_str = row.get("location", row.get("village", ""))
+            hid = None
+            for v_name, coords in VILLAGE_COORDS.items():
+                if v_name.lower() in location_str.lower():
+                    hid = h3.latlng_to_cell(coords["lat"], coords["lon"], 8)
+                    break
+
+            def _float_or_none(val):
+                if not val or str(val).strip() == "":
+                    return None
+                try:
+                    return float(val)
+                except ValueError:
+                    return None
+
             conn.execute(
                 """INSERT OR REPLACE INTO historical_events
-                   (event_id, hex_id, date, type, severity, source, coordinate_precision)
-                   VALUES (?,?,?,?,?,?,?)""",
+                   (event_id, hex_id, date, type, severity, source, coordinate_precision,
+                    provenance, grade, time_uncertainty_h, position_uncertainty_m, sources_used, region)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (
                     row.get("event_id", f"E{count+1:03d}"),
                     hid,
@@ -96,7 +109,13 @@ def seed_historical_events(conn):
                     row.get("type", row.get("event_type", "landslide")),
                     row.get("severity", ""),
                     row.get("source", ""),
-                    "village-level",
+                    row.get("coordinate_precision", "village-level"),
+                    row.get("provenance") or None,
+                    row.get("grade") or None,
+                    _float_or_none(row.get("time_uncertainty_h")),
+                    _float_or_none(row.get("position_uncertainty_m")),
+                    row.get("sources_used", ""),
+                    row.get("region", ""),
                 )
             )
             count += 1

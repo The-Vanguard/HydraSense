@@ -1,0 +1,226 @@
+{
+  "table": "data\\events\\training_table_v0.parquet",
+  "validation": "leave-one-event-out (all rows of an event held out)",
+  "caveats": [
+    "small table; reanalysis rain under-reads extreme events",
+    "negatives are temporal only (same place), unrecorded events may hide among them",
+    "LORO is illustrative: no region has >= 15 events per hazard (v2 Sec. 15.3)",
+    "flood head uses point events, not micro-catchments"
+  ],
+  "heads": [
+    {
+      "hazard": "landslide",
+      "events": 39,
+      "rows": 1074,
+      "positives": 179,
+      "note": "",
+      "xgb_loeo_dynamic": {
+        "auc": 0.545,
+        "pr_auc": 0.241,
+        "brier": 0.154,
+        "n": 1074,
+        "base_rate": 0.167
+      },
+      "xgb_loeo_dynamic_plus_terrain": {
+        "auc": 0.582,
+        "pr_auc": 0.252,
+        "brier": 0.148,
+        "n": 1074,
+        "base_rate": 0.167
+      },
+      "logit_rain_baseline_loeo": {
+        "auc": 0.663,
+        "pr_auc": 0.295,
+        "brier": 0.14,
+        "n": 1074,
+        "base_rate": 0.167
+      },
+      "rain_24h_alone_auc": 0.659,
+      "antecedent_15d_alone_auc": 0.6,
+      "control_shuffled_labels_auc": [
+        0.567,
+        0.521,
+        0.469
+      ],
+      "xgb_loro_by_region_illustrative": {
+        "Arunachal Pradesh": {
+          "events": 2,
+          "auc": 0.648,
+          "pr_auc": 0.237,
+          "base_rate": 0.167
+        },
+        "Eastern Ghats": {
+          "events": 3,
+          "auc": 0.346,
+          "pr_auc": 0.145,
+          "base_rate": 0.167
+        },
+        "Himachal Pradesh": {
+          "events": 4,
+          "auc": 0.444,
+          "pr_auc": 0.176,
+          "base_rate": 0.167
+        },
+        "Jammu & Kashmir / Ladakh": {
+          "events": 1,
+          "auc": 0.657,
+          "pr_auc": 0.311,
+          "base_rate": 0.167
+        },
+        "Meghalaya / Assam hills": {
+          "events": 2,
+          "auc": 0.381,
+          "pr_auc": 0.166,
+          "base_rate": 0.167
+        },
+        "Mizoram / Manipur / Nagaland": {
+          "events": 4,
+          "auc": 0.335,
+          "pr_auc": 0.126,
+          "base_rate": 0.167
+        },
+        "Nilgiris-Anamalai-Palani": {
+          "events": 4,
+          "auc": 0.638,
+          "pr_auc": 0.496,
+          "base_rate": 0.167
+        },
+        "Northern Western Ghats": {
+          "events": 4,
+          "auc": 0.796,
+          "pr_auc": 0.396,
+          "base_rate": 0.167
+        },
+        "Sikkim / Darjeeling": {
+          "events": 4,
+          "auc": 0.613,
+          "pr_auc": 0.306,
+          "base_rate": 0.167
+        },
+        "Southern Western Ghats": {
+          "events": 8,
+          "auc": 0.704,
+          "pr_auc": 0.3,
+          "base_rate": 0.167
+        },
+        "Uttarakhand": {
+          "events": 3,
+          "auc": 0.422,
+          "pr_auc": 0.162,
+          "base_rate": 0.167
+        }
+      },
+      "top_features_full_fit_descriptive": [
+        [
+          "rain_1h",
+          0.154
+        ],
+        [
+          "rain_12h",
+          0.124
+        ],
+        [
+          "rain_6h",
+          0.099
+        ],
+        [
+          "rain_24h",
+          0.094
+        ],
+        [
+          "antecedent_rain_15d",
+          0.088
+        ]
+      ]
+    },
+    {
+      "hazard": "flash_flood",
+      "events": 13,
+      "rows": 396,
+      "positives": 66,
+      "note": "illustrative: very few events",
+      "xgb_loeo_dynamic": {
+        "auc": 0.564,
+        "pr_auc": 0.18,
+        "brier": 0.162,
+        "n": 396,
+        "base_rate": 0.167
+      },
+      "xgb_loeo_dynamic_plus_terrain": {
+        "auc": 0.556,
+        "pr_auc": 0.176,
+        "brier": 0.164,
+        "n": 396,
+        "base_rate": 0.167
+      },
+      "logit_rain_baseline_loeo": {
+        "auc": 0.474,
+        "pr_auc": 0.157,
+        "brier": 0.145,
+        "n": 396,
+        "base_rate": 0.167
+      },
+      "rain_24h_alone_auc": 0.572,
+      "antecedent_15d_alone_auc": 0.562,
+      "control_shuffled_labels_auc": [
+        0.543,
+        0.478,
+        0.529
+      ],
+      "xgb_loro_by_region_illustrative": {
+        "Eastern Ghats": {
+          "events": 1,
+          "auc": 0.768,
+          "pr_auc": 0.326,
+          "base_rate": 0.167
+        },
+        "Himachal Pradesh": {
+          "events": 3,
+          "auc": 0.331,
+          "pr_auc": 0.127,
+          "base_rate": 0.167
+        },
+        "Jammu & Kashmir / Ladakh": {
+          "events": 5,
+          "auc": 0.548,
+          "pr_auc": 0.234,
+          "base_rate": 0.167
+        },
+        "Northern Western Ghats": {
+          "events": 2,
+          "auc": 0.367,
+          "pr_auc": 0.157,
+          "base_rate": 0.167
+        },
+        "Uttarakhand": {
+          "events": 2,
+          "auc": 0.46,
+          "pr_auc": 0.153,
+          "base_rate": 0.167
+        }
+      },
+      "top_features_full_fit_descriptive": [
+        [
+          "antecedent_rain_7d",
+          0.145
+        ],
+        [
+          "antecedent_rain_3d",
+          0.141
+        ],
+        [
+          "rain_24h",
+          0.131
+        ],
+        [
+          "soil_moisture_0_7",
+          0.106
+        ],
+        [
+          "antecedent_rain_15d",
+          0.102
+        ]
+      ]
+    }
+  ]
+}

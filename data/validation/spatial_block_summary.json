@@ -1,0 +1,15 @@
+{
+  "spatial_block_n_clusters": 2,
+  "spatial_block_n_scored": 2,
+  "spatial_block_n_skipped": 0,
+  "cluster_method": "hash_mid_5fold_fallback",
+  "mean_detection_rate": 0.0,
+  "mean_fp_rate": 0.0,
+  "per_cluster_detection_rates": {
+    "cluster_0": 0.0,
+    "cluster_3": 0.0
+  },
+  "methodology_note": "Spatial block CV: fold unit = H3 res-4 parent cluster (or 5-fold hash if h3 not installed). Prevents spatial-autocorrelation leakage across geographically adjacent hexes. Detection = model predicts Orange/Red on a row whose ground-truth tier_int >= 2 (same semantics as LOEO v2).",
+  "run_timestamp_utc": "2026-09-29T10:29:08.581783+00:00",
+  "n_sample_rows": 5716
+}

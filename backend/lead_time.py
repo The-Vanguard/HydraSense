@@ -39,12 +39,16 @@ _VILLAGE_COORDS: dict[str, tuple[float, float]] = {
 }
 _DEFAULT_LAT, _DEFAULT_LON = 11.5162, 76.0511
 _FORECAST_BASE      = "https://api.open-meteo.com/v1/forecast"
-_LIVE_TIMEOUT_S     = 4.0            # SRS ss13: 3-5s; 4s chosen
+_LIVE_TIMEOUT_S     = 1.5            # Fast responsive demo fallback (< 1.5s)
 _FORECAST_HORIZON_H = 24             # SRS ss12: up to 24h
 _CACHE_PATH         = ROOT / "data" / "weather" / "cached_demo_snapshot.json"
 _FORECAST_FILE      = ROOT / "data" / "weather" / "rainfall_forecast.json"
 
 
+from backend.coarse_cache import coarse_cached  # noqa: E402
+
+
+@coarse_cached(success=lambda r: r[1] == "live")
 def _fetch_live_forecast(lat: float, lon: float) -> tuple[dict, str]:
     """
     Fetch hourly precipitation forecast. Returns (series_dict, data_source).
@@ -195,13 +199,11 @@ def compute_lead_time(
 
     series, data_source = _fetch_live_forecast(lat, lon)
 
-    # Load fusion model
+    # Same model as the risk engine (physics-first index by default; HYDRASENSE_RISK_MODEL=legacy for the
+    # old fusion model).  Imported here because risk_engine imports this module.
     try:
-        import importlib
-        if "ml.models.train_fusion_model" not in sys.modules:
-            importlib.import_module("ml.models.train_fusion_model")
-        from ml.models.train_fusion_model import FusionModel
-        model = FusionModel.load(ROOT / "ml" / "models" / "fusion_model.pkl")
+        from backend.risk_engine import get_model
+        model = get_model()
     except Exception as exc:
         return None, f"model_load_error: {exc}", data_source
 

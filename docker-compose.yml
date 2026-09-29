@@ -1,0 +1,33 @@
+# HydraSense: backend + frontend (+ optional MQTT broker for the IoT simulator).
+#   docker compose up --build              -> http://localhost:8080  (UI), http://localhost:8000/docs (API)
+#   docker compose --profile iot up        -> also starts a Mosquitto broker on :1883
+# UNTESTED: written on a machine without Docker.  No secrets are stored here: pass EARTHDATA_TOKEN
+# from your shell (`EARTHDATA_TOKEN=... docker compose up`) or leave it unset.
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data            # SQLite DB, region GeoPackages, caches, validation results
+    environment:
+      - EARTHDATA_TOKEN             # optional: enables satellite-rain fetches
+      - OPENTOPOGRAPHY_API_KEY      # optional: live DEM fetch during onboarding
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    profiles: ["iot"]
+    ports:
+      - "1883:1883"
+    command: mosquitto -c /mosquitto-no-auth.conf     # local demo only: anonymous access, do not expose

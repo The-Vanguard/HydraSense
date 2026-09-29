@@ -1,0 +1,136 @@
+{
+  "rows_used": 1387,
+  "rows_dropped": 83,
+  "events_with_dropped_rows": [
+    "DARJEELING-2025-LS-01",
+    "MALPA-1998-LS-01",
+    "MARAPPALAM-1993-LS-01",
+    "THARALI-2025-FF-01",
+    "VAISHNODEVI-2025-LS-01"
+  ],
+  "note": "features use complete UTC days before the prediction time only",
+  "heads": [
+    {
+      "hazard": "landslide",
+      "events": 37,
+      "rows": 992,
+      "era5_single_feature_auc": {
+        "1d": 0.641,
+        "3d": 0.592,
+        "7d": 0.546,
+        "15d": 0.601
+      },
+      "imerg_single_feature_auc": {
+        "1d": 0.65,
+        "3d": 0.62,
+        "7d": 0.59,
+        "15d": 0.608
+      },
+      "logit_loeo_era5_daily": {
+        "auc": 0.645,
+        "pr_auc": 0.267,
+        "brier": 0.141,
+        "n": 992,
+        "base_rate": 0.165
+      },
+      "xgb_loeo_era5_daily": {
+        "auc": 0.573,
+        "pr_auc": 0.202,
+        "brier": 0.156,
+        "n": 992,
+        "base_rate": 0.165
+      },
+      "logit_loeo_imerg_daily": {
+        "auc": 0.602,
+        "pr_auc": 0.256,
+        "brier": 0.141,
+        "n": 992,
+        "base_rate": 0.165
+      },
+      "xgb_loeo_imerg_daily": {
+        "auc": 0.583,
+        "pr_auc": 0.211,
+        "brier": 0.152,
+        "n": 992,
+        "base_rate": 0.165
+      },
+      "logit_loeo_both": {
+        "auc": 0.626,
+        "pr_auc": 0.259,
+        "brier": 0.142,
+        "n": 992,
+        "base_rate": 0.165
+      },
+      "xgb_loeo_both": {
+        "auc": 0.56,
+        "pr_auc": 0.208,
+        "brier": 0.153,
+        "n": 992,
+        "base_rate": 0.165
+      },
+      "control_shuffled_imerg_xgb_auc": 0.488,
+      "imerg_over_era5_1d_before_onset_median": 1.0
+    },
+    {
+      "hazard": "flash_flood",
+      "events": 13,
+      "rows": 395,
+      "era5_single_feature_auc": {
+        "1d": 0.56,
+        "3d": 0.536,
+        "7d": 0.557,
+        "15d": 0.571
+      },
+      "imerg_single_feature_auc": {
+        "1d": 0.6,
+        "3d": 0.639,
+        "7d": 0.634,
+        "15d": 0.635
+      },
+      "logit_loeo_era5_daily": {
+        "auc": 0.466,
+        "pr_auc": 0.155,
+        "brier": 0.145,
+        "n": 395,
+        "base_rate": 0.167
+      },
+      "xgb_loeo_era5_daily": {
+        "auc": 0.599,
+        "pr_auc": 0.201,
+        "brier": 0.156,
+        "n": 395,
+        "base_rate": 0.167
+      },
+      "logit_loeo_imerg_daily": {
+        "auc": 0.516,
+        "pr_auc": 0.202,
+        "brier": 0.146,
+        "n": 395,
+        "base_rate": 0.167
+      },
+      "xgb_loeo_imerg_daily": {
+        "auc": 0.498,
+        "pr_auc": 0.183,
+        "brier": 0.158,
+        "n": 395,
+        "base_rate": 0.167
+      },
+      "logit_loeo_both": {
+        "auc": 0.501,
+        "pr_auc": 0.206,
+        "brier": 0.147,
+        "n": 395,
+        "base_rate": 0.167
+      },
+      "xgb_loeo_both": {
+        "auc": 0.558,
+        "pr_auc": 0.22,
+        "brier": 0.155,
+        "n": 395,
+        "base_rate": 0.167
+      },
+      "control_shuffled_imerg_xgb_auc": 0.485,
+      "imerg_over_era5_1d_before_onset_median": 0.86
+    }
+  ]
+}

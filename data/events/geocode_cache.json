@@ -1,0 +1,2899 @@
+{
+ "Punchirimattom-Mundakkai-Chooralmala, Meppadi, Wayanad, Kerala, India": [],
+ "Punchirimattom, Meppadi, Wayanad, Kerala, India": [],
+ "Mundakkai, Meppadi, Wayanad, Kerala, India": [
+  {
+   "place_id": 253245678,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "way",
+   "osm_id": 736440507,
+   "lat": "11.4868992",
+   "lon": "76.1552526",
+   "category": "amenity",
+   "type": "place_of_worship",
+   "place_rank": 30,
+   "importance": 4.5194934004684786e-05,
+   "addresstype": "amenity",
+   "name": "Mundakkai Juma Masjid (destroyed)",
+   "display_name": "Mundakkai Juma Masjid (destroyed), Kalpetta - Meppadi Road, Kalladi Colony, Neelikkap Colony, Chooralmala, Vythiri, Wayanad, Kerala, 673567, India",
+   "boundingbox": [
+    "11.4868089",
+    "11.4869894",
+    "76.1551448",
+    "76.1553604"
+   ]
+  },
+  {
+   "place_id": 253245642,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "way",
+   "osm_id": 1304699679,
+   "lat": "11.4867355",
+   "lon": "76.1554170",
+   "category": "amenity",
+   "type": "place_of_worship",
+   "place_rank": 30,
+   "importance": 4.5194934004684786e-05,
+   "addresstype": "amenity",
+   "name": "CSI Trinity Church Mundakkai",
+   "display_name": "CSI Trinity Church Mundakkai, Kalpetta - Meppadi Road, Kalladi Colony, Neelikkap Colony, Chooralmala, Vythiri, Wayanad, Kerala, 673567, India",
+   "boundingbox": [
+    "11.4866837",
+    "11.4867872",
+    "76.1553792",
+    "76.1554547"
+   ]
+  }
+ ],
+ "Kavalappara, Pothukal, Nilambur, Malappuram, Kerala, India": [
+  {
+   "place_id": 421466545,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 13987649250,
+   "lat": "11.4082009",
+   "lon": "76.2368496",
+   "category": "historic",
+   "type": "memorial",
+   "place_rank": 30,
+   "importance": 1.8543526359914817e-05,
+   "addresstype": "historic",
+   "name": "Kavalappara Disaster Point",
+   "display_name": "Kavalappara Disaster Point, Akampadom - Pathar Road, Pothukal, Nilambur, Malappuram, Kerala, 679354, India",
+   "boundingbox": [
+    "11.4081509",
+    "11.4082509",
+    "76.2367996",
+    "76.2368996"
+   ]
+  }
+ ],
+ "Puthumala, Meppadi, Wayanad, Kerala, India": [
+  {
+   "place_id": 253005179,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 8676429817,
+   "lat": "11.5585138",
+   "lon": "76.1287506",
+   "category": "amenity",
+   "type": "childcare",
+   "place_rank": 30,
+   "importance": 4.7064164187030097e-05,
+   "addresstype": "amenity",
+   "name": "Anganwadi 55 puthumala",
+   "display_name": "Anganwadi 55 puthumala, Calicut - Vythiri - Gudalur Road, Kunnamangalamvayal, Meppadi, Vythiri, Wayanad, Kerala, 673577, India",
+   "boundingbox": [
+    "11.5584638",
+    "11.5585638",
+    "76.1287006",
+    "76.1288006"
+   ]
+  }
+ ],
+ "Pettimudi, Rajamala, Munnar, Idukki, Kerala, India": [],
+ "Rajamala, Munnar, Idukki, Kerala, India": [],
+ "Munnar, Idukki, Kerala, India": [
+  {
+   "place_id": 253434703,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 3870703092,
+   "lat": "10.0869959",
+   "lon": "77.0600915",
+   "category": "place",
+   "type": "town",
+   "place_rank": 18,
+   "importance": 0.4424389152612867,
+   "addresstype": "town",
+   "name": "Munnar",
+   "display_name": "Munnar, Devikulam, Idukki, Kerala, 685612, India",
+   "boundingbox": [
+    "10.0469959",
+    "10.1269959",
+    "77.0200915",
+    "77.1000915"
+   ]
+  }
+ ],
+ "Plapally & Kavali (Koottickal, Kottayam) and Makkochi & Poovanchi (Kokkayar, Idukki), Kerala, India": [],
+ "Plapally, Kottayam) and Makkochi & Poovanchi (Kokkayar, Idukki), Kerala, India": [],
+ "Kavali (Koottickal, Kottayam) and Makkochi & Poovanchi (Kokkayar, Idukki), Kerala, India": [],
+ "Kottayam) and Makkochi & Poovanchi (Kokkayar, Idukki), Kerala, India": [],
+ "Kottayam), Idukki), Kerala, India": [
+  {
+   "place_id": 254104686,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "way",
+   "osm_id": 798196717,
+   "lat": "9.7126414",
+   "lon": "77.0504601",
+   "category": "building",
+   "type": "yes",
+   "place_rank": 30,
+   "importance": 4.400625619893214e-05,
+   "addresstype": "building",
+   "name": "Bus stop to kottayam",
+   "display_name": "Bus stop to kottayam, Hill Highway, Villagepadi, Vellilamkandam, Idukki, Kerala, 685507, India",
+   "boundingbox": [
+    "9.7126127",
+    "9.7126671",
+    "77.0504303",
+    "77.0504914"
+   ]
+  },
+  {
+   "place_id": 251012958,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "way",
+   "osm_id": 897839545,
+   "lat": "9.5799182",
+   "lon": "76.8865314",
+   "category": "amenity",
+   "type": "bank",
+   "place_rank": 30,
+   "importance": 4.577935454332826e-05,
+   "addresstype": "amenity",
+   "name": "Union Bank of India, Kokkayar",
+   "display_name": "Union Bank of India, Kokkayar, Mundakayam - Elamkadu Road, Kokkayar, Peerumade, Idukki, Kerala, 686514, India",
+   "boundingbox": [
+    "9.5798906",
+    "9.5799435",
+    "76.8864819",
+    "76.8865799"
+   ]
+  }
+ ],
+ "Karinchola hill, Kattippara, Kozhikode, Kerala, India": [],
+ "Kattippara, Kozhikode, Kerala, India": [
+  {
+   "place_id": 252493871,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "relation",
+   "osm_id": 11321411,
+   "lat": "11.4807607",
+   "lon": "75.9349086",
+   "category": "boundary",
+   "type": "local_authority",
+   "place_rank": 25,
+   "importance": 0.06671231479362172,
+   "addresstype": "local_authority",
+   "name": "Kattippara",
+   "display_name": "Kattippara, Vetti Ozhinja Thottam, Thamarassery, Kozhikode, Kerala, 673615, India",
+   "boundingbox": [
+    "11.4210138",
+    "11.5416036",
+    "75.8959043",
+    "75.9811235"
+   ]
+  },
+  {
+   "place_id": 252729982,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "relation",
+   "osm_id": 12672185,
+   "lat": "11.4923964",
+   "lon": "75.9097816",
+   "category": "boundary",
+   "type": "local_authority",
+   "place_rank": 25,
+   "importance": 0.06670666742961776,
+   "addresstype": "local_authority",
+   "name": "Kattippara",
+   "display_name": "Kattippara, Thamarassery, Kozhikode, Kerala, India",
+   "boundingbox": [
+    "11.4842269",
+    "11.5003251",
+    "75.8973527",
+    "75.9210037"
+   ]
+  }
+ ],
+ "Kodagu district incl. Mukkodlu, Karnataka, India": [],
+ "Gajagiri/Brahmagiri hill near Talacauvery, Bhagamandala, Kodagu, Karnataka, India": [],
+ "Gajagiri, Bhagamandala, Kodagu, Karnataka, India": [],
+ "Brahmagiri hill near Talacauvery, Bhagamandala, Kodagu, Karnataka, India": [],
+ "Bhagamandala, Kodagu, Karnataka, India": [
+  {
+   "place_id": 252248258,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 1861233134,
+   "lat": "12.3857285",
+   "lon": "75.5290234",
+   "category": "place",
+   "type": "village",
+   "place_rank": 19,
+   "importance": 0.14670416800183103,
+   "addresstype": "village",
+   "name": "Bhagamandala",
+   "display_name": "Bhagamandala, Madikeri taluku, Kodagu, Karnataka, 571247, India",
+   "boundingbox": [
+    "12.3657285",
+    "12.4057285",
+    "75.5090234",
+    "75.5490234"
+   ]
+  }
+ ],
+ "Malin, Ambegaon taluka, Pune, Maharashtra, India": [],
+ "Ambegaon taluka, Pune, Maharashtra, India": [],
+ "Pune, Maharashtra, India": [
+  {
+   "place_id": 419891659,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 16174445,
+   "lat": "18.5213738",
+   "lon": "73.8545071",
+   "category": "place",
+   "type": "city",
+   "place_rank": 16,
+   "importance": 0.6399667627949028,
+   "addresstype": "city",
+   "name": "Pune",
+   "display_name": "Pune, Pune City Subdistrict, Pune, Maharashtra, 411001, India",
+   "boundingbox": [
+    "18.3613738",
+    "18.6813738",
+    "73.6945071",
+    "74.0145071"
+   ]
+  },
+  {
+   "place_id": 247087011,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "relation",
+   "osm_id": 1986140,
+   "lat": "18.6448627",
+   "lon": "73.9224157",
+   "category": "boundary",
+   "type": "administrative",
+   "place_rank": 10,
+   "importance": 0.5324033172117643,
+   "addresstype": "state_district",
+   "name": "Pune",
+   "display_name": "Pune, Maharashtra, India",
+   "boundingbox": [
+    "17.8950735",
+    "19.3947459",
+    "73.3227109",
+    "75.1636505"
+   ]
+  }
+ ],
+ "Taliye, Mahad taluka, Raigad, Maharashtra, India": [
+  {
+   "place_id": 248091768,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 10713607684,
+   "lat": "18.1123470",
+   "lon": "73.5836577",
+   "category": "place",
+   "type": "hamlet",
+   "place_rank": 20,
+   "importance": 0.13337083466849772,
+   "addresstype": "hamlet",
+   "name": "Taliye",
+   "display_name": "Taliye, Mazeri, Mahad Taluka, Raigad, Maharashtra, 402306, India",
+   "boundingbox": [
+    "18.0923470",
+    "18.1323470",
+    "73.5636577",
+    "73.6036577"
+   ]
+  },
+  {
+   "place_id": 246684025,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 10713607685,
+   "lat": "18.1034140",
+   "lon": "73.5852241",
+   "category": "place",
+   "type": "hamlet",
+   "place_rank": 20,
+   "importance": 0.13337083466849772,
+   "addresstype": "hamlet",
+   "name": "Taliye",
+   "display_name": "Taliye, Mahad Taluka, Raigad, Maharashtra, 402306, India",
+   "boundingbox": [
+    "18.0834140",
+    "18.1234140",
+    "73.5652241",
+    "73.6052241"
+   ]
+  }
+ ],
+ "Ambeghar, Mirgaon, Dhokawale, Patan tehsil, Satara, Maharashtra, India": [],
+ "Mirgaon, Dhokawale, Patan tehsil, Satara, Maharashtra, India": [],
+ "Dhokawale, Patan tehsil, Satara, Maharashtra, India": [],
+ "Patan tehsil, Satara, Maharashtra, India": [],
+ "Satara, Maharashtra, India": [
+  {
+   "place_id": 248137991,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "relation",
+   "osm_id": 1986143,
+   "lat": "17.6361289",
+   "lon": "74.2982781",
+   "category": "boundary",
+   "type": "administrative",
+   "place_rank": 10,
+   "importance": 0.5191174381759412,
+   "addresstype": "state_district",
+   "name": "Satara",
+   "display_name": "Satara, Maharashtra, India",
+   "boundingbox": [
+    "17.0911627",
+    "18.1824285",
+    "73.5344716",
+    "74.9057829"
+   ]
+  },
+  {
+   "place_id": 248665016,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 245641635,
+   "lat": "17.6883210",
+   "lon": "74.0041726",
+   "category": "place",
+   "type": "city",
+   "place_rank": 16,
+   "importance": 0.44985542542417367,
+   "addresstype": "city",
+   "name": "Satara",
+   "display_name": "Satara, Maharashtra, 415002, India",
+   "boundingbox": [
+    "17.5283210",
+    "17.8483210",
+    "73.8441726",
+    "74.1641726"
+   ]
+  },
+  {
+   "place_id": 248300237,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "relation",
+   "osm_id": 10354583,
+   "lat": "17.6468336",
+   "lon": "73.9702522",
+   "category": "boundary",
+   "type": "administrative",
+   "place_rank": 12,
+   "importance": 0.24004942626077666,
+   "addresstype": "county",
+   "name": "Satara",
+   "display_name": "Satara, Maharashtra, India",
+   "boundingbox": [
+    "17.4585430",
+    "17.8362554",
+    "73.7987709",
+    "74.1633153"
+   ]
+  }
+ ],
+ "Irshalwadi, Khalapur, Raigad, Maharashtra, India": [
+  {
+   "place_id": 248232059,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 5910872203,
+   "lat": "18.9328660",
+   "lon": "73.2344583",
+   "category": "place",
+   "type": "hamlet",
+   "place_rank": 20,
+   "importance": 0.1333820180056458,
+   "addresstype": "hamlet",
+   "name": "Irshalwadi",
+   "display_name": "Irshalwadi, Khalapur Taluka, Raigad, Maharashtra, 410102, India",
+   "boundingbox": [
+    "18.9128660",
+    "18.9528660",
+    "73.2144583",
+    "73.2544583"
+   ]
+  }
+ ],
+ "Canacona taluka (Galgibaga, Poinguinim, Bhatpal, Mashem), South Goa, India": [],
+ "Poinguinim, Bhatpal, Mashem), South Goa, India": [],
+ "Bhatpal, Mashem), South Goa, India": [],
+ "Mashem), South Goa, India": [],
+ "Sattari taluka, North Goa, India": [],
+ "Marappalam, Coonoor-Mettupalayam ghat road, Nilgiris, Tamil Nadu, India": [],
+ "Coonoor-Mettupalayam ghat road, Nilgiris, Tamil Nadu, India": [],
+ "Coonoor, Nilgiris, Tamil Nadu, India": [
+  {
+   "place_id": 253932299,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 282403100,
+   "lat": "11.3459447",
+   "lon": "76.7965283",
+   "category": "place",
+   "type": "town",
+   "place_rank": 18,
+   "importance": 0.422444753433077,
+   "addresstype": "town",
+   "name": "Coonoor",
+   "display_name": "Coonoor, Nilgiris, Tamil Nadu, 643101, India",
+   "boundingbox": [
+    "11.3059447",
+    "11.3859447",
+    "76.7565283",
+    "76.8365283"
+   ]
+  },
+  {
+   "place_id": 253981688,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 5327443077,
+   "lat": "11.3442354",
+   "lon": "76.7912914",
+   "category": "railway",
+   "type": "station",
+   "place_rank": 30,
+   "importance": 0.35699141996923245,
+   "addresstype": "railway",
+   "name": "Coonoor",
+   "display_name": "Coonoor, Coonoor Road, Ottupatrai, Coonoor, Nilgiris, Tamil Nadu, 643102, India",
+   "boundingbox": [
+    "11.3392354",
+    "11.3492354",
+    "76.7862914",
+    "76.7962914"
+   ]
+  },
+  {
+   "place_id": 253957954,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "relation",
+   "osm_id": 10317014,
+   "lat": "11.3223310",
+   "lon": "76.7748020",
+   "category": "boundary",
+   "type": "administrative",
+   "place_rank": 12,
+   "importance": 0.2753675655596695,
+   "addresstype": "county",
+   "name": "Coonoor",
+   "display_name": "Coonoor, Nilgiris, Tamil Nadu, India",
+   "boundingbox": [
+    "11.2448930",
+    "11.4011572",
+    "76.6727257",
+    "76.8753290"
+   ]
+  }
+ ],
+ "Ooty, Coonoor & Kotagiri taluks, Nilgiris, Tamil Nadu, India": [],
+ "Coonoor & Kotagiri taluks, Nilgiris, Tamil Nadu, India": [],
+ "Avalanche / Emerald area, Nilgiris, Tamil Nadu, India": [],
+ "Avalanche, Nilgiris, Tamil Nadu, India": [
+  {
+   "place_id": 254361396,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "relation",
+   "osm_id": 7897624,
+   "lat": "11.3324458",
+   "lon": "76.6180797",
+   "category": "water",
+   "type": "reservoir",
+   "place_rank": 20,
+   "importance": 0.1333733340962844,
+   "addresstype": "reservoir",
+   "name": "Avalanchi reservoir",
+   "display_name": "Avalanchi reservoir, Ithalar, Kundah, Nilgiris, Tamil Nadu, India",
+   "boundingbox": [
+    "11.3013006",
+    "11.3636086",
+    "76.5705764",
+    "76.6346276"
+   ]
+  },
+  {
+   "place_id": 253221171,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "way",
+   "osm_id": 25846951,
+   "lat": "11.3976662",
+   "lon": "76.6873889",
+   "category": "highway",
+   "type": "tertiary",
+   "place_rank": 26,
+   "importance": 0.05338742885481037,
+   "addresstype": "road",
+   "name": "Avalanche Road",
+   "display_name": "Avalanche Road, Udhagamandalam, Nilgiris, Tamil Nadu, 643001, India",
+   "boundingbox": [
+    "11.3967383",
+    "11.4026881",
+    "76.6819125",
+    "76.6931004"
+   ]
+  },
+  {
+   "place_id": 254281526,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "way",
+   "osm_id": 619435825,
+   "lat": "11.3254156",
+   "lon": "76.6194380",
+   "category": "highway",
+   "type": "unclassified",
+   "place_rank": 26,
+   "importance": 0.05337333409628439,
+   "addresstype": "road",
+   "name": "Avalanche Road",
+   "display_name": "Avalanche Road, Emerald, Kundah, Nilgiris, Tamil Nadu, 643004, India",
+   "boundingbox": [
+    "11.3203531",
+    "11.3290610",
+    "76.6146331",
+    "76.6246478"
+   ]
+  }
+ ],
+ "Valparai, Anamalai hills, Coimbatore, Tamil Nadu, India": [],
+ "Anamalai hills, Coimbatore, Tamil Nadu, India": [],
+ "Coimbatore, Tamil Nadu, India": [
+  {
+   "place_id": 253232643,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 245589078,
+   "lat": "11.0018115",
+   "lon": "76.9628425",
+   "category": "place",
+   "type": "city",
+   "place_rank": 16,
+   "importance": 0.5690004428918582,
+   "addresstype": "city",
+   "name": "Coimbatore",
+   "display_name": "Coimbatore, Coimbatore North, Coimbatore, Tamil Nadu, 641001, India",
+   "boundingbox": [
+    "10.8418115",
+    "11.1618115",
+    "76.8028425",
+    "77.1228425"
+   ]
+  },
+  {
+   "place_id": 254231552,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "relation",
+   "osm_id": 1819317,
+   "lat": "10.8124445",
+   "lon": "77.0796084",
+   "category": "boundary",
+   "type": "administrative",
+   "place_rank": 10,
+   "importance": 0.5264887115782295,
+   "addresstype": "state_district",
+   "name": "Coimbatore",
+   "display_name": "Coimbatore, Tamil Nadu, India",
+   "boundingbox": [
+    "10.2204226",
+    "11.4052378",
+    "76.6559310",
+    "77.2936678"
+   ]
+  }
+ ],
+ "Medarasola, Madula GP, Araku block, Visakhapatnam, Andhra Pradesh, India": [],
+ "Madula GP, Araku block, Visakhapatnam, Andhra Pradesh, India": [],
+ "Araku block, Visakhapatnam, Andhra Pradesh, India": [],
+ "Visakhapatnam, Andhra Pradesh, India": [
+  {
+   "place_id": 250641650,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 245641840,
+   "lat": "17.6935526",
+   "lon": "83.2921297",
+   "category": "place",
+   "type": "city",
+   "place_rank": 16,
+   "importance": 0.5591309286790601,
+   "addresstype": "city",
+   "name": "Visakhapatnam",
+   "display_name": "Visakhapatnam, Visakhapatnam Urban, Visakhapatnam, Andhra Pradesh, 530001, India",
+   "boundingbox": [
+    "17.5335526",
+    "17.8535526",
+    "83.1321297",
+    "83.4521297"
+   ]
+  },
+  {
+   "place_id": 249816031,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "relation",
+   "osm_id": 2022111,
+   "lat": "17.8053222",
+   "lon": "83.2827677",
+   "category": "boundary",
+   "type": "administrative",
+   "place_rank": 10,
+   "importance": 0.4619430969118244,
+   "addresstype": "state_district",
+   "name": "Visakhapatnam",
+   "display_name": "Visakhapatnam, Andhra Pradesh, India",
+   "boundingbox": [
+    "17.5461762",
+    "18.0648215",
+    "83.1098127",
+    "83.5250060"
+   ]
+  }
+ ],
+ "Baraghara, Rayagada block, Gajapati, Odisha, India": [],
+ "Rayagada block, Gajapati, Odisha, India": [],
+ "Gajapati, Odisha, India": [
+  {
+   "place_id": 249806390,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "relation",
+   "osm_id": 1984576,
+   "lat": "19.1966026",
+   "lon": "84.1930634",
+   "category": "boundary",
+   "type": "administrative",
+   "place_rank": 10,
+   "importance": 0.4857419571472126,
+   "addresstype": "state_district",
+   "name": "Gajapati",
+   "display_name": "Gajapati, Odisha, India",
+   "boundingbox": [
+    "18.7568016",
+    "19.6366056",
+    "83.7947190",
+    "84.4400167"
+   ]
+  }
+ ],
+ "Annamayya project, Cheyyeru river, Rajampet, Kadapa, Andhra Pradesh, India": [],
+ "Cheyyeru river, Rajampet, Kadapa, Andhra Pradesh, India": [
+  {
+   "place_id": 249669534,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "relation",
+   "osm_id": 18313087,
+   "lat": "14.2520923",
+   "lon": "79.0796962",
+   "category": "waterway",
+   "type": "river",
+   "place_rank": 18,
+   "importance": 0.16003891432059203,
+   "addresstype": "river",
+   "name": "Cheyyeru",
+   "display_name": "Cheyyeru, Nandalur, YSR Kadapa, Andhra Pradesh, India",
+   "boundingbox": [
+    "13.9887509",
+    "14.4310852",
+    "78.9933551",
+    "79.2473291"
+   ]
+  }
+ ],
+ "Mogalrajapuram, Vijayawada, NTR district, Andhra Pradesh, India": [
+  {
+   "place_id": 249246180,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 11571989096,
+   "lat": "16.5061635",
+   "lon": "80.6470729",
+   "category": "natural",
+   "type": "cave_entrance",
+   "place_rank": 30,
+   "importance": 0.23094323434513592,
+   "addresstype": "natural",
+   "name": "Mogalrajapuram Caves",
+   "display_name": "Mogalrajapuram Caves, AS Rama Rao Road, Vijayawada Urban, Patamata Lanka, Vijayawada, Vijayawada (Urban), NTR, Andhra Pradesh, 520001, India",
+   "boundingbox": [
+    "16.5061135",
+    "16.5062135",
+    "80.6470229",
+    "80.6471229"
+   ]
+  },
+  {
+   "place_id": 249475290,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "way",
+   "osm_id": 343146991,
+   "lat": "16.5076279",
+   "lon": "80.6433402",
+   "category": "amenity",
+   "type": "restaurant",
+   "place_rank": 30,
+   "importance": 5.933394369416369e-05,
+   "addresstype": "amenity",
+   "name": "Cross Roads Restaurant",
+   "display_name": "Cross Roads Restaurant, 32-9-18/2, Siddhartha College Rd, near Madhu Chowk, Mogalrajapuram, Christurajupuram, Vijayawada, Andhra Pradesh 520010, AS Rama Rao Road, Vijayawada Urban, Patamata Lanka, Vijayawada, Vijayawada (Urban), NTR, Andhra Pradesh, 520010, India",
+   "boundingbox": [
+    "16.5074213",
+    "16.5078344",
+    "80.6431721",
+    "80.6435083"
+   ]
+  },
+  {
+   "place_id": 250543783,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 12850806183,
+   "lat": "16.5068125",
+   "lon": "80.6492258",
+   "category": "amenity",
+   "type": "pharmacy",
+   "place_rank": 30,
+   "importance": 5.933394369416369e-05,
+   "addresstype": "amenity",
+   "name": "Adithya Pharmacy",
+   "display_name": "Adithya Pharmacy, Mogalrajapuram, Christurajupuram, Vijayawada, Andhra Pradesh 520010, Siddartha College Road, Vijayawada Urban, Patamata Lanka, Vijayawada, Vijayawada (Urban), NTR, Andhra Pradesh, 520010, India",
+   "boundingbox": [
+    "16.5067625",
+    "16.5068625",
+    "80.6491758",
+    "80.6492758"
+   ]
+  }
+ ],
+ "Kotrupi, Mandi-Pathankot NH, Mandi, Himachal Pradesh, India": [],
+ "Mandi-Pathankot NH, Mandi, Himachal Pradesh, India": [],
+ "Mandi, Mandi, Himachal Pradesh, India": [
+  {
+   "place_id": 243927477,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "relation",
+   "osm_id": 9977134,
+   "lat": "31.6698556",
+   "lon": "76.9492507",
+   "category": "boundary",
+   "type": "administrative",
+   "place_rank": 12,
+   "importance": 0.24005029602502476,
+   "addresstype": "county",
+   "name": "Mandi",
+   "display_name": "Mandi, Himachal Pradesh, India",
+   "boundingbox": [
+    "31.5019462",
+    "31.8377543",
+    "76.8050551",
+    "77.1246671"
+   ]
+  },
+  {
+   "place_id": 244751195,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 1882920874,
+   "lat": "31.7084496",
+   "lon": "76.9293782",
+   "category": "place",
+   "type": "city",
+   "place_rank": 16,
+   "importance": 0.1867169626916914,
+   "addresstype": "city",
+   "name": "Mandi",
+   "display_name": "Mandi, Himachal Pradesh, 175001, India",
+   "boundingbox": [
+    "31.5484496",
+    "31.8684496",
+    "76.7693782",
+    "77.0893782"
+   ]
+  }
+ ],
+ "Batseri, Sangla-Chitkul road, Kinnaur, Himachal Pradesh, India": [],
+ "Sangla-Chitkul road, Kinnaur, Himachal Pradesh, India": [
+  {
+   "place_id": 244875466,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "way",
+   "osm_id": 1395764426,
+   "lat": "31.4098851",
+   "lon": "78.3125346",
+   "category": "highway",
+   "type": "secondary",
+   "place_rank": 26,
+   "importance": 0.05337333409628439,
+   "addresstype": "road",
+   "name": "Sangla Chitkul Road",
+   "display_name": "Sangla Chitkul Road, Seringche, Batseri, Sangla, Kinnaur, Himachal Pradesh, India",
+   "boundingbox": [
+    "31.4053526",
+    "31.4168594",
+    "78.2981319",
+    "78.3284849"
+   ]
+  },
+  {
+   "place_id": 244688447,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "way",
+   "osm_id": 1395764428,
+   "lat": "31.4209415",
+   "lon": "78.2876343",
+   "category": "highway",
+   "type": "secondary",
+   "place_rank": 26,
+   "importance": 0.05337333409628439,
+   "addresstype": "road",
+   "name": "Sangla Chitkul Road",
+   "display_name": "Sangla Chitkul Road, Seringche, Boning Saring, Sangla, Kinnaur, Himachal Pradesh, 172106, India",
+   "boundingbox": [
+    "31.4162305",
+    "31.4277641",
+    "78.2780119",
+    "78.2978099"
+   ]
+  },
+  {
+   "place_id": 243901113,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "way",
+   "osm_id": 467742808,
+   "lat": "31.4301194",
+   "lon": "78.2594144",
+   "category": "highway",
+   "type": "secondary",
+   "place_rank": 26,
+   "importance": 0.05337333409628439,
+   "addresstype": "road",
+   "name": "Sangla Chitkul Road",
+   "display_name": "Sangla Chitkul Road, Sangla, Kinnaur, Himachal Pradesh, 172106, India",
+   "boundingbox": [
+    "31.4280937",
+    "31.4327095",
+    "78.2562592",
+    "78.2625355"
+   ]
+  }
+ ],
+ "Nigulsari-Chaura, NH-5, Kinnaur, Himachal Pradesh, India": [],
+ "Nigulsari, NH-5, Kinnaur, Himachal Pradesh, India": [
+  {
+   "place_id": 244177661,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 627290696,
+   "lat": "31.5568228",
+   "lon": "77.8837812",
+   "category": "place",
+   "type": "village",
+   "place_rank": 19,
+   "importance": 0.14670416800183103,
+   "addresstype": "village",
+   "name": "Nigulsari",
+   "display_name": "Nigulsari, Nichar, Kinnaur, Himachal Pradesh, 172115, India",
+   "boundingbox": [
+    "31.5368228",
+    "31.5768228",
+    "77.8637812",
+    "77.9037812"
+   ]
+  }
+ ],
+ "Upper Beas valley, Manali-Kullu-Mandi, Himachal Pradesh, India": [],
+ "Manali-Kullu-Mandi, Himachal Pradesh, India": [],
+ "Manali, Himachal Pradesh, India": [
+  {
+   "place_id": 213701095,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 245773022,
+   "lat": "32.2454608",
+   "lon": "77.1872926",
+   "category": "place",
+   "type": "town",
+   "place_rank": 18,
+   "importance": 0.41761525391502413,
+   "addresstype": "town",
+   "name": "Manali",
+   "display_name": "Manali, Kullu, Himachal Pradesh, 175131, India",
+   "boundingbox": [
+    "32.2054608",
+    "32.2854608",
+    "77.1472926",
+    "77.2272926"
+   ]
+  },
+  {
+   "place_id": 216356323,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "relation",
+   "osm_id": 9977198,
+   "lat": "32.2630941",
+   "lon": "77.1881218",
+   "category": "boundary",
+   "type": "administrative",
+   "place_rank": 12,
+   "importance": 0.24004917448691537,
+   "addresstype": "county",
+   "name": "Manali",
+   "display_name": "Manali, Kullu, Himachal Pradesh, India",
+   "boundingbox": [
+    "32.1080604",
+    "32.4151825",
+    "77.0261979",
+    "77.3928451"
+   ]
+  },
+  {
+   "place_id": 213490759,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 4094133127,
+   "lat": "32.4080064",
+   "lon": "77.0773606",
+   "category": "natural",
+   "type": "peak",
+   "place_rank": 18,
+   "importance": 0.16000999999999999,
+   "addresstype": "peak",
+   "name": "Manali",
+   "display_name": "Manali, Multhan, Kangra, Himachal Pradesh, India",
+   "boundingbox": [
+    "32.4079564",
+    "32.4080564",
+    "77.0773106",
+    "77.0774106"
+   ]
+  }
+ ],
+ "Shiv Bawdi temple, Summer Hill, Shimla, Himachal Pradesh, India": [],
+ "Summer Hill, Shimla, Himachal Pradesh, India": [
+  {
+   "place_id": 243853441,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 1834077561,
+   "lat": "31.1097358",
+   "lon": "77.1381732",
+   "category": "place",
+   "type": "suburb",
+   "place_rank": 19,
+   "importance": 0.14672588311589221,
+   "addresstype": "suburb",
+   "name": "Summer Hill",
+   "display_name": "Summer Hill, Chakar, Shimla (urban), Shimla, Himachal Pradesh, 171005, India",
+   "boundingbox": [
+    "31.0897358",
+    "31.1297358",
+    "77.1181732",
+    "77.1581732"
+   ]
+  },
+  {
+   "place_id": 243937630,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 1007594553,
+   "lat": "31.1084158",
+   "lon": "77.1390403",
+   "category": "railway",
+   "type": "station",
+   "place_rank": 30,
+   "importance": 5.9216449225559126e-05,
+   "addresstype": "railway",
+   "name": "Summer Hill",
+   "display_name": "Summer Hill, Vice Regal Road, Boilelganj, Tutikandi, Shimla (urban), Shimla, Himachal Pradesh, 171005, India",
+   "boundingbox": [
+    "31.1034158",
+    "31.1134158",
+    "77.1340403",
+    "77.1440403"
+   ]
+  }
+ ],
+ "Samej, Rampur subdivision, Shimla, Himachal Pradesh, India": [],
+ "Rampur subdivision, Shimla, Himachal Pradesh, India": [],
+ "Shimla, Himachal Pradesh, India": [
+  {
+   "place_id": 241247763,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 316417040,
+   "lat": "31.1040393",
+   "lon": "77.1707923",
+   "category": "place",
+   "type": "city",
+   "place_rank": 16,
+   "importance": 0.5351068751083198,
+   "addresstype": "city",
+   "name": "Shimla",
+   "display_name": "Shimla, Shimla (urban), Shimla, Himachal Pradesh, 171001, India",
+   "boundingbox": [
+    "30.9440393",
+    "31.2640393",
+    "77.0107923",
+    "77.3307923"
+   ]
+  },
+  {
+   "place_id": 243868662,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "relation",
+   "osm_id": 364181,
+   "lat": "31.2387672",
+   "lon": "77.7185684",
+   "category": "boundary",
+   "type": "administrative",
+   "place_rank": 10,
+   "importance": 0.41118372170976975,
+   "addresstype": "state_district",
+   "name": "Shimla",
+   "display_name": "Shimla, Himachal Pradesh, India",
+   "boundingbox": [
+    "30.7640334",
+    "31.7140399",
+    "76.9888719",
+    "78.3171097"
+   ]
+  },
+  {
+   "place_id": 244108940,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "relation",
+   "osm_id": 9982318,
+   "lat": "31.1105563",
+   "lon": "77.0920786",
+   "category": "boundary",
+   "type": "administrative",
+   "place_rank": 12,
+   "importance": 0.24005921644922557,
+   "addresstype": "county",
+   "name": "Shimla ( Rural )",
+   "display_name": "Shimla ( Rural ), Shimla, Himachal Pradesh, India",
+   "boundingbox": [
+    "30.9998231",
+    "31.2212708",
+    "76.9888719",
+    "77.3085379"
+   ]
+  }
+ ],
+ "Seraj & Thunag, Mandi, Himachal Pradesh, India": [],
+ "Seraj, Mandi, Himachal Pradesh, India": [],
+ "Thunag, Mandi, Himachal Pradesh, India": [
+  {
+   "place_id": 244633015,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "relation",
+   "osm_id": 9977131,
+   "lat": "31.5403218",
+   "lon": "77.1854500",
+   "category": "boundary",
+   "type": "administrative",
+   "place_rank": 12,
+   "importance": 0.24003750133516438,
+   "addresstype": "county",
+   "name": "Thunag",
+   "display_name": "Thunag, Mandi, Himachal Pradesh, India",
+   "boundingbox": [
+    "31.4248181",
+    "31.6580573",
+    "77.0968151",
+    "77.3319467"
+   ]
+  },
+  {
+   "place_id": 244545579,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 3210242505,
+   "lat": "31.5586366",
+   "lon": "77.1665851",
+   "category": "place",
+   "type": "village",
+   "place_rank": 19,
+   "importance": 0.14670416800183103,
+   "addresstype": "village",
+   "name": "Thunag",
+   "display_name": "Thunag, Mandi, Himachal Pradesh, 175048, India",
+   "boundingbox": [
+    "31.5386366",
+    "31.5786366",
+    "77.1465851",
+    "77.1865851"
+   ]
+  }
+ ],
+ "Leh town & Choglamsar, Ladakh, India": [],
+ "Leh town, Ladakh, India": [
+  {
+   "place_id": 213515057,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "way",
+   "osm_id": 377196327,
+   "lat": "34.1641543",
+   "lon": "77.5877261",
+   "category": "landuse",
+   "type": "residential",
+   "place_rank": 24,
+   "importance": 0.0800578095674067,
+   "addresstype": "residential",
+   "name": "Old Town",
+   "display_name": "Old Town, Matsik Chulung, Leh, Leh district, Ladakh, 194101, India",
+   "boundingbox": [
+    "34.1623480",
+    "34.1658819",
+    "77.5851657",
+    "77.5907118"
+   ]
+  },
+  {
+   "place_id": 211739345,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 5013726036,
+   "lat": "34.1628521",
+   "lon": "77.5806021",
+   "category": "amenity",
+   "type": "cafe",
+   "place_rank": 30,
+   "importance": 5.780956740668372e-05,
+   "addresstype": "amenity",
+   "name": "Leh town cafe",
+   "display_name": "Leh town cafe, Fort Road, Malpak, Leh, Leh district, Ladakh, 194195, India",
+   "boundingbox": [
+    "34.1628021",
+    "34.1629021",
+    "77.5805521",
+    "77.5806521"
+   ]
+  }
+ ],
+ "Hunzar hamlet, Dachhan, Kishtwar, J&K, India": [],
+ "Dachhan, Kishtwar, J&K, India": [],
+ "Kishtwar, J&K, India": [],
+ "Amarnath cave shrine base camp, Anantnag/Ganderbal, J&K, India": [],
+ "Anantnag/Ganderbal, J&K, India": [],
+ "Anantnag, J&K, India": [],
+ "Ganderbal, J&K, India": [],
+ "Chasoti, Machail yatra route, Padder, Kishtwar, J&K, India": [],
+ "Machail yatra route, Padder, Kishtwar, J&K, India": [],
+ "Padder, Kishtwar, J&K, India": [],
+ "Jodh Ghati, Rajbagh, Kathua, J&K, India": [],
+ "Rajbagh, Kathua, J&K, India": [],
+ "Kathua, J&K, India": [],
+ "Ardhkuwari, Katra track, Reasi, J&K, India": [],
+ "Katra track, Reasi, J&K, India": [],
+ "Reasi, J&K, India": [],
+ "Malpa, Kali valley, Dharchula, Pithoragarh, Uttarakhand, India": [],
+ "Kali valley, Dharchula, Pithoragarh, Uttarakhand, India": [],
+ "Dharchula, Pithoragarh, Uttarakhand, India": [
+  {
+   "place_id": 242268995,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 342103478,
+   "lat": "29.8491135",
+   "lon": "80.5414711",
+   "category": "place",
+   "type": "town",
+   "place_rank": 18,
+   "importance": 0.3272701010450185,
+   "addresstype": "town",
+   "name": "Dh\u0101rchula",
+   "display_name": "Dh\u0101rchula, Dharchula, Pithoragarh district, Uttarakhand, India",
+   "boundingbox": [
+    "29.8091135",
+    "29.8891135",
+    "80.5014711",
+    "80.5814711"
+   ]
+  },
+  {
+   "place_id": 244016606,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "relation",
+   "osm_id": 9991064,
+   "lat": "30.1596952",
+   "lon": "80.6672700",
+   "category": "boundary",
+   "type": "administrative",
+   "place_rank": 12,
+   "importance": 0.09078915819201436,
+   "addresstype": "county",
+   "name": "Dharchula",
+   "display_name": "Dharchula, Pithoragarh district, Uttarakhand, India",
+   "boundingbox": [
+    "29.7499194",
+    "30.5698390",
+    "80.2461684",
+    "81.0447890"
+   ]
+  }
+ ],
+ "Ukhimath block (Chunni, Mangoli, Kimana etc.), Rudraprayag, Uttarakhand, India": [],
+ "Mangoli, Kimana etc.), Rudraprayag, Uttarakhand, India": [],
+ "Kimana etc.), Rudraprayag, Uttarakhand, India": [],
+ "Rudraprayag, Uttarakhand, India": [
+  {
+   "place_id": 242607967,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "relation",
+   "osm_id": 374925,
+   "lat": "30.4915835",
+   "lon": "79.0366067",
+   "category": "boundary",
+   "type": "administrative",
+   "place_rank": 10,
+   "importance": 0.46525419129316453,
+   "addresstype": "state_district",
+   "name": "Rudraprayag",
+   "display_name": "Rudraprayag, Uttarakhand, India",
+   "boundingbox": [
+    "30.1747148",
+    "30.8083483",
+    "78.8168525",
+    "79.3563852"
+   ]
+  },
+  {
+   "place_id": 242612374,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "relation",
+   "osm_id": 9987322,
+   "lat": "30.3018134",
+   "lon": "79.0629552",
+   "category": "boundary",
+   "type": "administrative",
+   "place_rank": 12,
+   "importance": 0.24003750133516438,
+   "addresstype": "county",
+   "name": "Rudraprayag",
+   "display_name": "Rudraprayag, Uttarakhand, India",
+   "boundingbox": [
+    "30.1747148",
+    "30.4288415",
+    "78.8907600",
+    "79.1705353"
+   ]
+  }
+ ],
+ "Kedarnath town / Chorabari Lake, Rudraprayag, Uttarakhand, India": [],
+ "Kedarnath town, Rudraprayag, Uttarakhand, India": [
+  {
+   "place_id": 244039898,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 1188262619,
+   "lat": "30.7338877",
+   "lon": "79.0669073",
+   "category": "place",
+   "type": "town",
+   "place_rank": 18,
+   "importance": 0.16004883421072708,
+   "addresstype": "town",
+   "name": "Kedarnath",
+   "display_name": "Kedarnath, Ukhimath, Rudraprayag, Uttarakhand, India",
+   "boundingbox": [
+    "30.6938877",
+    "30.7738877",
+    "79.0269073",
+    "79.1069073"
+   ]
+  }
+ ],
+ "Ronti Gad-Rishiganga-Dhauliganga, Raini/Tapovan, Chamoli, Uttarakhand, India": [],
+ "Ronti Gad, Raini/Tapovan, Chamoli, Uttarakhand, India": [],
+ "Rishiganga, Raini/Tapovan, Chamoli, Uttarakhand, India": [],
+ "Dhauliganga, Raini/Tapovan, Chamoli, Uttarakhand, India": [],
+ "Raini/Tapovan, Chamoli, Uttarakhand, India": [],
+ "Raini, Chamoli, Uttarakhand, India": [
+  {
+   "place_id": 244157733,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 7833070518,
+   "lat": "30.4852215",
+   "lon": "79.6910907",
+   "category": "place",
+   "type": "village",
+   "place_rank": 19,
+   "importance": 0.14670416800183103,
+   "addresstype": "village",
+   "name": "Reni",
+   "display_name": "Reni, Joshimath Tehsil, Chamoli, Uttarakhand, India",
+   "boundingbox": [
+    "30.4652215",
+    "30.5052215",
+    "79.6710907",
+    "79.7110907"
+   ]
+  }
+ ],
+ "Gaurikund, Kedarnath route, Rudraprayag, Uttarakhand, India": [],
+ "Kedarnath route, Rudraprayag, Uttarakhand, India": [
+  {
+   "place_id": 244530159,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "way",
+   "osm_id": 1339485314,
+   "lat": "30.7145657",
+   "lon": "79.0682658",
+   "category": "highway",
+   "type": "footway",
+   "place_rank": 27,
+   "importance": 0.04004883421072708,
+   "addresstype": "road",
+   "name": "Old Kedarnath Trek Route",
+   "display_name": "Old Kedarnath Trek Route, Kedarnath, Ukhimath, Rudraprayag, Uttarakhand, India",
+   "boundingbox": [
+    "30.7140228",
+    "30.7151831",
+    "79.0676493",
+    "79.0685398"
+   ]
+  }
+ ],
+ "Dharali, Kheer Gad, Harsil, Uttarkashi, Uttarakhand, India": [],
+ "Kheer Gad, Harsil, Uttarkashi, Uttarakhand, India": [],
+ "Harsil, Uttarkashi, Uttarakhand, India": [
+  {
+   "place_id": 244021874,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "way",
+   "osm_id": 509821388,
+   "lat": "31.0369099",
+   "lon": "78.7506484",
+   "category": "place",
+   "type": "village",
+   "place_rank": 19,
+   "importance": 0.14670416800183103,
+   "addresstype": "village",
+   "name": "Harsil",
+   "display_name": "Harsil, Bhatwari, Uttarkashi, Uttarakhand, India",
+   "boundingbox": [
+    "31.0338960",
+    "31.0396506",
+    "78.7470873",
+    "78.7552508"
+   ]
+  }
+ ],
+ "Tharali tehsil, Chamoli, Uttarakhand, India": [],
+ "Chamoli, Uttarakhand, India": [
+  {
+   "place_id": 244245959,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "relation",
+   "osm_id": 374815,
+   "lat": "30.4985956",
+   "lon": "79.6190537",
+   "category": "boundary",
+   "type": "administrative",
+   "place_rank": 10,
+   "importance": 0.6153211827952665,
+   "addresstype": "state_district",
+   "name": "Chamoli",
+   "display_name": "Chamoli, Uttarakhand, India",
+   "boundingbox": [
+    "29.9255743",
+    "31.0723409",
+    "79.0759835",
+    "80.1020386"
+   ]
+  },
+  {
+   "place_id": 243911878,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 316417349,
+   "lat": "30.5000000",
+   "lon": "79.5000000",
+   "category": "place",
+   "type": "county",
+   "place_rank": 12,
+   "importance": 0.24004468528267336,
+   "addresstype": "county",
+   "name": "Chamoli",
+   "display_name": "Chamoli, Uttarakhand, India",
+   "boundingbox": [
+    "29.8000000",
+    "31.2000000",
+    "78.8000000",
+    "80.2000000"
+   ]
+  }
+ ],
+ "Mirik & Kalimpong/Darjeeling subdivisions, West Bengal, India": [],
+ "Mirik, West Bengal, India": [
+  {
+   "place_id": 242357048,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 1138142345,
+   "lat": "26.8881872",
+   "lon": "88.1888396",
+   "category": "place",
+   "type": "town",
+   "place_rank": 18,
+   "importance": 0.324096928576472,
+   "addresstype": "town",
+   "name": "Mirik",
+   "display_name": "Mirik, Mirik Subdivision, Darjeeling, West Bengal, 734214, India",
+   "boundingbox": [
+    "26.8481872",
+    "26.9281872",
+    "88.1488396",
+    "88.2288396"
+   ]
+  },
+  {
+   "place_id": 240525744,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "relation",
+   "osm_id": 10362375,
+   "lat": "26.8361645",
+   "lon": "88.2052567",
+   "category": "boundary",
+   "type": "administrative",
+   "place_rank": 12,
+   "importance": 0.4227544019255127,
+   "addresstype": "county",
+   "name": "Mirik Subdivision",
+   "display_name": "Mirik Subdivision, Darjeeling, West Bengal, India",
+   "boundingbox": [
+    "26.7519721",
+    "26.9203427",
+    "88.1362164",
+    "88.2541179"
+   ]
+  }
+ ],
+ "South Lhonak Lake -> Chungthang, Mangan, Sikkim, India": [],
+ "South Lhonak Lake, Mangan, Sikkim, India": [],
+ "> Chungthang, Mangan, Sikkim, India": [
+  {
+   "place_id": 240760070,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 13148720740,
+   "lat": "27.6042360",
+   "lon": "88.6465196",
+   "category": "place",
+   "type": "village",
+   "place_rank": 19,
+   "importance": 0.14667666666666662,
+   "addresstype": "village",
+   "name": "Chungthang",
+   "display_name": "Chungthang, Mangan, Sikkim, India",
+   "boundingbox": [
+    "27.5842360",
+    "27.6242360",
+    "88.6265196",
+    "88.6665196"
+   ]
+  },
+  {
+   "place_id": 240758041,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "relation",
+   "osm_id": 10088930,
+   "lat": "27.8133328",
+   "lon": "88.5199948",
+   "category": "boundary",
+   "type": "administrative",
+   "place_rank": 12,
+   "importance": 0.13618373728802152,
+   "addresstype": "county",
+   "name": "Chungthang",
+   "display_name": "Chungthang, Mangan, Sikkim, 737120, India",
+   "boundingbox": [
+    "27.5022192",
+    "28.1240465",
+    "88.1179987",
+    "88.8881208"
+   ]
+  }
+ ],
+ "Mangan district, North Sikkim, India": [
+  {
+   "place_id": 243075499,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 7615097197,
+   "lat": "27.4908780",
+   "lon": "88.5318770",
+   "category": "amenity",
+   "type": "hospital",
+   "place_rank": 30,
+   "importance": 3.750133516437045e-05,
+   "addresstype": "amenity",
+   "name": "Mangan District Hospital",
+   "display_name": "Mangan District Hospital, North Sikkim Highway, Mangan, Sikkim, 737116, India",
+   "boundingbox": [
+    "27.4908280",
+    "27.4909280",
+    "88.5318270",
+    "88.5319270"
+   ]
+  }
+ ],
+ "Chaten army camp, Lachen, Mangan, North Sikkim, India": [],
+ "Lachen, Mangan, North Sikkim, India": [
+  {
+   "place_id": 243054750,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 342098800,
+   "lat": "27.7306136",
+   "lon": "88.5495009",
+   "category": "place",
+   "type": "town",
+   "place_rank": 18,
+   "importance": 0.23648094285300414,
+   "addresstype": "town",
+   "name": "Lachen",
+   "display_name": "Lachen, Chungthang, Mangan, Sikkim, India",
+   "boundingbox": [
+    "27.6906136",
+    "27.7706136",
+    "88.5095009",
+    "88.5895009"
+   ]
+  },
+  {
+   "place_id": 243096081,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "relation",
+   "osm_id": 19299440,
+   "lat": "27.8666745",
+   "lon": "88.5458489",
+   "category": "waterway",
+   "type": "river",
+   "place_rank": 18,
+   "importance": 0.3113151607222326,
+   "addresstype": "river",
+   "name": "Lachen Chu",
+   "display_name": "Lachen Chu, Chungthang, Mangan, Sikkim, India",
+   "boundingbox": [
+    "27.6010977",
+    "28.0566024",
+    "88.5247344",
+    "88.8035315"
+   ]
+  }
+ ],
+ "Mirik & Darjeeling subdivisions, West Bengal, India": [],
+ "Phamla, Tawang, Arunachal Pradesh, India": [],
+ "Tawang, Arunachal Pradesh, India": [
+  {
+   "place_id": 240985343,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 342097760,
+   "lat": "27.5879186",
+   "lon": "91.8637330",
+   "category": "place",
+   "type": "city",
+   "place_rank": 16,
+   "importance": 0.18671906691081097,
+   "addresstype": "city",
+   "name": "Tawang",
+   "display_name": "Tawang, Tawang Circle, Tawang district, Arunachal Pradesh, India",
+   "boundingbox": [
+    "27.4279186",
+    "27.7479186",
+    "91.7037330",
+    "92.0237330"
+   ]
+  },
+  {
+   "place_id": 427722730,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "relation",
+   "osm_id": 3841145,
+   "lat": "27.6689525",
+   "lon": "91.9860059",
+   "category": "boundary",
+   "type": "administrative",
+   "place_rank": 10,
+   "importance": 0.4105664642266795,
+   "addresstype": "state_district",
+   "name": "Tawang district",
+   "display_name": "Tawang district, Arunachal Pradesh, India",
+   "boundingbox": [
+    "27.4501950",
+    "27.8877530",
+    "91.5623082",
+    "92.4709547"
+   ]
+  }
+ ],
+ "Laptap, Papum Pare, Arunachal Pradesh, India": [],
+ "Papum Pare, Arunachal Pradesh, India": [
+  {
+   "place_id": 242311873,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "relation",
+   "osm_id": 2027348,
+   "lat": "27.2863667",
+   "lon": "93.6187716",
+   "category": "boundary",
+   "type": "administrative",
+   "place_rank": 10,
+   "importance": 0.4540735774087027,
+   "addresstype": "state_district",
+   "name": "Papum Pare",
+   "display_name": "Papum Pare, Arunachal Pradesh, India",
+   "boundingbox": [
+    "26.9369156",
+    "27.6367955",
+    "93.2120847",
+    "94.2210654"
+   ]
+  }
+ ],
+ "Bana-Seppa stretch, NH-13, East Kameng, Arunachal Pradesh, India": [],
+ "Bana, NH-13, East Kameng, Arunachal Pradesh, India": [
+  {
+   "place_id": 425316810,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 14089422159,
+   "lat": "27.2803493",
+   "lon": "92.8800735",
+   "category": "place",
+   "type": "village",
+   "place_rank": 19,
+   "importance": 0.14670416800183103,
+   "addresstype": "village",
+   "name": "Bana",
+   "display_name": "Bana, Richukrong Circle, East Kameng, Arunachal Pradesh, India",
+   "boundingbox": [
+    "27.2603493",
+    "27.3003493",
+    "92.8600735",
+    "92.9000735"
+   ]
+  }
+ ],
+ "Tupul railway construction camp, Noney, Manipur, India": [],
+ "Noney, Manipur, India": [
+  {
+   "place_id": 242698032,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 9839806385,
+   "lat": "24.8591099",
+   "lon": "93.6325027",
+   "category": "railway",
+   "type": "station",
+   "place_rank": 30,
+   "importance": 0.17283327415591612,
+   "addresstype": "railway",
+   "name": "Noney",
+   "display_name": "Noney, NH37, Noney, Longmei Subdivision, Noney district, Manipur, 795159, India",
+   "boundingbox": [
+    "24.8541099",
+    "24.8641099",
+    "93.6275027",
+    "93.6375027"
+   ]
+  },
+  {
+   "place_id": 242644419,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 3927938119,
+   "lat": "24.8599146",
+   "lon": "93.6236365",
+   "category": "place",
+   "type": "town",
+   "place_rank": 18,
+   "importance": 0.16004000076295108,
+   "addresstype": "town",
+   "name": "Noney",
+   "display_name": "Noney, Longmei Subdivision, Noney district, Manipur, 795159, India",
+   "boundingbox": [
+    "24.8199146",
+    "24.8999146",
+    "93.5836365",
+    "93.6636365"
+   ]
+  },
+  {
+   "place_id": 242590629,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "relation",
+   "osm_id": 9532329,
+   "lat": "24.7786690",
+   "lon": "93.5090836",
+   "category": "boundary",
+   "type": "administrative",
+   "place_rank": 10,
+   "importance": 0.31074813956852465,
+   "addresstype": "state_district",
+   "name": "Noney district",
+   "display_name": "Noney district, Manipur, India",
+   "boundingbox": [
+    "24.4958381",
+    "25.0601965",
+    "93.1715298",
+    "93.7337744"
+   ]
+  }
+ ],
+ "Melthum, Hlimen, Falkawn & Salem Veng, Aizawl, Mizoram, India": [],
+ "Hlimen, Falkawn & Salem Veng, Aizawl, Mizoram, India": [],
+ "Falkawn & Salem Veng, Aizawl, Mizoram, India": [],
+ "Falkawn, Aizawl, Mizoram, India": [
+  {
+   "place_id": 251125412,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 6909859597,
+   "lat": "23.6242176",
+   "lon": "92.7281633",
+   "category": "amenity",
+   "type": "hospital",
+   "place_rank": 30,
+   "importance": 5.338292515445209e-05,
+   "addresstype": "amenity",
+   "name": "State Referral Hospital,Falkawn",
+   "display_name": "State Referral Hospital,Falkawn, World Bank Road, Tlangnuam, Aizawl, Aibawk, Aizawl, Mizoram, 796005, India",
+   "boundingbox": [
+    "23.6241676",
+    "23.6242676",
+    "92.7281133",
+    "92.7282133"
+   ]
+  }
+ ],
+ "Pakala Pahar, NH-29, Ch\u00fcmoukedima, Nagaland, India": [],
+ "NH-29, Ch\u00fcmoukedima, Nagaland, India": [
+  {
+   "place_id": 241670264,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "way",
+   "osm_id": 857829957,
+   "lat": "25.8112750",
+   "lon": "93.7875258",
+   "category": "building",
+   "type": "yes",
+   "place_rank": 30,
+   "importance": 4.889066910806466e-05,
+   "addresstype": "building",
+   "name": "Joyce Complex",
+   "display_name": "Joyce Complex, NH 29, AH1;AH2, Chumukedima, Ch\u00fcmoukedima, Nagaland, 797115, India",
+   "boundingbox": [
+    "25.8111058",
+    "25.8114484",
+    "93.7873355",
+    "93.7877161"
+   ]
+  }
+ ],
+ "NH-29 between Kohima and Dimapur, Nagaland, India": [],
+ "NH, Nagaland, India": [
+  {
+   "place_id": 241766984,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "way",
+   "osm_id": 129815397,
+   "lat": "25.6841232",
+   "lon": "94.1193322",
+   "category": "highway",
+   "type": "trunk",
+   "place_rank": 26,
+   "importance": 0.05338669947356371,
+   "addresstype": "road",
+   "name": "National Highway 54",
+   "display_name": "National Highway 54, T-Khel, Bayav\u00fc, Kohima, Kohima Sadar, Kohima, Nagaland, 797001, India",
+   "boundingbox": [
+    "25.6788124",
+    "25.6883675",
+    "94.1157694",
+    "94.1243128"
+   ]
+  },
+  {
+   "place_id": 240167949,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "way",
+   "osm_id": 384479218,
+   "lat": "26.2744764",
+   "lon": "94.5796775",
+   "category": "highway",
+   "type": "trunk",
+   "place_rank": 26,
+   "importance": 0.05337505836575872,
+   "addresstype": "road",
+   "name": "Tuensang Road",
+   "display_name": "Tuensang Road, Meyilong, Chare, Tuensang, Nagaland, India",
+   "boundingbox": [
+    "26.2577442",
+    "26.2858148",
+    "94.5600583",
+    "94.6045315"
+   ]
+  },
+  {
+   "place_id": 244140254,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "way",
+   "osm_id": 263220714,
+   "lat": "26.2609652",
+   "lon": "94.6358887",
+   "category": "highway",
+   "type": "trunk",
+   "place_rank": 26,
+   "importance": 0.0533433333333333,
+   "addresstype": "road",
+   "name": "Tuensang Road",
+   "display_name": "Tuensang Road, Chare, Tuensang, Nagaland, 798616, India",
+   "boundingbox": [
+    "26.2034274",
+    "26.2993761",
+    "94.6044516",
+    "94.6468651"
+   ]
+  }
+ ],
+ "Cachar, Hailakandi & Karimganj, Barak Valley, Assam, India": [],
+ "Hailakandi & Karimganj, Barak Valley, Assam, India": [],
+ "Hailakandi, Barak Valley, Assam, India": [],
+ "Karimganj, Barak Valley, Assam, India": [],
+ "Barak Valley, Assam, India": [],
+ "Haflong & New Haflong railway station, Dima Hasao, Assam, India": [
+  {
+   "place_id": 241660440,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 2081915256,
+   "lat": "25.1480102",
+   "lon": "93.0320565",
+   "category": "railway",
+   "type": "station",
+   "place_rank": 30,
+   "importance": 0.2791651820367976,
+   "addresstype": "railway",
+   "name": "New Haflong",
+   "display_name": "New Haflong, NH627, Sibaraipur, J\u0101tinga, Haflong, Dima Hasao, Assam, 788819, India",
+   "boundingbox": [
+    "25.1430102",
+    "25.1530102",
+    "93.0270565",
+    "93.0370565"
+   ]
+  }
+ ],
+ "Haflong, Dima Hasao, Assam, India": [
+  {
+   "place_id": 241695186,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "relation",
+   "osm_id": 10052294,
+   "lat": "25.1825103",
+   "lon": "92.8984045",
+   "category": "boundary",
+   "type": "administrative",
+   "place_rank": 12,
+   "importance": 0.24000999999999997,
+   "addresstype": "county",
+   "name": "Haflong",
+   "display_name": "Haflong, Dima Hasao, Assam, India",
+   "boundingbox": [
+    "25.0005513",
+    "25.3644252",
+    "92.5205147",
+    "93.1542776"
+   ]
+  },
+  {
+   "place_id": 242447486,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 245729854,
+   "lat": "25.1645049",
+   "lon": "93.0175990",
+   "category": "place",
+   "type": "town",
+   "place_rank": 18,
+   "importance": 0.16004295643549246,
+   "addresstype": "town",
+   "name": "Haflong",
+   "display_name": "Haflong, Dima Hasao, Assam, 788819, India",
+   "boundingbox": [
+    "25.1245049",
+    "25.2045049",
+    "92.9775990",
+    "93.0575990"
+   ]
+  }
+ ],
+ "Hatiasia Songma, South Garo Hills (+ Dalu flash flood, West Garo Hills), Meghalaya, India": [],
+ "South Garo Hills (+ Dalu flash flood, West Garo Hills), Meghalaya, India": [],
+ "West Garo Hills), Meghalaya, India": [
+  {
+   "place_id": 242592811,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "relation",
+   "osm_id": 2027476,
+   "lat": "25.6065343",
+   "lon": "90.2038335",
+   "category": "boundary",
+   "type": "administrative",
+   "place_rank": 10,
+   "importance": 0.4530442354463324,
+   "addresstype": "state_district",
+   "name": "West Garo Hills",
+   "display_name": "West Garo Hills, Meghalaya, India",
+   "boundingbox": [
+    "25.2005988",
+    "26.0117246",
+    "89.8927116",
+    "90.4349041"
+   ]
+  }
+ ],
+ "Kodagu district, Karnataka, India": [
+  {
+   "place_id": 252247375,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "relation",
+   "osm_id": 2020511,
+   "lat": "12.3827332",
+   "lon": "75.6640715",
+   "category": "boundary",
+   "type": "administrative",
+   "place_rank": 10,
+   "importance": 0.5064256956082136,
+   "addresstype": "state_district",
+   "name": "Kodagu",
+   "display_name": "Kodagu, Karnataka, India",
+   "boundingbox": [
+    "11.9312137",
+    "12.8342368",
+    "75.3654385",
+    "76.1892617"
+   ]
+  }
+ ],
+ "Canacona taluka (Galgibaga, South Goa, India": [],
+ "Poinguinim, South Goa, India": [],
+ "Bhatpal, South Goa, India": [],
+ "Hunzar hamlet, J&K, India": [],
+ "Dachhan, J&K, India": [],
+ "Amarnath cave shrine base camp, J&K, India": [],
+ "Chasoti, J&K, India": [],
+ "Machail yatra route, J&K, India": [],
+ "Padder, J&K, India": [],
+ "Jodh Ghati, J&K, India": [],
+ "Rajbagh, J&K, India": [],
+ "Ardhkuwari, J&K, India": [],
+ "Katra track, J&K, India": [],
+ "Cachar, Assam, India": [
+  {
+   "place_id": 238957519,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "relation",
+   "osm_id": 2025971,
+   "lat": "24.7586400",
+   "lon": "92.8816648",
+   "category": "boundary",
+   "type": "administrative",
+   "place_rank": 10,
+   "importance": 0.4823081176999452,
+   "addresstype": "state_district",
+   "name": "Cachar",
+   "display_name": "Cachar, Assam, India",
+   "boundingbox": [
+    "24.3738373",
+    "25.1429343",
+    "92.4185130",
+    "93.2617378"
+   ]
+  }
+ ],
+ "Malin, Ambegaon, Pune, Maharashtra, India": [
+  {
+   "place_id": 248496862,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 4518491904,
+   "lat": "19.1608672",
+   "lon": "73.6885014",
+   "category": "place",
+   "type": "village",
+   "place_rank": 19,
+   "importance": 0.14670416800183103,
+   "addresstype": "village",
+   "name": "Malin",
+   "display_name": "Malin, Ambegaon, Pune, Maharashtra, 410509, India",
+   "boundingbox": [
+    "19.1408672",
+    "19.1808672",
+    "73.6685014",
+    "73.7085014"
+   ]
+  }
+ ],
+ "Taliye, Mahad, Raigad, Maharashtra, India": [
+  {
+   "place_id": 248091768,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 10713607684,
+   "lat": "18.1123470",
+   "lon": "73.5836577",
+   "category": "place",
+   "type": "hamlet",
+   "place_rank": 20,
+   "importance": 0.13337083466849772,
+   "addresstype": "hamlet",
+   "name": "Taliye",
+   "display_name": "Taliye, Mazeri, Mahad Taluka, Raigad, Maharashtra, 402306, India",
+   "boundingbox": [
+    "18.0923470",
+    "18.1323470",
+    "73.5636577",
+    "73.6036577"
+   ]
+  },
+  {
+   "place_id": 246684025,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 10713607685,
+   "lat": "18.1034140",
+   "lon": "73.5852241",
+   "category": "place",
+   "type": "hamlet",
+   "place_rank": 20,
+   "importance": 0.13337083466849772,
+   "addresstype": "hamlet",
+   "name": "Taliye",
+   "display_name": "Taliye, Mahad Taluka, Raigad, Maharashtra, 402306, India",
+   "boundingbox": [
+    "18.0834140",
+    "18.1234140",
+    "73.5652241",
+    "73.6052241"
+   ]
+  }
+ ],
+ "Ambeghar, Mirgaon, Dhokawale, Patan, Satara, Maharashtra, India": [],
+ "Mirgaon, Dhokawale, Patan, Satara, Maharashtra, India": [],
+ "Dhokawale, Patan, Satara, Maharashtra, India": [],
+ "Patan, Satara, Maharashtra, India": [
+  {
+   "place_id": 247834788,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "relation",
+   "osm_id": 10354589,
+   "lat": "17.3565267",
+   "lon": "73.8634207",
+   "category": "boundary",
+   "type": "administrative",
+   "place_rank": 12,
+   "importance": 0.24003885786221102,
+   "addresstype": "county",
+   "name": "Patan",
+   "display_name": "Patan, Satara, Maharashtra, India",
+   "boundingbox": [
+    "17.1318469",
+    "17.5817259",
+    "73.6423015",
+    "74.0681505"
+   ]
+  },
+  {
+   "place_id": 248773377,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 7022158219,
+   "lat": "17.3764430",
+   "lon": "73.9003086",
+   "category": "place",
+   "type": "town",
+   "place_rank": 18,
+   "importance": 0.16003885786221103,
+   "addresstype": "town",
+   "name": "Patan",
+   "display_name": "Patan, Satara, Maharashtra, 415206, India",
+   "boundingbox": [
+    "17.3364430",
+    "17.4164430",
+    "73.8603086",
+    "73.9403086"
+   ]
+  }
+ ],
+ "Canacona (Galgibaga, Poinguinim, Bhatpal, Mashem), South Goa, India": [],
+ "Canacona (Galgibaga, South Goa, India": [],
+ "Sattari, North Goa, India": [
+  {
+   "place_id": 253027487,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "way",
+   "osm_id": 1086903718,
+   "lat": "15.5520495",
+   "lon": "74.1774854",
+   "category": "amenity",
+   "type": "place_of_worship",
+   "place_rank": 30,
+   "importance": 3.750133516437045e-05,
+   "addresstype": "amenity",
+   "name": "Shantadurga Temple Dhavem",
+   "display_name": "Shantadurga Temple Dhavem, Dhavem Nagargao Sattari Goa, MDR26, Nagoli, Edorem, Valpoi, Satari, North Goa, Goa, 403506, India",
+   "boundingbox": [
+    "15.5519624",
+    "15.5521586",
+    "74.1772896",
+    "74.1776813"
+   ]
+  },
+  {
+   "place_id": 252919485,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 10172985620,
+   "lat": "15.5296038",
+   "lon": "74.1350979",
+   "category": "shop",
+   "type": "mall",
+   "place_rank": 30,
+   "importance": 3.750133516437045e-05,
+   "addresstype": "shop",
+   "name": "Sattari bazar",
+   "display_name": "Sattari bazar, SH1, Valpoi, Satari, North Goa, Goa, 403506, India",
+   "boundingbox": [
+    "15.5295538",
+    "15.5296538",
+    "74.1350479",
+    "74.1351479"
+   ]
+  }
+ ],
+ "Medarasola, Madula GP, Araku, Visakhapatnam, Andhra Pradesh, India": [],
+ "Madula GP, Araku, Visakhapatnam, Andhra Pradesh, India": [],
+ "Araku, Visakhapatnam, Andhra Pradesh, India": [
+  {
+   "place_id": 250590609,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "way",
+   "osm_id": 729081889,
+   "lat": "17.7460977",
+   "lon": "83.2222200",
+   "category": "highway",
+   "type": "primary",
+   "place_rank": 26,
+   "importance": 0.053395224689097395,
+   "addresstype": "road",
+   "name": "Vishakapatnam - Srungavarapukota - Araku Road",
+   "display_name": "Vishakapatnam - Srungavarapukota - Araku Road, NAD Junction, Marripalem, Visakhapatnam, Visakhapatnam Urban, Visakhapatnam, Andhra Pradesh, 530001, India",
+   "boundingbox": [
+    "17.7432664",
+    "17.7562040",
+    "83.2172347",
+    "83.2336572"
+   ]
+  },
+  {
+   "place_id": 250759721,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "way",
+   "osm_id": 990429892,
+   "lat": "17.7432031",
+   "lon": "83.2343684",
+   "category": "highway",
+   "type": "primary",
+   "place_rank": 26,
+   "importance": 0.053395224689097395,
+   "addresstype": "road",
+   "name": "Vishakapatnam - Srungavarapukota - Araku Road",
+   "display_name": "Vishakapatnam - Srungavarapukota - Araku Road, Ganesh Nagar, Marripalem, Visakhapatnam, Visakhapatnam Urban, Visakhapatnam, Andhra Pradesh, 530001, India",
+   "boundingbox": [
+    "17.7429318",
+    "17.7434348",
+    "83.2334839",
+    "83.2352378"
+   ]
+  },
+  {
+   "place_id": 250815678,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "way",
+   "osm_id": 1261938496,
+   "lat": "17.8300937",
+   "lon": "83.2023797",
+   "category": "highway",
+   "type": "trunk",
+   "place_rank": 26,
+   "importance": 0.053395224689097395,
+   "addresstype": "road",
+   "name": "Vishakapatnam - Srungavarapukota - Araku Road",
+   "display_name": "Vishakapatnam - Srungavarapukota - Araku Road, LIC Colony, Rayavarapuvanipalem, Pendurthi, Visakhapatnam, Andhra Pradesh, 531173, India",
+   "boundingbox": [
+    "17.8295357",
+    "17.8306841",
+    "83.2022347",
+    "83.2026167"
+   ]
+  }
+ ],
+ "Baraghara, Rayagada, Gajapati, Odisha, India": [],
+ "Rayagada, Gajapati, Odisha, India": [
+  {
+   "place_id": 250080301,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "relation",
+   "osm_id": 10117119,
+   "lat": "18.9659986",
+   "lon": "84.1928746",
+   "category": "boundary",
+   "type": "administrative",
+   "place_rank": 12,
+   "importance": 0.24003750133516438,
+   "addresstype": "county",
+   "name": "Rayagada",
+   "display_name": "Rayagada, Gajapati, Odisha, 761213, India",
+   "boundingbox": [
+    "18.8588590",
+    "19.0726232",
+    "84.0732192",
+    "84.3118715"
+   ]
+  },
+  {
+   "place_id": 249507592,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 7147038851,
+   "lat": "18.9718630",
+   "lon": "84.1586423",
+   "category": "place",
+   "type": "village",
+   "place_rank": 19,
+   "importance": 0.14670416800183103,
+   "addresstype": "village",
+   "name": "Rayagada",
+   "display_name": "Rayagada, Gajapati, Odisha, India",
+   "boundingbox": [
+    "18.9518630",
+    "18.9918630",
+    "84.1386423",
+    "84.1786423"
+   ]
+  }
+ ],
+ "Samej, Rampur, Shimla, Himachal Pradesh, India": [],
+ "Rampur, Shimla, Himachal Pradesh, India": [
+  {
+   "place_id": 244546800,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "relation",
+   "osm_id": 9982322,
+   "lat": "31.5091373",
+   "lon": "77.7709741",
+   "category": "boundary",
+   "type": "administrative",
+   "place_rank": 12,
+   "importance": 0.24003750133516438,
+   "addresstype": "county",
+   "name": "Rampur",
+   "display_name": "Rampur, Shimla, Himachal Pradesh, India",
+   "boundingbox": [
+    "31.3039651",
+    "31.7140399",
+    "77.5215958",
+    "77.9625225"
+   ]
+  },
+  {
+   "place_id": 244587052,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "way",
+   "osm_id": 49397577,
+   "lat": "31.4466262",
+   "lon": "77.6301850",
+   "category": "place",
+   "type": "town",
+   "place_rank": 18,
+   "importance": 0.16004000076295108,
+   "addresstype": "town",
+   "name": "Rampur",
+   "display_name": "Rampur, Shimla, Himachal Pradesh, India",
+   "boundingbox": [
+    "31.4344915",
+    "31.4586472",
+    "77.6219414",
+    "77.6620528"
+   ]
+  },
+  {
+   "place_id": 244542550,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 8830444938,
+   "lat": "31.0758819",
+   "lon": "77.1112239",
+   "category": "place",
+   "type": "hamlet",
+   "place_rank": 20,
+   "importance": 0.1333925497825589,
+   "addresstype": "hamlet",
+   "name": "Rampur",
+   "display_name": "Rampur, Manjtal, Shimla ( Rural ), Shimla, Himachal Pradesh, 171005, India",
+   "boundingbox": [
+    "31.0558819",
+    "31.0958819",
+    "77.0912239",
+    "77.1312239"
+   ]
+  }
+ ],
+ "Hunzar, Dachhan, Kishtwar, Jammu and Kashmir, India": [],
+ "Dachhan, Kishtwar, Jammu and Kashmir, India": [],
+ "Kishtwar, Jammu and Kashmir, India": [
+  {
+   "place_id": 212228935,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "relation",
+   "osm_id": 1944353,
+   "lat": "33.6156200",
+   "lon": "75.8793972",
+   "category": "boundary",
+   "type": "administrative",
+   "place_rank": 10,
+   "importance": 0.4367889923841922,
+   "addresstype": "state_district",
+   "name": "Kishtwar",
+   "display_name": "Kishtwar, Jammu and Kashmir, India",
+   "boundingbox": [
+    "33.0197384",
+    "34.2121877",
+    "75.3896856",
+    "76.7803165"
+   ]
+  },
+  {
+   "place_id": 211824793,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 245773899,
+   "lat": "33.3107908",
+   "lon": "75.7694213",
+   "category": "place",
+   "type": "town",
+   "place_rank": 18,
+   "importance": 0.4080375579827476,
+   "addresstype": "town",
+   "name": "Kishtwar",
+   "display_name": "Kishtwar, Jammu and Kashmir, 182204, India",
+   "boundingbox": [
+    "33.2707908",
+    "33.3507908",
+    "75.7294213",
+    "75.8094213"
+   ]
+  },
+  {
+   "place_id": 211832014,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "relation",
+   "osm_id": 10379953,
+   "lat": "33.2930862",
+   "lon": "75.8171777",
+   "category": "boundary",
+   "type": "administrative",
+   "place_rank": 12,
+   "importance": 0.24005276340886547,
+   "addresstype": "county",
+   "name": "Kishtwar",
+   "display_name": "Kishtwar, Jammu and Kashmir, India",
+   "boundingbox": [
+    "33.1241047",
+    "33.4659601",
+    "75.5829763",
+    "76.1460684"
+   ]
+  }
+ ],
+ "Amarnath cave shrine base camp, Anantnag/Ganderbal, Jammu and Kashmir, India": [],
+ "Anantnag/Ganderbal, Jammu and Kashmir, India": [],
+ "Anantnag, Jammu and Kashmir, India": [
+  {
+   "place_id": 213793433,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "relation",
+   "osm_id": 10380141,
+   "lat": "33.7461100",
+   "lon": "75.1854475",
+   "category": "boundary",
+   "type": "administrative",
+   "place_rank": 12,
+   "importance": 0.4854658749924824,
+   "addresstype": "county",
+   "name": "Anantnag",
+   "display_name": "Anantnag, Jammu and Kashmir, India",
+   "boundingbox": [
+    "33.6560666",
+    "33.8364153",
+    "75.1117229",
+    "75.4374075"
+   ]
+  },
+  {
+   "place_id": 213854674,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 774462073,
+   "lat": "33.7368773",
+   "lon": "75.1455138",
+   "category": "place",
+   "type": "city",
+   "place_rank": 16,
+   "importance": 0.4854658749924824,
+   "addresstype": "city",
+   "name": "Anantnag",
+   "display_name": "Anantnag, Jammu and Kashmir, 192101, India",
+   "boundingbox": [
+    "33.5768773",
+    "33.8968773",
+    "74.9855138",
+    "75.3055138"
+   ]
+  },
+  {
+   "place_id": 213691994,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "relation",
+   "osm_id": 1944955,
+   "lat": "33.8096849",
+   "lon": "75.2494527",
+   "category": "boundary",
+   "type": "administrative",
+   "place_rank": 10,
+   "importance": 0.44944568143391417,
+   "addresstype": "state_district",
+   "name": "Anantnag",
+   "display_name": "Anantnag, Jammu and Kashmir, India",
+   "boundingbox": [
+    "33.3637250",
+    "34.2545754",
+    "75.0282204",
+    "75.5947001"
+   ]
+  }
+ ],
+ "Chasoti, Machail yatra route, Padder, Kishtwar, Jammu and Kashmir, India": [],
+ "Machail yatra route, Padder, Kishtwar, Jammu and Kashmir, India": [],
+ "Padder, Kishtwar, Jammu and Kashmir, India": [],
+ "Jodh Ghati, Rajbagh, Kathua, Jammu and Kashmir, India": [],
+ "Rajbagh, Kathua, Jammu and Kashmir, India": [],
+ "Kathua, Jammu and Kashmir, India": [
+  {
+   "place_id": 213232009,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 342117074,
+   "lat": "32.3765524",
+   "lon": "75.5243044",
+   "category": "place",
+   "type": "city",
+   "place_rank": 16,
+   "importance": 0.47170612902614156,
+   "addresstype": "city",
+   "name": "Kathua",
+   "display_name": "Kathua, Kathua district, Jammu and Kashmir, 184101, India",
+   "boundingbox": [
+    "32.2165524",
+    "32.5365524",
+    "75.3643044",
+    "75.6843044"
+   ]
+  },
+  {
+   "place_id": 213157140,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "relation",
+   "osm_id": 10376752,
+   "lat": "32.4288215",
+   "lon": "75.5628646",
+   "category": "boundary",
+   "type": "administrative",
+   "place_rank": 12,
+   "importance": 0.24005367742427708,
+   "addresstype": "county",
+   "name": "Kathua",
+   "display_name": "Kathua, Kathua district, Jammu and Kashmir, India",
+   "boundingbox": [
+    "32.2763569",
+    "32.5823306",
+    "75.3626919",
+    "75.7418918"
+   ]
+  },
+  {
+   "place_id": 213357459,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 316417024,
+   "lat": "32.5833330",
+   "lon": "75.5000000",
+   "category": "place",
+   "type": "county",
+   "place_rank": 12,
+   "importance": 0.24003750133516438,
+   "addresstype": "county",
+   "name": "Kathua",
+   "display_name": "Kathua, Kathua district, Jammu and Kashmir, India",
+   "boundingbox": [
+    "31.8833330",
+    "33.2833330",
+    "74.8000000",
+    "76.2000000"
+   ]
+  }
+ ],
+ "Ardhkuwari, Katra track, Reasi, Jammu and Kashmir, India": [],
+ "Katra track, Reasi, Jammu and Kashmir, India": [],
+ "Reasi, Jammu and Kashmir, India": [
+  {
+   "place_id": 213262610,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "relation",
+   "osm_id": 10378709,
+   "lat": "33.0691032",
+   "lon": "74.8378698",
+   "category": "boundary",
+   "type": "administrative",
+   "place_rank": 12,
+   "importance": 0.24005196688792246,
+   "addresstype": "county",
+   "name": "Reasi",
+   "display_name": "Reasi, Reasi district, Jammu and Kashmir, India",
+   "boundingbox": [
+    "32.8864775",
+    "33.2520033",
+    "74.5185900",
+    "75.0827980"
+   ]
+  },
+  {
+   "place_id": 212799937,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 245773744,
+   "lat": "33.0791771",
+   "lon": "74.8362947",
+   "category": "place",
+   "type": "town",
+   "place_rank": 18,
+   "importance": 0.16005196688792248,
+   "addresstype": "town",
+   "name": "Reasi",
+   "display_name": "Reasi, Reasi district, Jammu and Kashmir, 182311, India",
+   "boundingbox": [
+    "33.0391771",
+    "33.1191771",
+    "74.7962947",
+    "74.8762947"
+   ]
+  },
+  {
+   "place_id": 212799452,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "relation",
+   "osm_id": 9548023,
+   "lat": "33.2059909",
+   "lon": "74.8626794",
+   "category": "boundary",
+   "type": "administrative",
+   "place_rank": 10,
+   "importance": 0.4294069168155019,
+   "addresstype": "state_district",
+   "name": "Reasi district",
+   "display_name": "Reasi district, Jammu and Kashmir, India",
+   "boundingbox": [
+    "32.8864775",
+    "33.5256190",
+    "74.5185900",
+    "75.0924110"
+   ]
+  }
+ ],
+ "Ukhimath (Chunni, Mangoli, Kimana etc.), Rudraprayag, Uttarakhand, India": [],
+ "Tharali, Chamoli, Uttarakhand, India": [
+  {
+   "place_id": 244317555,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "relation",
+   "osm_id": 9990701,
+   "lat": "30.1471916",
+   "lon": "79.5379882",
+   "category": "boundary",
+   "type": "administrative",
+   "place_rank": 12,
+   "importance": 0.2763378134411431,
+   "addresstype": "county",
+   "name": "Tharali",
+   "display_name": "Tharali, Chamoli, Uttarakhand, India",
+   "boundingbox": [
+    "29.9958326",
+    "30.2991670",
+    "79.2926602",
+    "79.8293136"
+   ]
+  },
+  {
+   "place_id": 244430162,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 2207946888,
+   "lat": "30.0745471",
+   "lon": "79.5000256",
+   "category": "place",
+   "type": "village",
+   "place_rank": 19,
+   "importance": 0.14670416800183103,
+   "addresstype": "village",
+   "name": "Tharali",
+   "display_name": "Tharali, Chamoli, Uttarakhand, 246482, India",
+   "boundingbox": [
+    "30.0545471",
+    "30.0945471",
+    "79.4800256",
+    "79.5200256"
+   ]
+  },
+  {
+   "place_id": 242493229,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 342105258,
+   "lat": "30.0682075",
+   "lon": "79.5074347",
+   "category": "place",
+   "type": "village",
+   "place_rank": 19,
+   "importance": 0.14670416800183103,
+   "addresstype": "village",
+   "name": "Thar\u0101li",
+   "display_name": "Thar\u0101li, Tharali, Chamoli, Uttarakhand, 246482, India",
+   "boundingbox": [
+    "30.0482075",
+    "30.0882075",
+    "79.4874347",
+    "79.5274347"
+   ]
+  }
+ ],
+ "Plapally & Kavali and Makkochi & Poovanchi, Kerala, India": [],
+ "Plapally, Kerala, India": [
+  {
+   "place_id": 381723024,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 13736838317,
+   "lat": "8.9742228",
+   "lon": "76.7944427",
+   "category": "place",
+   "type": "quarter",
+   "place_rank": 20,
+   "importance": 0.13338192492561224,
+   "addresstype": "quarter",
+   "name": "Plappally",
+   "display_name": "Plappally, Karikkam, Kottarakkara, Kollam, Kerala, 691500, India",
+   "boundingbox": [
+    "8.9642228",
+    "8.9842228",
+    "76.7844427",
+    "76.8044427"
+   ]
+  }
+ ],
+ "Kodagu district incl. Mukkodlu, India": [],
+ "Canacona, South Goa, India": [
+  {
+   "place_id": 253773551,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "way",
+   "osm_id": 1341232016,
+   "lat": "15.0077046",
+   "lon": "74.0518205",
+   "category": "amenity",
+   "type": "hospital",
+   "place_rank": 30,
+   "importance": 3.750133516437045e-05,
+   "addresstype": "amenity",
+   "name": "Community Health Centre, Canacona",
+   "display_name": "Community Health Centre, Canacona, Ruby Residency Road, Ruby Residency, Chaudi, Canacona, South Goa, Goa, 403702, India",
+   "boundingbox": [
+    "15.0071217",
+    "15.0082461",
+    "74.0511239",
+    "74.0525267"
+   ]
+  },
+  {
+   "place_id": 253413525,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "way",
+   "osm_id": 1379880047,
+   "lat": "15.0298412",
+   "lon": "74.0220442",
+   "category": "amenity",
+   "type": "recycling",
+   "place_rank": 30,
+   "importance": 3.750133516437045e-05,
+   "addresstype": "amenity",
+   "name": "Canacona Material Recovery Facility",
+   "display_name": "Canacona Material Recovery Facility, MDR49, Parven, Agonda, Canacona, Kushavati, Goa, 503702, India",
+   "boundingbox": [
+    "15.0293542",
+    "15.0304681",
+    "74.0212977",
+    "74.0226978"
+   ]
+  }
+ ],
+ "Ukhimath, Rudraprayag, Uttarakhand, India": [
+  {
+   "place_id": 245180506,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "relation",
+   "osm_id": 9987324,
+   "lat": "30.5845118",
+   "lon": "79.1287714",
+   "category": "boundary",
+   "type": "administrative",
+   "place_rank": 12,
+   "importance": 0.24003750133516438,
+   "addresstype": "county",
+   "name": "Ukhimath",
+   "display_name": "Ukhimath, Rudraprayag, Uttarakhand, India",
+   "boundingbox": [
+    "30.3608042",
+    "30.8083483",
+    "78.9083302",
+    "79.3563852"
+   ]
+  },
+  {
+   "place_id": 244774048,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 299531768,
+   "lat": "30.5139518",
+   "lon": "79.0947560",
+   "category": "place",
+   "type": "town",
+   "place_rank": 18,
+   "importance": 0.1600375013351644,
+   "addresstype": "town",
+   "name": "Ukhimath",
+   "display_name": "Ukhimath, Rudraprayag, Uttarakhand, 246469, India",
+   "boundingbox": [
+    "30.4739518",
+    "30.5539518",
+    "79.0547560",
+    "79.1347560"
+   ]
+  }
+ ],
+ "Cachar, India": [
+  {
+   "place_id": 241479604,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "relation",
+   "osm_id": 2025971,
+   "lat": "24.7586400",
+   "lon": "92.8816648",
+   "category": "boundary",
+   "type": "administrative",
+   "place_rank": 10,
+   "importance": 0.4823081176999452,
+   "addresstype": "state_district",
+   "name": "Cachar",
+   "display_name": "Cachar, Assam, India",
+   "boundingbox": [
+    "24.3738373",
+    "25.1429343",
+    "92.4185130",
+    "93.2617378"
+   ]
+  }
+ ],
+ "Hatiasia Songma, South Garo Hills, Meghalaya, India": [],
+ "South Garo Hills, Meghalaya, India": [
+  {
+   "place_id": 240272812,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "relation",
+   "osm_id": 2027475,
+   "lat": "25.3479690",
+   "lon": "90.5657773",
+   "category": "boundary",
+   "type": "administrative",
+   "place_rank": 10,
+   "importance": 0.44144021327567107,
+   "addresstype": "state_district",
+   "name": "South Garo Hills",
+   "display_name": "South Garo Hills, Meghalaya, India",
+   "boundingbox": [
+    "25.1446386",
+    "25.5540132",
+    "90.2269363",
+    "90.9689584"
+   ]
+  }
+ ],
+ "Chungthang, Mangan, Sikkim, India": [
+  {
+   "place_id": 243143958,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "node",
+   "osm_id": 13148720740,
+   "lat": "27.6042360",
+   "lon": "88.6465196",
+   "category": "place",
+   "type": "village",
+   "place_rank": 19,
+   "importance": 0.14667666666666662,
+   "addresstype": "village",
+   "name": "Chungthang",
+   "display_name": "Chungthang, Mangan, Sikkim, India",
+   "boundingbox": [
+    "27.5842360",
+    "27.6242360",
+    "88.6265196",
+    "88.6665196"
+   ]
+  },
+  {
+   "place_id": 242682875,
+   "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+   "osm_type": "relation",
+   "osm_id": 10088930,
+   "lat": "27.8133328",
+   "lon": "88.5199948",
+   "category": "boundary",
+   "type": "administrative",
+   "place_rank": 12,
+   "importance": 0.13618373728802152,
+   "addresstype": "county",
+   "name": "Chungthang",
+   "display_name": "Chungthang, Mangan, Sikkim, 737120, India",
+   "boundingbox": [
+    "27.5022192",
+    "28.1240465",
+    "88.1179987",
+    "88.8881208"
+   ]
+  }
+ ]
+}

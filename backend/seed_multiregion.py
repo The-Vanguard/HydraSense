@@ -123,8 +123,8 @@ def seed_multiregion_events(conn, point_to_hex: dict[str, str]) -> None:
             uei = _s(row.get("UEI"), f"{region_key}-{n+1:04d}")
             conn.execute(
                 """INSERT OR REPLACE INTO historical_events
-                   (event_id, hex_id, date, type, severity, source, coordinate_precision, region)
-                   VALUES (?,?,?,?,?,?,?,?)""",
+                   (event_id, hex_id, date, type, severity, source, coordinate_precision, region, provenance, grade)
+                   VALUES (?,?,?,?,?,?,?,?,?,?)""",
                 (
                     f"{uei}::{region_key}",
                     default_hex,
@@ -134,6 +134,8 @@ def seed_multiregion_events(conn, point_to_hex: dict[str, str]) -> None:
                     _s(row.get("data_source"), _s(row.get("Event Source"))),
                     _s(row.get("coordinate_precision"), "district-level"),
                     target_location,
+                    "REAL_RECONSTRUCTED",
+                    "B",
                 )
             )
             n += 1
