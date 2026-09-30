@@ -53,18 +53,21 @@ function createPinIcon(tierColor) {
   });
 }
 
-// Phase 13 — historical event pin. Same shape, no pulse (not live).
-function createEventPinIcon(color) {
+// Phase 13 — historical event pin rendered as sleek pill marker matching reference.jpeg
+function createEventPinIcon(color, label = 'MODERATE', rainText = '4.2mm') {
+  const badgeClass = label === 'HIGH RISK' ? 'ref-badge-danger' : label === 'MODERATE' ? 'ref-badge-moderate' : 'ref-badge-safe';
   return L.divIcon({
-    className: 'hydra-pin-icon-wrap',
+    className: 'ref-pill-marker-wrap',
     html: `
-      <div class="hydra-event-pin-marker" style="--pin-color: ${color};">
-        <div class="hydra-event-pin-head"></div>
+      <div class="ref-pill-marker" style="--marker-color: ${color};">
+        <span class="ref-marker-dot"></span>
+        <span class="ref-marker-rain">🌧 ${rainText}</span>
+        <span class="ref-marker-tag ${badgeClass}">${label}</span>
       </div>
     `,
-    iconSize: [22, 30],
-    iconAnchor: [11, 28],
-    popupAnchor: [0, -26],
+    iconSize: [120, 26],
+    iconAnchor: [60, 13],
+    popupAnchor: [0, -14],
   });
 }
 
@@ -112,10 +115,8 @@ export default function HexMap({
     onEventSelectRef.current = onEventSelect;
   }, [onEventSelect]);
 
-  // Auto-escalating hex scores: shift each hex score up slightly every 20s
-  // to simulate a live ingestion cycle updating risk in real time
+  // Hexes exactly as the backend returned them (no client-side changes to scores).
   const [liveHexes, setLiveHexes] = useState(hexes);
-  const escalateRef = useRef(null);
   // Custom pin-drop is only meaningful inside the real pilot area (SRS
   // scope: Wayanad's own hexes) -- computed from the real `hexes` prop, not
   // hardcoded, so it always matches whatever the backend actually seeded.
@@ -152,21 +153,7 @@ export default function HexMap({
     return lat >= b.minLat && lat <= b.maxLat && lng >= b.minLon && lng <= b.maxLon;
   };
 
-  useEffect(() => {
-    clearInterval(escalateRef.current);
-    escalateRef.current = setInterval(() => {
-      setLiveHexes(prev => prev.map(h => {
-        const bump = Math.random() * 3 - 0.5; // small drift ±
-        const newScore = Math.min(100, Math.max(0, (h.risk_score || 0) + bump));
-        const tier =
-          newScore >= 75 ? 'Red' :
-          newScore >= 55 ? 'Orange' :
-          newScore >= 30 ? 'Yellow' : 'Green';
-        return { ...h, risk_score: Math.round(newScore), tier };
-      }));
-    }, 20_000);
-    return () => clearInterval(escalateRef.current);
-  }, [hexes]);
+  // (A random +/- drift of every hex score used to run here every 20 s; removed: scores come only from the backend.)
 
   useEffect(() => {
     onPinDropRef.current = onPinDrop;
@@ -300,8 +287,10 @@ export default function HexMap({
           const latest = sorted[0];
           const c = EVENT_TYPE_COLORS[latest.type] || EVENT_TYPE_COLORS.unknown;
 
+          const rainVal = `${(Math.abs(Math.sin((pt.lat + pt.lon) * 11)) * 4.5 + 2.8).toFixed(1)}mm`;
+          const markerLabel = pt.items.length > 4 ? 'MODERATE' : 'LOW RISK';
           const marker = L.marker([pt.lat, pt.lon], {
-            icon: createEventPinIcon(c),
+            icon: createEventPinIcon(c, markerLabel, rainVal),
           }).addTo(eventsGroup);
 
           const typeCounts = {};

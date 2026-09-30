@@ -2,7 +2,7 @@
  * AlertFeed.jsx — Phase 12
  * Polls GET /alert/feed every 10s.
  * CAP alerts and downgrade events rendered as DISTINCT item types (SRS §17).
- * Auto-fires a CAP entry on Orange/Red, followed by a downgrade after 8s.
+ * Shows only what the backend feed returns; nothing is generated client-side.
  */
 import React, { useEffect, useState, useRef } from 'react';
 import { getAlertFeed } from '../api/client';
@@ -78,13 +78,9 @@ function AlertItem({ item }) {
   );
 }
 
-export default function AlertFeed({ customAlert }) {
+export default function AlertFeed() {
   const [alerts,    setAlerts]    = useState([]);
-  const [localCap,  setLocalCap]  = useState(null);
-  const [downgrade, setDowngrade] = useState(null);
   const timerRef     = useRef(null);
-  const downgradeRef = useRef(null);
-  const prevTierRef  = useRef(null);
 
   const fetchAlerts = () => {
     getAlertFeed().then(setAlerts).catch(() => {});
@@ -96,33 +92,8 @@ export default function AlertFeed({ customAlert }) {
     return () => clearInterval(timerRef.current);
   }, []);
 
-  // Auto-fire CAP when customAlert is Orange/Red, then downgrade after 8s
-  useEffect(() => {
-    clearTimeout(downgradeRef.current);
-    if (!customAlert) {
-      setLocalCap(null); setDowngrade(null); prevTierRef.current = null;
-      return;
-    }
-    const tier = customAlert.tier;
-    if (['Orange', 'Red'].includes(tier) && tier !== prevTierRef.current) {
-      setLocalCap({ ...customAlert, timestamp: new Date().toISOString() });
-      setDowngrade(null);
-      prevTierRef.current = tier;
-      downgradeRef.current = setTimeout(() => {
-        setDowngrade({
-          type: 'downgrade',
-          hex_id: customAlert.hex_id,
-          message: 'Risk subsiding — consecutive below-Orange cycles >= 2',
-          timestamp: new Date().toISOString(),
-        });
-      }, 8000);
-    }
-    return () => clearTimeout(downgradeRef.current);
-  }, [customAlert]);
 
   const combined = [...alerts];
-  if (downgrade) combined.push(downgrade);
-  if (localCap)  combined.push(localCap);
 
   return (
     <div className="panel">

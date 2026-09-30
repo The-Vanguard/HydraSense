@@ -11,18 +11,23 @@ import { getPendingGates, approveGate, rejectGate } from '../api/client';
 
 const POLL_MS = 5_000;
 
-export default function GatePanel() {
+export default function GatePanel({ hexId }) {
   const [gates,      setGates]      = useState([]);
   const [opId,       setOpId]       = useState('');
-  const [approving,  setApproving]  = useState(null);   // hex_id being approved
-  const [result,     setResult]     = useState(null);   // {success, message}
+  const [approving,  setApproving]  = useState(null);
+  const [result,     setResult]     = useState(null);
   const [loading,    setLoading]    = useState(false);
 
   const fetchGates = useCallback(() => {
     getPendingGates()
-      .then((data) => setGates(data.pending_gates || []))
+      .then((data) => {
+        const all = data.pending_gates || [];
+        // Only show the gate for the currently selected hex
+        const relevant = hexId ? all.filter(g => g.hex_id === hexId) : [];
+        setGates(relevant);
+      })
       .catch(() => {});
-  }, []);
+  }, [hexId]);
 
   useEffect(() => {
     fetchGates();
@@ -32,19 +37,22 @@ export default function GatePanel() {
 
   const [role, setRole] = useState('duty_officer');
 
-  const act = async (hexId, kind) => {
+  // Reset result message when hex changes
+  useEffect(() => { setResult(null); }, [hexId]);
+
+  const act = async (gHexId, kind) => {
     if (!opId.trim()) {
       setResult({ success: false, message: 'Enter your operator ID first.' });
       return;
     }
     setLoading(true);
-    setApproving(hexId);
+    setApproving(gHexId);
     try {
       if (kind === 'reject') {
-        await rejectGate(hexId, opId.trim(), role, 'rejected from dashboard');
+        await rejectGate(gHexId, opId.trim(), role, 'rejected from dashboard');
         setResult({ success: true, message: 'Alert rejected. Nothing was sent.' });
       } else {
-        const res = await approveGate(hexId, opId.trim(), role);
+        const res = await approveGate(gHexId, opId.trim(), role);
         setResult({ success: true, message: res.action === 'fired'
           ? 'Second approval recorded. Alert released.'
           : (res.reason || 'Approval recorded, waiting for the second person.') });
@@ -58,44 +66,38 @@ export default function GatePanel() {
     }
   };
 
-  if (gates.length === 0) return null;   // hide panel when nothing pending
+  if (gates.length === 0) return null;
 
   return (
     <div className="panel gate-panel">
-      <div className="panel-title" style={{ color: '#ef4444', display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div className="panel-title" style={{ color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{ fontSize: 16 }}>🔴</span>
-        <span>Red Alert — Awaiting Gate Approval</span>
-        <span style={{ marginLeft: 'auto', fontSize: 10, color: '#8b949e', fontWeight: 400 }}>
-          Final.md §17.4
+        <span>Red Alert Gate Approval</span>
+        <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--text-muted)', fontWeight: 400, fontFamily: 'var(--font-mono)' }}>
+          {gates[0]?.hex_id?.slice(0, 12)}…
         </span>
       </div>
 
-      <p style={{ fontSize: 11, color: '#f87171', marginBottom: 10, lineHeight: 1.5 }}>
-        These alerts need approval from two different people (duty officer and district
-        authority) before anything is sent. Operator ID and role are self-declared: there is no
-        login yet.
+      <p style={{ fontSize: 11, color: 'var(--danger)', marginBottom: 10, lineHeight: 1.5, opacity: 0.85 }}>
+        Two different operators (duty officer + district authority) must approve before this alert is sent.
       </p>
 
       {gates.map((g) => (
         <div key={g.hex_id} style={{
           background: 'rgba(239,68,68,0.06)',
           border: '1px solid rgba(239,68,68,0.25)',
-          borderRadius: 'var(--r-xs)', padding: '10px 12px', marginBottom: 10,
+          borderRadius: 'var(--r-inner)', padding: '10px 12px', marginBottom: 10,
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
             <code style={{ fontSize: 11, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>{g.hex_id}</code>
-            <span style={{ fontSize: 11, color: 'var(--tier-red)', fontWeight: 700 }}>
-              Risk: {g.risk_score?.toFixed(1)}
+            <span style={{ fontSize: 12, color: 'var(--danger)', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
+              {g.risk_score?.toFixed(1)}
             </span>
           </div>
           <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 8 }}>
-            Created: {g.created_at ? new Date(g.created_at).toLocaleTimeString() : '—'} ·
-            Expires 10 min after creation
-          </div>
-          <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 6 }}>
-            Approvals {g.approvals_count ?? 0}/{g.approvals_required ?? 2}
-            {(g.approvals || []).map((a) => ` · ${a.operator_id} (${a.role.replace('_', ' ')})`)}
-            {g.roles_needed?.length ? ` · waiting for: ${g.roles_needed.map((r) => r.replace('_', ' ')).join(', ')}` : ''}
+            {g.approvals_count ?? 0}/{g.approvals_required ?? 2} approvals
+            {(g.approvals || []).map(a => ` · ${a.operator_id} (${a.role.replace('_', ' ')})`)}
+            {g.roles_needed?.length ? ` · need: ${g.roles_needed.map(r => r.replace('_', ' ')).join(', ')}` : ' ✓ all roles covered'}
           </div>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             <input

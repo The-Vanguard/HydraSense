@@ -71,7 +71,7 @@ export default function CitizenPreviewPanel({ selectedHex = null, region = null 
           <div className="citizen-meta">
             Risk score: {risk} · Lead time: {lead}
           </div>
-          <div className="citizen-timestamp">Issued: {timeStr} · via NDMA/SACHET</div>
+          <div className="citizen-timestamp">Preview only · {timeStr} · would need an authorised agency (e.g. SACHET) to send</div>
         </div>
 
         <div className="citizen-channels">

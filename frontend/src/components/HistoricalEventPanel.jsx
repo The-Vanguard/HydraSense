@@ -114,12 +114,6 @@ const TERRAIN_FIELDS = [
 export default function HistoricalEventPanel({ selectedEvent, onClose }) {
   const [rainfallWindow, setRainfallWindow] = useState(null);
 
-  // Randomised lead-time shown in the river forecast header — picks a
-  // realistic-looking value (6 h – 36 h, multiples of 3) once per panel open.
-  const randomLeadTime = useMemo(() => {
-    const steps = [6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36];
-    return steps[Math.floor(Math.random() * steps.length)];
-  }, []);
 
   const events = selectedEvent?.events || [];
   const staticFeatures = selectedEvent?.staticFeatures;
@@ -242,7 +236,7 @@ export default function HistoricalEventPanel({ selectedEvent, onClose }) {
             RIVER LEVEL FORECAST — {river.chronos_station} (Chronos-Bolt, pretrained)
           </div>
           <div style={{ fontSize: 11, color: '#c9d1d9', marginBottom: 6 }}>
-            Lead time: <strong>{randomLeadTime}h</strong> ahead
+            Forecast horizon: <strong>24 h</strong> (1-day, hourly steps)
           </div>
           <div style={{ fontSize: 10, color: '#8b949e', marginBottom: 2 }}>
             1-day risk trend (river level, median ± real forecast band)

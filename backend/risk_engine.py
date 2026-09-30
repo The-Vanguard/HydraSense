@@ -231,6 +231,10 @@ def compute_and_store_risk(hex_id: str) -> dict[str, Any] | None:
             "index_landslide":                    pred.get("index_landslide"),
             "index_flood":                        pred.get("index_flood"),
             "confidence_primary_reason":          pred.get("confidence_primary_reason"),
+            # the measured inputs this score used (null = not available; never filled in)
+            "inputs": {k: dynamic_feats.get(k) for k in (
+                "rainfall_1h", "rainfall_6h", "rainfall_24h", "rainfall_72h_antecedent",
+                "soil_saturation_ratio")},
         }
 
     LAST_RESULTS[hex_id] = result

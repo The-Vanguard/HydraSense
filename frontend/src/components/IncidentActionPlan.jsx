@@ -3,33 +3,65 @@
  * Final.md §13.4: "an editable Incident Action Plan with a dashed 'live document' border"
  * Final.md §13.5: "in Response Unit view, reframed as assigned tasks (team, ward, route, ETA)"
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
-const INITIAL_ORDERS = [
-  { id: 'ORD-101', team: 'NDRF 04 - Special Rescue', task: 'Evacuation corridor setup & riverbank cordon', sector: 'Mundakkai / Chooralmala', eta: '12 min', status: 'En Route', route: 'SH-59 via Meppadi' },
-  { id: 'ORD-102', team: 'Kerala Fire & Rescue Squad 2', task: 'Pre-position high-clearance rescue vehicles', sector: 'Chooralmala Bridge', eta: 'On Scene', status: 'Active', route: 'Direct North Access' },
-  { id: 'ORD-103', team: 'SDRF Hill Unit 09', task: 'Slope monitor & secondary slide lookout', sector: 'Attamala Ridge', eta: '25 min', status: 'Dispatched', route: 'Attamala Forest Track' },
-];
+// Suggested task TEMPLATES by tier (v2 Sec. 10.4 action text).  They are not real dispatches: no team
+// has been assigned, so status is "Suggested" and ETA / route are left for the duty officer to fill in.
+const T = (id, team, task, sector) => ({ id, team, task, sector, eta: '—', status: 'Suggested', route: '—' });
+const ORDERS_BY_TIER = {
+  Red: [
+    T('T-1', 'Rescue team (to assign)', 'Evacuate people below steep slopes and along stream banks', 'Red hexes / listed villages'),
+    T('T-2', 'Fire & rescue (to assign)', 'Pre-position vehicles outside the hazard zone', 'Nearest safe road junction'),
+    T('T-3', 'Local volunteers (to assign)', 'Watch for new cracks, muddy water, sudden stream changes', 'Upslope of the villages'),
+  ],
+  Orange: [
+    T('T-1', 'Revenue / panchayat team (to assign)', 'Precautionary evacuation of low-lying and slope-foot households', 'Orange hexes'),
+    T('T-2', 'Panchayat alert team (to assign)', 'Sound sirens and inform village nodal contacts', 'Listed villages'),
+  ],
+  Yellow: [
+    T('T-1', 'District control room', 'Watch rainfall and stream gauges each cycle', 'District'),
+    T('T-2', 'Panchayat (to assign)', 'Keep shelters ready (standby only)', 'Nearest shelters'),
+  ],
+  Green: [
+    T('T-1', 'District control room', 'Routine monitoring; no action needed', 'District'),
+  ],
+};
+
+function getInitialOrders(tier) {
+  return (ORDERS_BY_TIER[tier] || ORDERS_BY_TIER.Green).map(o => ({ ...o }));
+}
 
 export default function IncidentActionPlan({ readOnly = false, selectedHex = null, region = null }) {
-  const [orders, setOrders] = useState(INITIAL_ORDERS);
-  const [newTeam, setNewTeam] = useState('');
-  const [newTask, setNewTask] = useState('');
+  const tier = selectedHex?.tier || 'Green';
+  const [orders, setOrders] = useState(() => getInitialOrders(tier));
+  const [newTeam, setNewTeam]   = useState('');
+  const [newTask, setNewTask]   = useState('');
   const [isAdding, setIsAdding] = useState(false);
+  const prevHexRef = useRef(null);
 
-  const regionName = region?.district || region?.region_label || 'Wayanad, Kerala';
+  // Reset orders whenever the selected hex changes
+  useEffect(() => {
+    const hexId = selectedHex?.hex_id || null;
+    if (hexId !== prevHexRef.current) {
+      prevHexRef.current = hexId;
+      setOrders(getInitialOrders(selectedHex?.tier || 'Green'));
+      setIsAdding(false);
+    }
+  }, [selectedHex]);
+
+  const regionName = region?.district || region?.region_label || 'selected region';
 
   const handleAddOrder = (e) => {
     e.preventDefault();
     if (!newTeam.trim() || !newTask.trim()) return;
     const newOrd = {
-      id: `ORD-${Math.floor(100 + Math.random() * 900)}`,
+      id: `T-${orders.length + 1}`,
       team: newTeam.trim(),
       task: newTask.trim(),
       sector: selectedHex?.village || `${regionName} Sector`,
-      eta: '15 min',
-      status: 'Dispatched',
-      route: 'Primary Emergency Arterial',
+      eta: '—',
+      status: 'Added by operator',
+      route: '—',
     };
     setOrders([newOrd, ...orders]);
     setNewTeam('');
@@ -50,11 +82,7 @@ export default function IncidentActionPlan({ readOnly = false, selectedHex = nul
   };
 
   return (
-    <div className="panel iap-panel" style={{
-      margin: '0 12px 10px',
-      padding: '12px',
-      position: 'relative',
-    }}>
+    <div className="panel iap-panel" style={{ position: 'relative' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.05em', color: 'var(--text-primary)' }}>
@@ -62,13 +90,22 @@ export default function IncidentActionPlan({ readOnly = false, selectedHex = nul
           </span>
           <span style={{
             fontSize: 9,
-            padding: '1px 5px',
-            borderRadius: 3,
-            background: 'rgba(46, 125, 239, 0.12)',
-            color: 'var(--accent)',
-            fontFamily: 'var(--font-mono, monospace)',
+            padding: '1px 6px',
+            borderRadius: 'var(--r-pill)',
+            background: tier === 'Red'    ? 'var(--danger-soft)'
+                      : tier === 'Orange' ? 'var(--orange-soft)'
+                      : tier === 'Yellow' ? 'var(--warning-soft)'
+                      : 'rgba(46, 125, 239, 0.1)',
+            color: tier === 'Red'    ? 'var(--danger)'
+                 : tier === 'Orange' ? 'var(--orange)'
+                 : tier === 'Yellow' ? 'var(--warning)'
+                 : 'var(--accent)',
+            fontFamily: 'var(--font-mono)',
+            fontWeight: 600,
+            border: '1px solid currentColor',
+            opacity: 0.8,
           }}>
-            ILLUSTRATIVE · SAMPLE TASKS
+            ILLUSTRATIVE · {tier.toUpperCase()} TIER TASKS
           </span>
         </div>
         {!readOnly && (
@@ -98,8 +135,8 @@ export default function IncidentActionPlan({ readOnly = false, selectedHex = nul
         <form onSubmit={handleAddOrder} style={{
           marginBottom: 10,
           padding: 8,
-          background: 'var(--bg-card)',
-          border: '1px solid var(--border)',
+          background: 'var(--sky)',
+          border: '1px solid var(--edge)',
           borderRadius: 'var(--r-xs)',
           display: 'flex',
           flexDirection: 'column',

@@ -1,7 +1,7 @@
 /**
  * ConfidenceLeadTime.jsx — Phase 12
  * Displays confidence_score, lead_time_min (hour-granular), lead_time_basis,
- * live rainfall ticker, FS band gauge, and real-time lead-time countdown.
+ * the 24 h rainfall the score used, FS band gauge, and real-time lead-time countdown.
  */
 import React, { useState, useEffect, useRef } from 'react';
 
@@ -18,24 +18,10 @@ const TIER_COLOR = {
   Green: '#22c55e', Yellow: '#eab308', Orange: '#f97316', Red: '#ef4444',
 };
 
-// Stable rainfall base value per session
-const RAIN_BASE = 12 + (Math.random() * 35);
 
 export default function ConfidenceLeadTime({ risk }) {
-  const [rainVal, setRainVal]     = useState(RAIN_BASE);
   const [countdown, setCountdown] = useState(null);
   const countdownRef = useRef(null);
-
-  // Rainfall ticker: increments slowly every 4 seconds
-  useEffect(() => {
-    const id = setInterval(() => {
-      setRainVal(v => {
-        const next = v + (Math.random() * 0.3 - 0.05);
-        return Math.max(8, Math.min(120, next));
-      });
-    }, 4000);
-    return () => clearInterval(id);
-  }, []);
 
   // Countdown ticks down from lead_time_min every 60 seconds
   useEffect(() => {
@@ -72,26 +58,39 @@ export default function ConfidenceLeadTime({ risk }) {
   const leadFormatted = formatLeadTime(countdown);
 
   // FS band
-  const fsMin = factor_of_safety_min ?? (factor_of_safety ? +(factor_of_safety * 0.82).toFixed(2) : null);
-  const fsMax = factor_of_safety_max ?? (factor_of_safety ? +(factor_of_safety * 1.18).toFixed(2) : null);
+  const fsMin = factor_of_safety_min ?? null;     // no band is invented when the engine gave none
+  const fsMax = factor_of_safety_max ?? null;
   const fsVal = factor_of_safety;
   const fsBandVisible   = fsMin != null && fsMax != null;
   const fsBandStraddles = fsBandVisible && fsMin < 1.0 && fsMax >= 1.0;
-  const fsColor = fsVal == null ? '#8b949e' : fsVal < 1.0 ? '#ef4444' : fsVal < 1.3 ? '#f97316' : '#22c55e';
+  const fsColor = fsVal == null ? 'var(--mist)' : fsVal < 1.0 ? 'var(--danger)' : fsVal < 1.3 ? 'var(--orange)' : 'var(--success)';
 
-  const rainDir = rainVal > RAIN_BASE + 2 ? '↑' : rainVal < RAIN_BASE - 2 ? '↓' : '→';
+  const rain24 = risk?.inputs?.rainfall_24h;
 
   return (
     <div className="panel">
       <div className="panel-title">Risk Score &amp; Confidence</div>
 
-      {/* Risk score + tier */}
-      <div className="hex-info" style={{ marginBottom: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-          <span style={{ fontSize: 32, fontWeight: 800, color: tierColor, lineHeight: 1 }}>
+      {/* Risk score hero — bold, tier-colored, Inter Tight */}
+      <div style={{
+        background: `linear-gradient(135deg, ${tierColor}12 0%, ${tierColor}06 100%)`,
+        border: `1px solid ${tierColor}30`,
+        borderRadius: 'var(--r-inner)',
+        padding: '12px 14px',
+        marginBottom: 10,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 8 }}>
+          <span style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: 48,
+            fontWeight: 800,
+            color: tierColor,
+            lineHeight: 1,
+            letterSpacing: '-0.03em',
+          }}>
             {risk_score}
           </span>
-          <span style={{ fontSize: 11, color: '#8b949e' }}> / 100</span>
+          <span style={{ fontSize: 14, color: 'var(--text-muted)', fontFamily: 'var(--font-display)' }}>/ 100</span>
         </div>
         <span className={`tier-badge ${tier}`}>
           <span className="pulse-dot" />
@@ -99,12 +98,16 @@ export default function ConfidenceLeadTime({ risk }) {
         </span>
       </div>
 
-      {/* Live rainfall ticker */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, padding: '5px 8px', background: 'var(--bg-card)', borderRadius: 'var(--r-xs)', border: '1px solid var(--border)' }}>
-        <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>24h Rainfall</span>
-        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', fontVariantNumeric: 'tabular-nums', fontFamily: 'var(--font-mono)' }}>
-          {rainVal.toFixed(1)} mm{' '}
-          <span style={{ fontSize: 10, color: rainDir === '↑' ? 'var(--tier-orange)' : 'var(--tier-green)' }}>{rainDir}</span>
+      {/* 24 h rainfall the score used (from the backend; '—' if not available) */}
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        marginBottom: 10, padding: '6px 10px',
+        background: 'var(--sky)', borderRadius: 'var(--r-sm)',
+        border: '1px solid var(--edge)',
+      }}>
+        <span style={{ fontSize: 10, color: 'var(--mist)', fontFamily: 'var(--font-mono)' }}>24h Rainfall</span>
+        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)', fontVariantNumeric: 'tabular-nums', fontFamily: 'var(--font-mono)' }}>
+          {rain24 == null ? '—' : `${Number(rain24).toFixed(1)} mm`}
         </span>
       </div>
 

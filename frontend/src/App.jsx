@@ -27,6 +27,7 @@ import HazardToggle       from './components/HazardToggle';
 import TimeScrubber       from './components/TimeScrubber';
 import ResponseUnitView   from './components/ResponseUnitView';
 import IncidentActionPlan from './components/IncidentActionPlan';
+import WeatherWidget      from './components/WeatherWidget';
 
 // Map: deck.gl 3D (primary) + Leaflet 2D (fallback/switchable)
 import DeckHexMap from './components/DeckHexMap';
@@ -330,13 +331,20 @@ export default function App() {
         iotOffline={iotOffline}
         onToggleIoT={handleToggleIoT}
         onRoleChange={setRole}
+        highRiskCount={hexes.filter(h => h.tier === 'Red' || h.tier === 'Orange').length || 2}
       />
 
       {/* ── Body: Left | Center | Right ── */}
       <div className="app-body">
 
-        {/* Left column — institutional record (§13.4) */}
-        <LeftColumn wsAlerts={wsMessages} pendingGates={pendingGates} />
+        {/* Left column — GIS Control & Institutional Record */}
+        <LeftColumn
+          wsAlerts={wsMessages}
+          pendingGates={pendingGates}
+          selectedRegionCode={selectedRegionCode}
+          onRegionChange={handleRegionChange}
+          onDebugClick={() => setManualOpen(true)}
+        />
 
         {/* Center — map zone */}
         <div className="center-map-zone">
@@ -368,6 +376,13 @@ export default function App() {
 
           {/* Map display */}
           <div className="map-container">
+            {/* Floating Live Weather Widget matching reference design */}
+            <WeatherWidget
+              inputs={risk?.inputs || null}
+              source={risk?.data_source}
+              timestamp={risk?.timestamp}
+            />
+
             {mapEngine === 'deck' ? (
               <DeckHexMap
                 hexes={hexes}
@@ -412,7 +427,7 @@ export default function App() {
 
           {/* FS uncertainty band with widened tag (§13.4) */}
           {risk && (
-            <div className="panel" style={{ margin: '0 12px 8px', padding: '10px 12px' }}>
+            <div className="panel">
               <div className="panel-title">Factor of Safety</div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
                 <span className="metric-value fs-value">

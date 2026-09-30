@@ -1,23 +1,16 @@
 /**
- * AppHeader.jsx — Command-instrument header strip (Final.md §13.4)
- *
- * Contains:
- *  - HydraSense hex brand mark
- *  - Dynamically-resolved chain-of-command breadcrumb (§13.2)
- *  - Region Selector (all 10 onboarded regions) & Location Search Bar (§6, §14.2)
- *  - Deliberate IoT sensor failure demonstration button (§14.5)
- *  - Live clock + situation-status pill
- *  - Two-person [AUTH] gate indicator (§12.4)
- *  - Role switcher (Decision Authority / Response Unit)
- *  - ? legend modal toggle
- *  - Cold-start indicator
- *  - Hairline loading bar on region resolution
+ * AppHeader.jsx — Disaster Management GIS Portal Header
+ * Matches exact reference style from reference.jpeg:
+ *  - Left: HydraSense mark + name + subtitle (a student prototype; not affiliated with any government agency)
+ *  - Center: Capsule tab bar (Dashboard Overview, Landslide GIS Map [Active], Landslide Alerts [#alerts] with orange high-risk pill)
+ *  - Right: "LIVE MONITORING ACTIVE" pill with pulsing dot + Region selector pill + DA/RU role + theme toggle
  */
 import React, { useState, useEffect } from 'react';
 
 const ROLES = ['Decision Authority', 'Response Unit'];
 
 export const ONBOARDED_REGIONS = [
+  { code: 'all-india',      name: 'India (National Level)',       state: 'All India',        district: 'National' },
   { code: 'wayanad-kl',     name: 'Wayanad, Kerala (Pilot)',      state: 'Kerala',           district: 'Wayanad' },
   { code: 'idukki-kl',      name: 'Idukki, Kerala',               state: 'Kerala',           district: 'Idukki' },
   { code: 'nilgiris-tn',    name: 'Nilgiris, Tamil Nadu',         state: 'Tamil Nadu',       district: 'Nilgiris' },
@@ -31,15 +24,13 @@ export const ONBOARDED_REGIONS = [
 ];
 
 const LEGEND = [
-  { label: 'Green',  desc: '0–29 — Low modeled risk, monitor',      color: '#22c55e' },
-  { label: 'Yellow', desc: '30–54 — Elevated / prepare',            color: '#eab308' },
+  { label: 'Green',  desc: '0–29 — Low modeled risk, monitor',      color: '#10b981' },
+  { label: 'Yellow', desc: '30–54 — Elevated / prepare',            color: '#f59e0b' },
   { label: 'Orange', desc: '55–74 — Significant risk / act',         color: '#f97316' },
   { label: 'Red',    desc: '75–100 — High risk / alert workflow',    color: '#ef4444' },
   { label: 'AUTH',   desc: 'Pending 2-person gate authorization',    color: '#a78bfa' },
   { label: 'PERSISTENT', desc: 'Sustained ≥2 consecutive alarm cycles', color: '#f97316' },
   { label: 'COLD-START', desc: 'First cycle — alerts suppressed until pipeline warms', color: '#60a5fa' },
-  { label: 'DESATURATED', desc: 'Reduced saturation: uncalibrated region or wide geotechnical band', color: '#8b949e' },
-  { label: 'HOLLOW DOT', desc: 'No local IoT alert coverage (Layer 3 digital-only)', color: '#60a5fa' },
 ];
 
 export default function AppHeader({
@@ -53,14 +44,17 @@ export default function AppHeader({
   iotOffline = false,
   onToggleIoT,
   onRoleChange,
+  activeTab = 'map',
+  onTabChange,
+  highRiskCount = 2,
 }) {
-  const [clock, setClock]           = useState('');
-  const [role, setRole]             = useState(ROLES[0]);
-  const [showLegend, setLegend]     = useState(false);
+  const [clock, setClock]             = useState('');
+  const [role, setRole]               = useState(ROLES[0]);
+  const [showLegend, setLegend]       = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [theme, setTheme]           = useState(() => localStorage.getItem('hs-theme') || 'light');
+  const [currentNav, setCurrentNav]   = useState(activeTab);
+  const [theme, setTheme]             = useState(() => localStorage.getItem('hs-theme') || 'light');
 
-  // Theme effect: set data-theme attribute on <html> element per Cirrus design system
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('hs-theme', theme);
@@ -68,7 +62,6 @@ export default function AppHeader({
 
   const toggleTheme = () => setTheme(t => (t === 'dark' ? 'light' : 'dark'));
 
-  // Live clock
   useEffect(() => {
     const tick = () => {
       const now = new Date();
@@ -79,15 +72,14 @@ export default function AppHeader({
     return () => clearInterval(iv);
   }, []);
 
-  // Chain-of-command breadcrumb (§13.2) — resolved from region
-  const locTarget = region?.district || region?.region_label || region?.region_code;
-  const breadcrumb = locTarget
-    ? `India → ${region?.state || 'Kerala'} → ${locTarget}`
-    : 'India → Kerala → Wayanad';
-
   const handleRole = (r) => {
     setRole(r);
     onRoleChange?.(r);
+  };
+
+  const handleNavClick = (tabKey) => {
+    setCurrentNav(tabKey);
+    onTabChange?.(tabKey);
   };
 
   const handleSearchSubmit = (e) => {
@@ -99,147 +91,181 @@ export default function AppHeader({
   };
 
   return (
-    <header className="app-header" style={{ position: 'relative' }}>
-      {/* Animated loading hairline on region onboarding (§13.4) */}
+    <header className="ref-app-header">
+      {/* Animated loading hairline */}
       {isResolving && (
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 2,
-          background: 'linear-gradient(90deg, transparent, #38bdf8, transparent)',
-          backgroundSize: '200% 100%',
-          animation: 'hairlineLoad 1.2s infinite linear',
-          zIndex: 9999,
-        }} />
+        <div className="ref-hairline-loader" />
       )}
 
-      {/* Brand mark — H3 hex SVG (§13.4) */}
-      <div className="header-brand">
-        <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-          <polygon
-            points="14,2 25,8 25,20 14,26 3,20 3,8"
-            fill="none" stroke="#38bdf8" strokeWidth="2"
-          />
-          <polygon
-            points="14,7 20,10.5 20,17.5 14,21 8,17.5 8,10.5"
-            fill="#38bdf8" opacity="0.3"
-          />
-        </svg>
-        <span className="header-brand-name">HydraSense</span>
+      {/* ── LEFT: Brand, Title & Subtitle ── */}
+      <div className="ref-header-left">
+        {/* Shield Icon in Dark Rounded Container */}
+        <div className="ref-shield-badge">
+          <svg width="18" height="20" viewBox="0 0 24 28" fill="none">
+            <path
+              d="M12 2L3 6V13C3 19.5 6.8 25.5 12 27C17.2 25.5 21 19.5 21 13V6L12 2Z"
+              stroke="#ffffff"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M12 7V17M12 17L9 14M12 17L15 14"
+              stroke="#38bdf8"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </div>
+
+        {/* Title & Subtitle */}
+        <div className="ref-title-group">
+          <div className="ref-main-title">
+            HYDRASENSE
+            <span className="ref-title-subbrand"> · FLASH FLOOD &amp; LANDSLIDE EARLY WARNING</span>
+          </div>
+          <div className="ref-subtitle">
+            SIH prototype · decision support for district teams · not an official warning service
+          </div>
+        </div>
       </div>
 
-      {/* Chain-of-command breadcrumb */}
-      <div className="header-breadcrumb">{breadcrumb}</div>
-
-      {/* ── Region Selector Dropdown (§6, §14.3) ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 8 }}>
-        <select
-          value={selectedRegionCode}
-          onChange={(e) => onRegionChange?.(e.target.value)}
-          className="header-region-select"
-          title="Switch Onboarded Region (§14.3 Demo Shortlist)"
+      {/* ── CENTER: Pill Capsule Navigation Bar ── */}
+      <div className="ref-nav-capsule">
+        {/* Dashboard Overview */}
+        <button
+          className={`ref-capsule-btn${currentNav === 'overview' ? ' is-active' : ''}`}
+          onClick={() => handleNavClick('overview')}
         >
-          {ONBOARDED_REGIONS.map((r) => (
-            <option key={r.code} value={r.code}>
-              📍 {r.name}
-            </option>
-          ))}
-        </select>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <rect x="3" y="3" width="7" height="7" rx="1" />
+            <rect x="14" y="3" width="7" height="7" rx="1" />
+            <rect x="14" y="14" width="7" height="7" rx="1" />
+            <rect x="3" y="14" width="7" height="7" rx="1" />
+          </svg>
+          <span>Dashboard Overview</span>
+        </button>
 
-        {/* ── Resolve Any Hilly Location Bar (§6) ── */}
-        <form onSubmit={handleSearchSubmit} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        {/* Landslide GIS Map (#map) - Active */}
+        <button
+          className={`ref-capsule-btn${currentNav === 'map' ? ' is-active' : ''}`}
+          onClick={() => handleNavClick('map')}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="9" />
+            <polyline points="12 7 12 12 15 15" />
+          </svg>
+          <span>Landslide GIS Map (#map)</span>
+        </button>
+
+        {/* Landslide Alerts (#alerts) */}
+        <button
+          className={`ref-capsule-btn${currentNav === 'alerts' ? ' is-active' : ''}`}
+          onClick={() => handleNavClick('alerts')}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+          </svg>
+          <span>Landslide Alerts (#alerts)</span>
+          {/* Orange Risk Pill */}
+          <span className="ref-alert-count-pill">
+            {pendingGates > 0 ? `${pendingGates} PENDING` : `${highRiskCount} HIGH RISK`}
+          </span>
+        </button>
+      </div>
+
+      {/* ── RIGHT: Live Status, Region Selector, Role & Tools ── */}
+      <div className="ref-header-right">
+        {/* Live Monitoring Active Green Pill */}
+        <div className="ref-live-pill">
+          <span className="ref-live-pulse-dot" />
+          <span>LIVE MONITORING ACTIVE</span>
+        </div>
+
+        {/* Region Selector Pill */}
+        <div className="ref-region-pill-wrap">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2.5">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="2" y1="12" x2="22" y2="12" />
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+          </svg>
+          <span className="ref-region-label">Region:</span>
+          <select
+            value={selectedRegionCode}
+            onChange={(e) => onRegionChange?.(e.target.value)}
+            className="ref-region-dropdown"
+          >
+            {ONBOARDED_REGIONS.map((r) => (
+              <option key={r.code} value={r.code}>
+                {r.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Quick Hill Location Resolver */}
+        <form onSubmit={handleSearchSubmit} className="ref-search-form">
           <input
             type="text"
-            placeholder="Resolve any hill location (e.g. Munnar, Shimla)..."
+            placeholder="Resolve hill area..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             disabled={isResolving}
-            className="header-search-input"
+            className="ref-search-input"
           />
-          <button
-            type="submit"
-            disabled={isResolving}
-            className="cir-btn cir-btn--accent"
-            style={{
-              padding: '6px 12px',
-              fontSize: 11,
-              cursor: isResolving ? 'wait' : 'pointer',
-            }}
-            title="Trigger Autonomous Region Onboarding Pipeline (§6)"
-          >
-            {isResolving ? 'Resolving...' : 'Onboard'}
+          <button type="submit" disabled={isResolving} className="ref-search-btn">
+            {isResolving ? '...' : 'Go'}
           </button>
         </form>
-      </div>
 
-      {/* Spacer */}
-      <div style={{ flex: 1 }} />
+        {/* Deliberate IoT Failure simulation toggle button */}
+        <button
+          onClick={onToggleIoT}
+          className={`ref-tool-pill ${iotOffline ? 'is-offline' : ''}`}
+          title="Toggle IoT Telemetry failure fallback"
+        >
+          <span>{iotOffline ? '⚡ IoT Fallback' : '📡 IoT Live'}</span>
+        </button>
 
-      {/* ── Deliberate IoT Failure Demo Button (§14.5) ── */}
-      <button
-        onClick={onToggleIoT}
-        className={iotOffline ? 'iot-btn-offline' : 'iot-btn-live'}
-        title="Toggle deliberate sensor failure to demonstrate live fallback to satellite/forecast (Final.md §14.5)"
-      >
-        <span style={{ fontSize: 13 }}>{iotOffline ? '⚡' : '📡'}</span>
-        <span>{iotOffline ? 'IoT Offline (Fallback Active)' : 'Simulate IoT Failure'}</span>
-      </button>
-
-      {/* Cold-start pill */}
-      {coldStart && (
-        <div className="header-pill cold-start-pill">
-          COLD-START
+        {/* Role toggle (DA/RU) */}
+        <div className="ref-role-pill-group">
+          {ROLES.map(r => (
+            <button
+              key={r}
+              className={`ref-role-btn${role === r ? ' is-active' : ''}`}
+              onClick={() => handleRole(r)}
+              title={r}
+            >
+              {r === 'Decision Authority' ? 'DA' : 'RU'}
+            </button>
+          ))}
         </div>
-      )}
 
-      {/* Situation status */}
-      <div className="header-clock">
-        <span className="header-clock-time">{clock}</span>
+        {/* Light / Dark theme toggle */}
+        <button
+          className="ref-icon-circle-btn"
+          onClick={toggleTheme}
+          title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} theme`}
+        >
+          {theme === 'dark' ? '☀️' : '🌙'}
+        </button>
+
+        {/* Legend modal toggle */}
+        <button
+          className="ref-icon-circle-btn"
+          onClick={() => setLegend(l => !l)}
+          title="Legend"
+        >
+          ?
+        </button>
+
+        {/* Clock */}
+        <div className="ref-header-clock">{clock}</div>
       </div>
 
-      {/* [AUTH] gate indicator */}
-      {pendingGates > 0 && (
-        <div className="header-pill auth-pill">
-          [AUTH] {pendingGates} pending
-        </div>
-      )}
-
-      {/* Role switcher */}
-      <div className="cir-tabs" style={{ flexShrink: 0 }}>
-        {ROLES.map(r => (
-          <div
-            key={r}
-            className={`cir-tab${role === r ? ' is-active' : ''}`}
-            onClick={() => handleRole(r)}
-          >
-            {r === 'Decision Authority' ? 'DA' : 'RU'}
-          </div>
-        ))}
-      </div>
-
-      {/* Light / Dark theme toggle (§13.3 / Cirrus Design System) */}
-      <button
-        className="header-legend-btn"
-        onClick={toggleTheme}
-        title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} theme`}
-        style={{ minWidth: 32 }}
-      >
-        {theme === 'dark' ? '☀️' : '🌙'}
-      </button>
-
-      {/* ? legend toggle */}
-      <button className="header-legend-btn" onClick={() => setLegend(l => !l)} title="Legend">
-        ?
-      </button>
-
-      {/* Greyed National View tab (§13.4 — Phase 2, not built) */}
-      <button className="header-tab-disabled" disabled title="Phase 2 roadmap">
-        National View
-      </button>
-
-      {/* Legend modal */}
+      {/* Legend Modal */}
       {showLegend && (
         <div className="legend-modal" onClick={() => setLegend(false)}>
           <div className="legend-box" onClick={e => e.stopPropagation()}>

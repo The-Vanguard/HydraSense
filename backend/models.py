@@ -64,6 +64,8 @@ class RiskResponse(BaseModel):
     data_source:                        Any = "live"
     # v2 provenance field (Gap Analysis §0.2) — REAL_VALIDATED | REAL_RECONSTRUCTED | SIMULATED
     provenance:                         Optional[ProvenanceTag] = None
+    # rainfall (mm) / soil saturation actually used for this score; absent when served from the DB only
+    inputs:                             Optional[dict] = None
 
 class RiskMapEntry(BaseModel):
     hex_id:                             str
