@@ -1,5 +1,5 @@
 /**
- * Shell.jsx — top bar, notice bar, exercise banner and footer of the v2 dashboard.
+ * Shell.jsx — top bar and footer of the v2 dashboard.
  */
 import React, { useEffect, useState } from 'react';
 import { fmtIST } from './tiers';
@@ -21,7 +21,7 @@ function Logo() {
   );
 }
 
-export function TopBar({ tab, onTab, alertCount, backendUp, liveScores, region, onRegion, role, onRole }) {
+export function TopBar({ tab, onTab, alertCount, backendUp, liveScores, lastUpdated, role, onRole }) {
   const [theme, setTheme] = useState(() => {
     try { return localStorage.getItem('hs-theme') || 'light'; } catch { return 'light'; }
   });
@@ -49,7 +49,7 @@ export function TopBar({ tab, onTab, alertCount, backendUp, liveScores, region, 
       </nav>
       <div className="hs2-top-right">
         <span className={`hs2-pill ${liveScores ? 'ok' : 'warn'}`}
-              title="Live = the newest stored score is less than 20 minutes old">
+              title={`Last updated: ${fmtIST(lastUpdated)} (live = newest score under 20 min old)`}>
           <span className="hs2-dot" />{liveScores ? 'Live' : 'Not current'}
         </span>
         <span className={`hs2-pill ${backendUp === false ? 'bad' : backendUp ? 'ok' : ''}`}>
@@ -63,18 +63,6 @@ export function TopBar({ tab, onTab, alertCount, backendUp, liveScores, region, 
                 title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}>{theme === 'dark' ? '☀' : '☾'}</button>
       </div>
     </header>
-  );
-}
-
-export function NoticeBar({ lastUpdated, simulatedPresent, exerciseOpen }) {
-  const mode = exerciseOpen ? 'Exercise in progress' : simulatedPresent ? 'Includes simulated data' : 'Live data';
-  return (
-    <div className="hs2-notice" role="note">
-      <span>ⓘ <strong>Decision-support system only</strong> — alerts require authorised agency approval. HydraSense is an SIH prototype, not an official warning service.</span>
-      <span className="spacer" />
-      <span>Last updated: {fmtIST(lastUpdated)}</span>
-      <span className={`hs2-tag ${simulatedPresent || exerciseOpen ? 'sim' : 'live'}`}>{mode}</span>
-    </div>
   );
 }
 

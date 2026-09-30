@@ -8,7 +8,7 @@
 import React, { useMemo, useState } from 'react';
 import './v2.css';
 import useDashboard, { NATIONAL } from './useDashboard';
-import { TopBar, NoticeBar, Footer } from './Shell';
+import { TopBar, Footer } from './Shell';
 import Kpis from './Kpis';
 import Sidebar from './Sidebar';
 import MapCard from './MapCard';
@@ -37,7 +37,6 @@ export default function Dashboard() {
     [d.regionStatus]);
   const liveScores = lastUpdated && Date.now() - new Date(lastUpdated).getTime() < 20 * 60 * 1000;
   const exerciseOpen = d.gates.some((g) => g.exercise);
-  const simulatedPresent = d.hexes.some((h) => h.data_source === 'sensor') || exerciseOpen;
   const rainSource = d.risk?.data_source || null;
   const selectedHex = d.hexes.find((h) => h.hex_id === d.selectedHexId) || null;
   const currentRegion = { region_code: d.region, region_label: REGION_NAMES[d.region] };
@@ -45,9 +44,8 @@ export default function Dashboard() {
   if (role === 'Response Unit') {
     return (
       <div className="hs2">
-        <TopBar tab={tab} onTab={setTab} alertCount={d.gates.length} backendUp={d.backendUp} liveScores={liveScores}
+        <TopBar tab={tab} onTab={setTab} alertCount={d.gates.length} backendUp={d.backendUp} liveScores={liveScores} lastUpdated={lastUpdated}
                 region={d.region} onRegion={d.selectRegion} role={role} onRole={setRole} />
-        <NoticeBar lastUpdated={lastUpdated} simulatedPresent={simulatedPresent} exerciseOpen={exerciseOpen} />
         <div className="hs2-scroll hs2-legacy"><ResponseUnitView hexes={d.hexes} alerts={d.gates} region={currentRegion} /></div>
         <Footer rainSource={rainSource} />
       </div>
@@ -56,9 +54,8 @@ export default function Dashboard() {
 
   return (
     <div className="hs2">
-      <TopBar tab={tab} onTab={setTab} alertCount={d.gates.length} backendUp={d.backendUp} liveScores={liveScores}
+      <TopBar tab={tab} onTab={setTab} alertCount={d.gates.length} backendUp={d.backendUp} liveScores={liveScores} lastUpdated={lastUpdated}
               region={d.region} onRegion={d.selectRegion} role={role} onRole={setRole} />
-      <NoticeBar lastUpdated={lastUpdated} simulatedPresent={simulatedPresent} exerciseOpen={exerciseOpen} />
       {exerciseOpen && <div className="hs2-exercise">Simulated feed. Exercise alert, nothing is being sent.</div>}
 
       <div className="hs2-scroll">

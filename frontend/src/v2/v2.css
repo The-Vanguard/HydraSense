@@ -85,13 +85,7 @@
   border: 1px solid var(--c-border); background: var(--c-surface); border-radius: 8px; padding: 6px 9px; cursor: pointer;
 }
 
-/* ── Notice + title ───────────────────────────────────── */
-.hs2-notice {
-  display: flex; align-items: center; gap: 14px; padding: 6px 18px; font-size: 12px;
-  background: var(--c-notice); border-bottom: 1px solid var(--c-notice-border); color: #92400e;
-}
-[data-theme='dark'] .hs2 .hs2-notice { color: #fcd34d; }
-.hs2-notice .spacer { flex: 1; }
+/* ── Exercise banner + title ─────────────────────────── */
 .hs2-exercise {
   padding: 5px 18px; font-size: 12px; font-weight: 700; color: #fff; background: var(--c-purple);
 }
