@@ -73,18 +73,29 @@ def region_status():
     for code in repository.REGION_BBOX:
         rows = repository.get_risk_map_data(code)
         counts = {t: 0 for t in _TIER_RANK}
+        village_worst: dict[str, str] = {}          # village (or place) name -> worst tier among its scored cells
         for r in rows:
-            if r.get("tier") in counts:
-                counts[r["tier"]] += 1
+            t = r.get("tier")
+            if t in counts:
+                counts[t] += 1
+                name = r.get("village") or r["hex_id"]
+                if name not in village_worst or _TIER_RANK[t] > _TIER_RANK[village_worst[name]]:
+                    village_worst[name] = t
+        village_counts = {t: 0 for t in _TIER_RANK}
+        for t in village_worst.values():
+            village_counts[t] += 1
         worst = max((t for t, n in counts.items() if n), key=_TIER_RANK.get, default=None)
         peak, last = _peak_rain_and_last_update([r["hex_id"] for r in rows])
         s, n, w, e = repository.REGION_BBOX[code]
         out.append(dict(region_code=code, worst_tier=worst, scored_hexes=len(rows), tier_counts=counts,
+                        village_tier_counts=village_counts, villages_with_scores=len(village_worst),
                         center=dict(lat=(s + n) / 2, lon=(w + e) / 2),
                         peak_rainfall_24h_mm=peak, last_updated=last,
                         region_label=(rows[0].get("region_label") if rows else None)))
-    return {"regions": out, "basis": "latest stored score per hex (stale scores excluded); "
-                                     "peak rainfall is null where the 24 h rainfall was not stored"}
+    return {"regions": out, "basis": "latest stored score per hex (stale scores excluded), the same rows the map "
+                                     "draws; a village takes the worst tier of its scored cells (cells outside every "
+                                     "village footprint count toward the nearest village); peak rainfall is null "
+                                     "where the 24 h rainfall was not stored"}
 
 
 def _peak_rain_and_last_update(hex_ids: list[str]):

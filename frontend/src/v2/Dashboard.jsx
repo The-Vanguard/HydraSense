@@ -73,8 +73,7 @@ export default function Dashboard() {
 
         {tab === 'overview' && (
           <>
-            <Kpis summary={d.summary} summaryError={d.summaryError} regionStatus={d.regionStatus}
-                  region={d.region} national={d.national} />
+            <Kpis regionStatus={d.regionStatus} region={d.region} national={d.national} />
             <div className="hs2-main">
               <Sidebar region={d.region} onRegion={d.selectRegion} rainSource={rainSource}
                        soilSat={d.risk?.inputs?.soil_saturation_ratio} wsMessages={d.wsMessages}

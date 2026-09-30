@@ -52,7 +52,7 @@ export default function useDashboard() {
   useEffect(() => { try { localStorage.setItem('hs2-region', region); } catch { /* ignore */ } }, [region]);
 
   // ── polled data ────────────────────────────────────────────────────────
-  const regionStatus = usePoll(() => getRegionStatus(), 60_000, []);
+  const regionStatus = usePoll(() => getRegionStatus(), 30_000, []);   // same cadence as the map
   const summary = usePoll(() => getVillageSummary(region), 90_000, [region]);
   const hexes = usePoll(() => (national ? Promise.resolve([]) : getRiskMap(null, region)), 30_000, [region]);
   const villages = usePoll(() => (national ? Promise.resolve(null) : getVillagePriority(region, 500)),
