@@ -52,7 +52,7 @@ function AlertItem({ item }) {
               color: item.tier === 'Red' ? 'var(--tier-red)' : 'var(--tier-orange)',
               textTransform: 'uppercase',
             }}>
-              CAP Alert — {item.tier}
+              {item.cap_payload?.status === 'Exercise' ? 'EXERCISE CAP (not sent)' : 'CAP Alert'} — {item.tier}
             </span>
           )}
           <div style={{ marginTop: 3, fontSize: 12, color: 'var(--text-primary)' }}>{getMessage(item)}</div>

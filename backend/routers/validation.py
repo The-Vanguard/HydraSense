@@ -49,7 +49,15 @@ def get_loeo():
         results = []
         if LOEO_RESULTS_PATH.exists():
             results = sanitize_nans(json.loads(LOEO_RESULTS_PATH.read_text(encoding="utf-8")))
-        return {"summary": summary, "per_event_results": results}
+        warning = None
+        if summary.get("false_positive_rate") is None:
+            warning = ("Detection-only run: no non-event (negative) samples were scored, so the detection rate "
+                       "says nothing about false alarms and is not a skill measure. It evaluated the retired "
+                       "fusion model, not the physics-first index used live. Event-held-out results with "
+                       "negatives are in data/validation/baseline_v0_results.json (landslide ROC-AUC about "
+                       "0.55-0.66, flash floods at chance).")
+        return {"summary": summary, "per_event_results": results, "reliability_warning": warning,
+                "evidence_grade": "illustrative" if warning else "unassessed"}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Error reading LOEO results: {exc}")
 

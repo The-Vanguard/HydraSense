@@ -74,6 +74,7 @@ class ScenarioInput(BaseModel):
     rain_intensity_mm_hr: Optional[float] = None
     antecedent_precipitation_index: Optional[float] = None
     soil_saturation_ratio: Optional[float] = None
+    hand_m: Optional[float] = None               # height above nearest drainage (flood term of the index)
     factor_of_safety: Optional[float] = None
     factor_of_safety_min: Optional[float] = None
     factor_of_safety_max: Optional[float] = None

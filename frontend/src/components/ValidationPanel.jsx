@@ -69,6 +69,12 @@ export default function ValidationPanel() {
       </div>
 
       {error && !current && <div style={{ color: '#ef4444', fontSize: 11 }}>{error}</div>}
+      {apiLoeo?.reliability_warning && (
+        <div style={{ fontSize: 10.5, lineHeight: 1.45, padding: '6px 8px', margin: '6px 0', borderRadius: 6,
+                      background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.4)', color: 'var(--warning)' }}>
+          <strong>Illustrative only.</strong> {apiLoeo.reliability_warning}
+        </div>
+      )}
       {!current && !error && <div className="empty-state">Loading…</div>}
 
       {current && STATS_DEF.map((s, i) => (

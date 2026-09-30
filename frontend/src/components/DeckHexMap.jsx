@@ -18,7 +18,7 @@ import maplibregl from 'maplibre-gl';
 import DeckGL from '@deck.gl/react';
 import { H3HexagonLayer } from '@deck.gl/geo-layers';
 import { ScatterplotLayer } from '@deck.gl/layers';
-import { LinearInterpolator } from '@deck.gl/core';
+import { LinearInterpolator, WebMercatorViewport } from '@deck.gl/core';
 import { cellToLatLng } from 'h3-js';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
@@ -27,6 +27,8 @@ import ErrorBoundary from './ErrorBoundary';
 
 // Token-free Carto Dark Matter basemap style (matches dark command center theme)
 const BASEMAP_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
+const BASEMAP_LIGHT = 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json';
+const INDIA_VIEW = { longitude: 82.8, latitude: 23.2, zoom: 4.3, pitch: 0, bearing: 0 };
 
 // Default view — Wayanad pilot hex cluster (lat 11.51, lng 76.05)
 const INITIAL_VIEW = {
@@ -98,8 +100,33 @@ function DeckHexMapInner({
   onEventSelect,
   events = [],
   hazardMode = 'compound',
+  regionMarkers = [],          // [{region_code, label, lat, lon, worst_tier}] -- national view
+  onRegionClick,
+  nationalView = false,
+  light = false,
 }) {
-  const [viewState, setViewState] = useState(INITIAL_VIEW);
+  const [viewState, setViewState] = useState(nationalView ? INDIA_VIEW : INITIAL_VIEW);
+
+  // National view: fit all region markers into the actual map size whenever it is switched on.
+  const wrapRef = useRef(null);
+  const markerKey = regionMarkers.map(m => m.region_code).join(',');
+  useEffect(() => {
+    if (!nationalView) return;
+    let target = INDIA_VIEW;
+    const el = wrapRef.current;
+    if (regionMarkers.length > 1 && el && el.clientWidth > 50 && el.clientHeight > 50) {
+      const lats = regionMarkers.map(m => m.lat), lons = regionMarkers.map(m => m.lon);
+      try {
+        const vp = new WebMercatorViewport({ width: el.clientWidth, height: el.clientHeight });
+        const f = vp.fitBounds([[Math.min(...lons), Math.min(...lats)], [Math.max(...lons), Math.max(...lats)]],
+                               { padding: Math.min(60, el.clientWidth / 8) });
+        target = { longitude: f.longitude, latitude: f.latitude, zoom: Math.min(6, f.zoom), pitch: 0, bearing: 0 };
+      } catch { /* keep INDIA_VIEW */ }
+    }
+    setViewState(prev => ({ ...prev, ...target, transitionDuration: 900,
+      transitionInterpolator: new LinearInterpolator(['latitude', 'longitude', 'zoom']) }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nationalView, markerKey]);
   const [hoverInfo, setHoverInfo] = useState(null);
   const deckRef = useRef(null);
 
@@ -107,7 +134,7 @@ function DeckHexMapInner({
   // would throw away the user's pan and zoom every 10 seconds.
   const fitKeyRef = useRef(null);
   useEffect(() => {
-    if (!hexes || hexes.length === 0) return;
+    if (!hexes || hexes.length === 0) { fitKeyRef.current = null; return; }
     const fitKey = `${hexes[0]?.region_code}|${hexes[0]?.hex_id}|${hexes.length}`;
     if (fitKeyRef.current === fitKey) return;
     fitKeyRef.current = fitKey;
@@ -213,10 +240,28 @@ function DeckHexMapInner({
     onClick: ({ object }) => { if (object) onEventSelect?.(object); },
   });
 
-  const layers = [hexLayer, dotLayer, eventLayer];
+  // ── Region markers (national view): one circle per region, coloured by its worst current tier ──
+  const regionLayer = new ScatterplotLayer({
+    id: 'region-markers',
+    data: regionMarkers,
+    pickable: true,
+    getPosition: d => [d.lon, d.lat, 0],
+    getRadius: 22000,
+    radiusMinPixels: 9,
+    radiusMaxPixels: 26,
+    getFillColor: d => (TIER_RGBA[d.worst_tier] ? [...TIER_RGBA[d.worst_tier].slice(0, 3), 200] : [120, 120, 120, 160]),
+    getLineColor: [255, 255, 255, 230],
+    stroked: true,
+    lineWidthMinPixels: 2,
+    onClick: ({ object }) => { if (object) onRegionClick?.(object.region_code); },
+    onHover: info => setHoverInfo(info.object ? info : null),
+    updateTriggers: { getFillColor: [regionMarkers] },
+  });
+
+  const layers = [hexLayer, dotLayer, eventLayer, regionLayer];
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+    <div ref={wrapRef} style={{ position: 'relative', width: '100%', height: '100%' }}>
       <DeckGL
         ref={deckRef}
         viewState={viewState}
@@ -227,7 +272,7 @@ function DeckHexMapInner({
       >
         <Map
           mapLib={maplibregl}
-          mapStyle={BASEMAP_STYLE}
+          mapStyle={light ? BASEMAP_LIGHT : BASEMAP_STYLE}
           reuseMaps
           attributionControl={false}
         >
@@ -252,6 +297,14 @@ function DeckHexMapInner({
           maxWidth: 240,
           boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
         }}>
+          {hoverInfo.object.region_code && !hoverInfo.object.hex_id ? (
+            <div style={{ fontWeight: 700 }}>
+              {hoverInfo.object.label || hoverInfo.object.region_code}
+              <div style={{ fontWeight: 400, color: '#8b949e' }}>
+                worst current tier: {hoverInfo.object.worst_tier || 'no scores'} · click to open
+              </div>
+            </div>
+          ) : (<>
           <div style={{ fontWeight: 700, marginBottom: 4 }}>
             {hexTier(hoverInfo.object, hazardMode)}
             {hoverInfo.object.confidence_score != null && (
@@ -292,6 +345,7 @@ function DeckHexMapInner({
               Landslide: {hoverInfo.object.landslide_tier}
             </div>
           )}
+          </>)}
         </div>
       )}
     </div>
