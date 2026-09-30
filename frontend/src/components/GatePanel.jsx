@@ -78,21 +78,21 @@ export default function GatePanel() {
 
       {gates.map((g) => (
         <div key={g.hex_id} style={{
-          background: 'rgba(239,68,68,0.08)',
-          border: '1px solid rgba(239,68,68,0.3)',
-          borderRadius: 6, padding: '10px 12px', marginBottom: 10,
+          background: 'rgba(239,68,68,0.06)',
+          border: '1px solid rgba(239,68,68,0.25)',
+          borderRadius: 'var(--r-xs)', padding: '10px 12px', marginBottom: 10,
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-            <code style={{ fontSize: 11, color: '#e6edf3' }}>{g.hex_id}</code>
-            <span style={{ fontSize: 11, color: '#f87171', fontWeight: 700 }}>
+            <code style={{ fontSize: 11, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>{g.hex_id}</code>
+            <span style={{ fontSize: 11, color: 'var(--tier-red)', fontWeight: 700 }}>
               Risk: {g.risk_score?.toFixed(1)}
             </span>
           </div>
-          <div style={{ fontSize: 10, color: '#8b949e', marginBottom: 8 }}>
+          <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 8 }}>
             Created: {g.created_at ? new Date(g.created_at).toLocaleTimeString() : '—'} ·
             Expires 10 min after creation
           </div>
-          <div style={{ fontSize: 11, color: '#e6edf3', marginBottom: 6 }}>
+          <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 6 }}>
             Approvals {g.approvals_count ?? 0}/{g.approvals_required ?? 2}
             {(g.approvals || []).map((a) => ` · ${a.operator_id} (${a.role.replace('_', ' ')})`)}
             {g.roles_needed?.length ? ` · waiting for: ${g.roles_needed.map((r) => r.replace('_', ' ')).join(', ')}` : ''}
@@ -133,10 +133,10 @@ export default function GatePanel() {
 
       {result && (
         <div style={{
-          padding: '6px 10px', borderRadius: 4, fontSize: 11, marginTop: 4,
-          background: result.success ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
-          border: `1px solid ${result.success ? 'rgba(34,197,94,0.4)' : 'rgba(239,68,68,0.4)'}`,
-          color: result.success ? '#4ade80' : '#f87171',
+          padding: '6px 10px', borderRadius: 'var(--r-xs)', fontSize: 11, marginTop: 4,
+          background: result.success ? 'var(--success-soft)' : 'var(--danger-soft)',
+          border: `1px solid ${result.success ? 'rgba(16,185,129,0.35)' : 'rgba(239,68,68,0.35)'}`,
+          color: result.success ? 'var(--success)' : 'var(--danger)',
         }}>
           {result.message}
         </div>

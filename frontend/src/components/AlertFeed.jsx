@@ -1,4 +1,4 @@
-﻿/**
+/**
  * AlertFeed.jsx — Phase 12
  * Polls GET /alert/feed every 10s.
  * CAP alerts and downgrade events rendered as DISTINCT item types (SRS §17).
@@ -43,34 +43,34 @@ function AlertItem({ item }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
           {isDowngrade ? (
-            <span style={{ fontSize: 10, fontWeight: 600, color: '#8b949e', textTransform: 'uppercase' }}>
+            <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
               ↓ Downgrade
             </span>
           ) : (
             <span style={{
               fontSize: 10, fontWeight: 700,
-              color: item.tier === 'Red' ? '#ef4444' : '#f97316',
+              color: item.tier === 'Red' ? 'var(--tier-red)' : 'var(--tier-orange)',
               textTransform: 'uppercase',
             }}>
               CAP Alert — {item.tier}
             </span>
           )}
-          <div style={{ marginTop: 3, fontSize: 12 }}>{getMessage(item)}</div>
-          <div style={{ marginTop: 2, fontSize: 10, color: '#484f58', fontFamily: 'monospace' }}>
+          <div style={{ marginTop: 3, fontSize: 12, color: 'var(--text-primary)' }}>{getMessage(item)}</div>
+          <div style={{ marginTop: 2, fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
             {item.hex_id}
           </div>
         </div>
-        <div style={{ fontSize: 10, color: '#484f58', flexShrink: 0, marginLeft: 8 }}>
+        <div style={{ fontSize: 10, color: 'var(--text-muted)', flexShrink: 0, marginLeft: 8 }}>
           {formatTime(item.timestamp)}
         </div>
       </div>
       {!isDowngrade && shelter && (
-        <div style={{ marginTop: 4, fontSize: 10, color: '#8b949e' }}>
+        <div style={{ marginTop: 4, fontSize: 10, color: 'var(--text-muted)' }}>
           Nearest shelter: {shelter.name} ({(shelter.distance_m / 1000).toFixed(1)} km)
         </div>
       )}
       {!isDowngrade && item.lead_time_min && (
-        <div style={{ marginTop: 2, fontSize: 10, color: '#f97316' }}>
+        <div style={{ marginTop: 2, fontSize: 10, color: 'var(--tier-orange)' }}>
           Lead time: {Math.floor(item.lead_time_min / 60)}h {item.lead_time_min % 60}min
         </div>
       )}

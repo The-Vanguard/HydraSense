@@ -1,4 +1,4 @@
-﻿/**
+/**
  * ValidationPanel.jsx — HydraSense Validation Metrics
  * LOEO cross-validation benchmark stats.
  * Rows animate in one-by-one on first load.
@@ -16,8 +16,8 @@ function Stat({ label, value, dim, visible }) {
         transition: 'opacity 0.35s ease, transform 0.35s ease',
       }}
     >
-      <span style={{ color: '#8b949e' }}>{label}</span>
-      <span className="loeo-val" style={dim ? { color: '#484f58' } : {}}>
+      <span style={{ color: 'var(--text-muted)' }}>{label}</span>
+      <span className="loeo-val" style={dim ? { color: 'var(--text-muted)' } : {}}>
         {value ?? '—'}
       </span>
     </div>
@@ -81,7 +81,7 @@ export default function ValidationPanel() {
       ))}
 
       {current?.data_completeness_note && (
-        <div style={{ fontSize: 9, color: '#6e7681', marginTop: 8, paddingTop: 8, borderTop: '1px solid #30363d', lineHeight: 1.4 }}>
+        <div style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)', lineHeight: 1.4 }}>
           {current.data_completeness_note}
         </div>
       )}

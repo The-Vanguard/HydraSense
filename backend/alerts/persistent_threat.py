@@ -27,6 +27,7 @@ API surface:
 from __future__ import annotations
 
 import json
+import threading
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -95,10 +96,14 @@ def _get_state(hex_id: str) -> PersistentThreatState:
     return PersistentThreatState(hex_id=hex_id)
 
 
+_STATE_LOCK = threading.RLock()     # the slow cycle scores hexes in parallel threads
+
+
 def _save_state(state: PersistentThreatState) -> None:
-    all_states = _load_all()
-    all_states[state.hex_id] = state.to_dict()
-    _save_all(all_states)
+    with _STATE_LOCK:
+        all_states = _load_all()
+        all_states[state.hex_id] = state.to_dict()
+        _save_all(all_states)
 
 
 # ---------------------------------------------------------------------------

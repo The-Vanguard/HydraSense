@@ -53,22 +53,19 @@ export default function IncidentActionPlan({ readOnly = false, selectedHex = nul
     <div className="panel iap-panel" style={{
       margin: '0 12px 10px',
       padding: '12px',
-      border: '1px dashed #38bdf888',
-      background: 'rgba(13, 17, 23, 0.95)',
-      borderRadius: '6px',
       position: 'relative',
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.05em', color: '#e6edf3' }}>
+          <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.05em', color: 'var(--text-primary)' }}>
             INCIDENT ACTION PLAN (IAP)
           </span>
           <span style={{
             fontSize: 9,
             padding: '1px 5px',
             borderRadius: 3,
-            background: 'rgba(56, 189, 248, 0.15)',
-            color: '#38bdf8',
+            background: 'rgba(46, 125, 239, 0.12)',
+            color: 'var(--accent)',
             fontFamily: 'var(--font-mono, monospace)',
           }}>
             ILLUSTRATIVE · SAMPLE TASKS
@@ -78,10 +75,10 @@ export default function IncidentActionPlan({ readOnly = false, selectedHex = nul
           <button
             onClick={() => setIsAdding(a => !a)}
             style={{
-              background: '#21262d',
-              border: '1px solid #30363d',
-              borderRadius: 4,
-              color: '#38bdf8',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--r-xs)',
+              color: 'var(--accent)',
               fontSize: 10,
               padding: '2px 8px',
               cursor: 'pointer',
@@ -92,8 +89,8 @@ export default function IncidentActionPlan({ readOnly = false, selectedHex = nul
         )}
       </div>
 
-      <div style={{ fontSize: 10, color: '#8b949e', marginBottom: 8 }}>
-        Operational Area: <strong style={{ color: '#c9d1d9' }}>{regionName}</strong>
+      <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 8 }}>
+        Operational Area: <strong style={{ color: 'var(--text-secondary)' }}>{regionName}</strong>
         {selectedHex?.village && ` · Focus: ${selectedHex.village}`}
       </div>
 
@@ -101,9 +98,9 @@ export default function IncidentActionPlan({ readOnly = false, selectedHex = nul
         <form onSubmit={handleAddOrder} style={{
           marginBottom: 10,
           padding: 8,
-          background: '#161b22',
-          border: '1px solid #30363d',
-          borderRadius: 4,
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border)',
+          borderRadius: 'var(--r-xs)',
           display: 'flex',
           flexDirection: 'column',
           gap: 6,
@@ -113,14 +110,8 @@ export default function IncidentActionPlan({ readOnly = false, selectedHex = nul
             placeholder="Unit / Force (e.g. NDRF Unit 02, SDRF Team)"
             value={newTeam}
             onChange={e => setNewTeam(e.target.value)}
-            style={{
-              background: '#0d1117',
-              border: '1px solid #30363d',
-              color: '#e6edf3',
-              padding: '4px 8px',
-              borderRadius: 3,
-              fontSize: 11,
-            }}
+            className="header-search-input"
+            style={{ width: '100%' }}
             required
           />
           <input
@@ -147,9 +138,9 @@ export default function IncidentActionPlan({ readOnly = false, selectedHex = nul
           <div
             key={ord.id}
             style={{
-              background: '#161b22',
-              border: '1px solid #21262d',
-              borderRadius: 4,
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--r-xs)',
               padding: '6px 8px',
               fontSize: 11,
               display: 'flex',
@@ -158,7 +149,7 @@ export default function IncidentActionPlan({ readOnly = false, selectedHex = nul
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontWeight: 600, color: '#f0f6fc' }}>{ord.team}</span>
+              <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{ord.team}</span>
               <span
                 onClick={() => handleStatusCycle(ord.id)}
                 title={readOnly ? '' : 'Click to cycle status'}
@@ -169,20 +160,20 @@ export default function IncidentActionPlan({ readOnly = false, selectedHex = nul
                   padding: '1px 5px',
                   borderRadius: 3,
                   cursor: readOnly ? 'default' : 'pointer',
-                  background: ord.status === 'Active' ? 'rgba(34, 197, 94, 0.2)'
-                    : ord.status === 'Completed' ? 'rgba(148, 163, 184, 0.2)'
-                    : 'rgba(234, 179, 8, 0.2)',
-                  color: ord.status === 'Active' ? '#4ade80'
-                    : ord.status === 'Completed' ? '#94a3b8'
-                    : '#facc15',
-                  border: `1px solid ${ord.status === 'Active' ? '#22c55e44' : ord.status === 'Completed' ? '#64748b44' : '#eab30844'}`,
+                  background: ord.status === 'Active' ? 'rgba(16, 185, 129, 0.15)'
+                    : ord.status === 'Completed' ? 'rgba(148, 163, 184, 0.15)'
+                    : 'rgba(245, 158, 11, 0.15)',
+                  color: ord.status === 'Active' ? 'var(--tier-green)'
+                    : ord.status === 'Completed' ? 'var(--text-muted)'
+                    : 'var(--tier-yellow)',
+                  border: `1px solid ${ord.status === 'Active' ? 'rgba(16,185,129,0.3)' : ord.status === 'Completed' ? 'rgba(148,163,184,0.2)' : 'rgba(245,158,11,0.3)'}`,
                 }}
               >
                 {ord.status}
               </span>
             </div>
-            <div style={{ color: '#c9d1d9', fontSize: 10 }}>{ord.task}</div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#8b949e', fontSize: 9, marginTop: 2 }}>
+            <div style={{ color: 'var(--text-secondary)', fontSize: 10 }}>{ord.task}</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: 9, marginTop: 2 }}>
               <span>Sector: {ord.sector}</span>
               <span>ETA: {ord.eta} · Route: {ord.route}</span>
             </div>

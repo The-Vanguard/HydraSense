@@ -138,16 +138,7 @@ export default function AppHeader({
         <select
           value={selectedRegionCode}
           onChange={(e) => onRegionChange?.(e.target.value)}
-          style={{
-            background: '#161b22',
-            border: '1px solid #30363d',
-            color: '#e6edf3',
-            fontSize: 11,
-            borderRadius: 4,
-            padding: '4px 8px',
-            outline: 'none',
-            cursor: 'pointer',
-          }}
+          className="header-region-select"
           title="Switch Onboarded Region (§14.3 Demo Shortlist)"
         >
           {ONBOARDED_REGIONS.map((r) => (
@@ -165,16 +156,7 @@ export default function AppHeader({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             disabled={isResolving}
-            style={{
-              background: '#0d1117',
-              border: '1px solid #30363d',
-              color: '#e6edf3',
-              fontSize: 11,
-              borderRadius: 4,
-              padding: '4px 8px',
-              width: 190,
-              outline: 'none',
-            }}
+            className="header-search-input"
           />
           <button
             type="submit"
@@ -198,12 +180,7 @@ export default function AppHeader({
       {/* ── Deliberate IoT Failure Demo Button (§14.5) ── */}
       <button
         onClick={onToggleIoT}
-        className={iotOffline ? 'cir-btn cir-btn--ghost' : 'cir-btn'}
-        style={{
-          border: `1px solid ${iotOffline ? 'var(--danger)' : 'var(--blue)'}`,
-          color: iotOffline ? 'var(--danger)' : 'var(--blue)',
-          padding: '6px 12px',
-        }}
+        className={iotOffline ? 'iot-btn-offline' : 'iot-btn-live'}
         title="Toggle deliberate sensor failure to demonstrate live fallback to satellite/forecast (Final.md §14.5)"
       >
         <span style={{ fontSize: 13 }}>{iotOffline ? '⚡' : '📡'}</span>

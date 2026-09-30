@@ -31,6 +31,7 @@ API surface (registered in main.py as /alert/gate/...):
 from __future__ import annotations
 
 import json
+import threading
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Any, Literal
@@ -141,10 +142,14 @@ def _get(hex_id: str) -> GateRequest | None:
     return None
 
 
+_STATE_LOCK = threading.RLock()     # the slow cycle scores hexes in parallel threads
+
+
 def _save(req: GateRequest) -> None:
-    all_gates = _load_all()
-    all_gates[req.hex_id] = req.to_dict()
-    _save_all(all_gates)
+    with _STATE_LOCK:
+        all_gates = _load_all()
+        all_gates[req.hex_id] = req.to_dict()
+        _save_all(all_gates)
 
 
 # ---------------------------------------------------------------------------

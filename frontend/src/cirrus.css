@@ -49,15 +49,19 @@
 }
 
 [data-theme="dark"] {
-  --bg: #0a0f1d;
-  --bg-warm: #0a0f1d;
-  --text: #f3f4f6;
-  --cloud: #111827;
-  --edge: #1f2937;
+  --bg:          #0a0f1d;
+  --bg-warm:     #0a0f1d;
+  --text:        #f3f4f6;
+  --cloud:       #111827;
+  --edge:        #1f2937;
   --edge-subtle: #172032;
-  --sky: #0f172a;
-  --sky-tint: #111c33;
-  --mist: #9aa4b2;
+  --sky:         #0f172a;
+  --sky-tint:    #111c33;
+  --sky-accent:  #0c1f3f;
+  --mist:        #9aa4b2;
+  --mist-light:  #64748b;
+  --ink:         #e5e7eb;
+  --ink-hover:   #f9fafb;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -109,9 +113,14 @@ h1, h2, h3, h4, .display { font-family: var(--font-display); letter-spacing: -0.
   border-radius: var(--r-pill);
   box-shadow: var(--sh-btn);
   cursor: pointer;
-  transition: transform var(--dur) var(--ease), background-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+  white-space: nowrap;
+  transition:
+    transform        var(--dur) var(--ease),
+    background-color var(--dur) var(--ease),
+    box-shadow       var(--dur) var(--ease);
 }
-.cir-btn:hover { background: var(--ink-hover); transform: translateY(-1px); }
+.cir-btn:hover  { background: var(--ink-hover); transform: translateY(-1px); }
+.cir-btn:active { transform: translateY(0); }
 .cir-btn--accent { background: var(--blue); }
 .cir-btn--accent:hover { background: var(--blue-hover); }
 .cir-btn--ghost { background: var(--cloud); color: var(--ink); border: 1px solid var(--edge); box-shadow: var(--sh-sm); }
@@ -169,3 +178,27 @@ h1, h2, h3, h4, .display { font-family: var(--font-display); letter-spacing: -0.
   border-radius: var(--r-inner);
   box-shadow: var(--sh-elevated);
 }
+
+/* ── Segmented Control ──────────────────────────────────────────────────── */
+.hs-seg {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  background: var(--cloud);
+  border: 1px solid var(--edge);
+  border-radius: var(--r-pill);
+  box-shadow: var(--sh-sm);
+}
+.hs-seg button {
+  min-height: 30px;
+  padding: 0 14px;
+  font: 500 13px var(--font-sans);
+  color: var(--mist);
+  background: transparent;
+  border: 0;
+  border-radius: var(--r-pill);
+  cursor: pointer;
+  transition: background-color var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.hs-seg button.is-active { background: var(--ink); color: var(--cloud); }
+[data-theme="dark"] .hs-seg button.is-active { background: var(--blue); color: #0a0f1d; }

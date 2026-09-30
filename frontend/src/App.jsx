@@ -360,7 +360,7 @@ export default function App() {
           </div>
 
           {hexes.length === 0 && (
-            <div style={{ padding: '8px 14px', background: '#3b2f0b', color: '#fcd34d', fontSize: 12, lineHeight: 1.4 }}>
+            <div style={{ padding: '8px 14px', background: 'var(--warning-soft)', color: 'var(--warning)', fontSize: 12, lineHeight: 1.4, borderBottom: '1px solid rgba(245,158,11,0.25)' }}>
               No scored hexes for this region yet. Scores appear after the scoring cycle has run for it
               (set HYDRASENSE_SCORE_REGIONS on the backend). Nothing is estimated in the meantime.
             </div>

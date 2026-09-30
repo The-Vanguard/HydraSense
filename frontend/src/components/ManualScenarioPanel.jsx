@@ -276,20 +276,21 @@ export default function ManualScenarioPanel({ onClose, externalPointRequest }) {
   const handleReset = () => { setValues({}); setResult(null); setError(null); setSelectedPointId(''); setPointNote(null); };
 
   return (
-    <div className="panel" style={{ borderColor: '#a78bfa' }}>
+    <div className="panel" style={{ borderColor: 'rgba(167, 139, 250, 0.5)' }}>
       <div className="panel-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span>Manual Scenario</span>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#8b949e', cursor: 'pointer', fontSize: 14, padding: 0 }} title="Close">✕</button>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 14, padding: 0 }} title="Close">✕</button>
       </div>
 
       <div style={{ marginBottom: 10 }}>
-        <label style={{ fontSize: 10, fontWeight: 700, color: '#8b949e', display: 'block', marginBottom: 4 }}>
+        <label style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: 4, letterSpacing: '0.08em' }}>
           START FROM A REAL POINT (optional)
         </label>
         <select
           value={selectedPointId}
           onChange={(e) => handlePointSelect(e.target.value)}
-          style={{ width: '100%', background: '#0d1117', border: '1px solid #30363d', borderRadius: 4, color: '#e6edf3', fontSize: 11, padding: '5px 6px' }}
+          className="scenario-select"
+          style={{ width: '100%' }}
         >
           <option value="">— none —</option>
           {['Wayanad pilot', 'Other real locations (partial terrain only)'].map((group) => {
@@ -307,7 +308,7 @@ export default function ManualScenarioPanel({ onClose, externalPointRequest }) {
           })}
         </select>
         {pointNote && (
-          <div style={{ fontSize: 10, color: '#8b949e', marginTop: 4, lineHeight: 1.4 }}>{pointNote}</div>
+          <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.4 }}>{pointNote}</div>
         )}
       </div>
 
@@ -316,14 +317,15 @@ export default function ManualScenarioPanel({ onClose, externalPointRequest }) {
       <div style={{ maxHeight: 320, overflowY: 'auto', marginBottom: 10 }}>
         {NUMERIC_FIELDS.map(([group, fields]) => (
           <div key={group} style={{ marginBottom: 8 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#8b949e', marginBottom: 4 }}>{group.toUpperCase()}</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 4, letterSpacing: '0.08em' }}>{group.toUpperCase()}</div>
             {fields.map(([key, label]) => (
               <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                <label style={{ fontSize: 11, color: '#c9d1d9' }}>{label}</label>
+                <label style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{label}</label>
                 <input
                   type="number" step="any" value={values[key] ?? ''}
                   onChange={(e) => setField(key, e.target.value === '' ? '' : Number(e.target.value))}
-                  style={{ width: 90, background: '#0d1117', border: '1px solid #30363d', borderRadius: 4, color: '#e6edf3', fontSize: 11, padding: '3px 6px' }}
+                  className="scenario-input"
+                  style={{ width: 90 }}
                 />
               </div>
             ))}
@@ -331,19 +333,19 @@ export default function ManualScenarioPanel({ onClose, externalPointRequest }) {
         ))}
 
         <div style={{ marginBottom: 8 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: '#8b949e', marginBottom: 4 }}>LAND / SUSCEPTIBILITY</div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 4, letterSpacing: '0.08em' }}>LAND / SUSCEPTIBILITY</div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-            <label style={{ fontSize: 11, color: '#c9d1d9' }}>Land use class</label>
+            <label style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Land use class</label>
             <select value={values.land_use_class ?? ''} onChange={(e) => setField('land_use_class', e.target.value || undefined)}
-              style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: 4, color: '#e6edf3', fontSize: 11, padding: '3px 6px' }}>
+              className="scenario-select">
               <option value="">—</option>
               {LAND_USE_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
             </select>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-            <label style={{ fontSize: 11, color: '#c9d1d9' }}>GSI susceptibility</label>
+            <label style={{ fontSize: 11, color: 'var(--text-secondary)' }}>GSI susceptibility</label>
             <select value={values.gsi_susceptibility_class ?? ''} onChange={(e) => setField('gsi_susceptibility_class', e.target.value || undefined)}
-              style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: 4, color: '#e6edf3', fontSize: 11, padding: '3px 6px' }}>
+              className="scenario-select">
               <option value="">—</option>
               {GSI_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
             </select>
@@ -351,10 +353,10 @@ export default function ManualScenarioPanel({ onClose, externalPointRequest }) {
         </div>
 
         <div style={{ marginBottom: 8 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: '#8b949e', marginBottom: 4 }}>SIGNALS</div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 4, letterSpacing: '0.08em' }}>SIGNALS</div>
           {BOOL_FIELDS.map(([key, label]) => (
             <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-              <label style={{ fontSize: 11, color: '#c9d1d9' }}>{label}</label>
+              <label style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{label}</label>
               <input type="checkbox" checked={!!values[key]} onChange={(e) => setField(key, e.target.checked)} />
             </div>
           ))}
@@ -377,7 +379,7 @@ export default function ManualScenarioPanel({ onClose, externalPointRequest }) {
       )}
 
       {result && (
-        <div style={{ borderTop: '1px solid #30363d', paddingTop: 10 }}>
+        <div style={{ borderTop: '1px solid var(--border)', paddingTop: 10 }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 6 }}>
             <span style={{ fontSize: 28, fontWeight: 800, color: TIER_COLORS[result.tier] || '#8b949e' }}>{result.risk_score}</span>
             <span style={{ fontSize: 12, color: '#8b949e' }}>/100</span>
@@ -386,7 +388,7 @@ export default function ManualScenarioPanel({ onClose, externalPointRequest }) {
               color: TIER_COLORS[result.tier] || '#8b949e', border: `1px solid ${TIER_COLORS[result.tier] || '#8b949e'}`,
             }}>{result.tier}</span>
           </div>
-          <div style={{ fontSize: 11, color: '#8b949e', marginBottom: 6 }}>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>
             Confidence {result.confidence_score}% · {result.n_fields_provided}/{result.n_fields_total} fields provided
           </div>
 
@@ -402,23 +404,23 @@ export default function ManualScenarioPanel({ onClose, externalPointRequest }) {
           {/* Lead time -- real SRS §12 forecast walk (backend/lead_time.py's
               method), run against real Open-Meteo rainfall for the selected
               point merged with the hypothetical inputs above. */}
-          <div style={{ borderTop: '1px solid #30363d', paddingTop: 10, marginBottom: 10 }}>
+          <div style={{ borderTop: '1px solid var(--border)', paddingTop: 10, marginBottom: 10 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
-              <span style={{ fontSize: 11, color: '#8b949e' }}>Lead time (Red crossing)</span>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Lead time (Red crossing)</span>
               <span style={{
-                fontSize: 9, color: '#6e7681', border: '1px solid #30363d', borderRadius: 3, padding: '1px 5px',
+                fontSize: 9, color: 'var(--text-muted)', border: '1px solid var(--border)', borderRadius: 3, padding: '1px 5px',
               }}>
                 {result.forecast_data_source === 'cached_demo' ? 'cached forecast (live call failed)' : 'live Open-Meteo forecast'}
               </span>
             </div>
             {result.lead_time_basis === 'no_red_crossing_in_forecast_window' ? (
-              <div style={{ fontSize: 12, color: '#8b949e' }}>no_red_crossing_in_forecast_window</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>no_red_crossing_in_forecast_window</div>
             ) : (
               <>
-                <div style={{ fontSize: 22, fontWeight: 800, color: '#e6edf3' }}>
+                <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)' }}>
                   {formatLeadTime(result.lead_time_min) ?? '—'}
                 </div>
-                <div style={{ fontSize: 9, color: '#484f58' }}>{result.lead_time_basis}</div>
+                <div style={{ fontSize: 9, color: 'var(--text-muted)' }}>{result.lead_time_basis}</div>
               </>
             )}
           </div>
@@ -426,9 +428,9 @@ export default function ManualScenarioPanel({ onClose, externalPointRequest }) {
           {/* Factor of safety -- only the value(s) you typed in above, echoed
               back for the gauge (never computed/guessed here). */}
           {result.factor_of_safety != null && (
-            <div style={{ marginBottom: 10, borderTop: '1px solid #30363d', paddingTop: 8 }}>
+            <div style={{ marginBottom: 10, borderTop: '1px solid var(--border)', paddingTop: 8 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: 11 }}>
-                <span style={{ color: '#8b949e' }}>Factor of safety (FS)</span>
+                <span style={{ color: 'var(--text-muted)' }}>Factor of safety (FS)</span>
                 <span style={{
                   fontWeight: 700,
                   color: result.factor_of_safety < 1.0 ? '#ef4444' : result.factor_of_safety < 1.3 ? '#f97316' : '#22c55e',
@@ -437,7 +439,7 @@ export default function ManualScenarioPanel({ onClose, externalPointRequest }) {
                 </span>
               </div>
               {result.factor_of_safety_min != null && result.factor_of_safety_max != null && (
-                <div style={{ fontSize: 9, color: '#484f58' }}>
+                <div style={{ fontSize: 9, color: 'var(--text-muted)' }}>
                   Band: {result.factor_of_safety_min.toFixed(2)} – {result.factor_of_safety_max.toFixed(2)}
                   {result.factor_of_safety_min < 1.0 && result.factor_of_safety_max >= 1.0 && (
                     <span style={{ color: '#ef4444' }}> · straddles failure threshold</span>
@@ -450,8 +452,8 @@ export default function ManualScenarioPanel({ onClose, externalPointRequest }) {
           {/* 24h forward projection -- real forecast rainfall re-run through
               the real model at each hourly step; NOT a historical trend. */}
           {result.projected_trend?.length > 1 && (
-            <div style={{ marginBottom: 10, borderTop: '1px solid #30363d', paddingTop: 8 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#8b949e', marginBottom: 4, letterSpacing: 0.5 }}>
+            <div style={{ marginBottom: 10, borderTop: '1px solid var(--border)', paddingTop: 8 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 4, letterSpacing: 0.5 }}>
                 RISK SCORE — 24H PROJECTION
               </div>
               <ResponsiveContainer width="100%" height={110}>
@@ -459,10 +461,10 @@ export default function ManualScenarioPanel({ onClose, externalPointRequest }) {
                   data={result.projected_trend.map((p) => ({ time: formatHour(p.timestamp), score: p.risk_score, tier: p.tier }))}
                   margin={{ top: 4, right: 4, left: -24, bottom: 0 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#30363d" />
-                  <XAxis dataKey="time" tick={{ fontSize: 9, fill: '#8b949e' }} interval="preserveStartEnd" />
-                  <YAxis domain={[0, 100]} tick={{ fontSize: 9, fill: '#8b949e' }} width={32} />
-                  <Tooltip contentStyle={{ background: '#21262d', border: '1px solid #30363d', fontSize: 11 }} labelStyle={{ color: '#8b949e' }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--edge)" />
+                  <XAxis dataKey="time" tick={{ fontSize: 9, fill: 'var(--text-muted)' }} interval="preserveStartEnd" />
+                  <YAxis domain={[0, 100]} tick={{ fontSize: 9, fill: 'var(--text-muted)' }} width={32} />
+                  <Tooltip contentStyle={{ background: 'var(--cloud)', border: '1px solid var(--edge)', fontSize: 11 }} labelStyle={{ color: 'var(--text-muted)' }} />
                   {TIER_THRESHOLDS.map((t) => (
                     <ReferenceLine
                       key={t.tier} y={t.value} stroke={t.color} strokeDasharray="4 3" strokeOpacity={0.5}
@@ -472,15 +474,15 @@ export default function ManualScenarioPanel({ onClose, externalPointRequest }) {
                   <Line type="monotone" dataKey="score" stroke="#a78bfa" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: '#a78bfa' }} />
                 </LineChart>
               </ResponsiveContainer>
-              <div style={{ fontSize: 9, color: '#6e7681', marginTop: 4, lineHeight: 1.4 }}>
+              <div style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.4 }}>
                 {result.projected_trend_caveat}
               </div>
             </div>
           )}
 
           <div style={{
-            fontSize: 10, color: result.alert_fired ? '#22c55e' : '#8b949e',
-            border: '1px solid #30363d', borderRadius: 4, padding: '6px 8px', lineHeight: 1.4,
+            fontSize: 10, color: result.alert_fired ? 'var(--success)' : 'var(--text-muted)',
+            border: '1px solid var(--border)', borderRadius: 'var(--r-xs)', padding: '6px 8px', lineHeight: 1.4,
           }}>
             {result.alert_detail}
           </div>

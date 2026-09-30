@@ -335,12 +335,19 @@ def run_cycle_all_regions():
 
     hex_ids = legacy + chosen
     scored = 0
-    for hid in hex_ids:
+    # Scoring a hex is dominated by waiting on weather APIs (~4 s each), so hexes are scored in a few
+    # parallel threads.  Kept small (default 6) to stay well inside the free API rate limits.
+    workers = max(1, int(os.environ.get("HYDRASENSE_SCORE_WORKERS", "6")))
+
+    def _one(hid):
         try:
-            res = compute_and_store_risk(hid)
-            if res:
-                scored += 1
+            return bool(compute_and_store_risk(hid))
         except Exception as exc:
             print(f"[risk_engine] error scoring hex {hid}: {exc}")
+            return False
+
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        scored = sum(pool.map(_one, hex_ids))
     print(f"[risk_engine] slow-cycle complete: scored {scored}/{len(hex_ids)} hexes")
     return scored

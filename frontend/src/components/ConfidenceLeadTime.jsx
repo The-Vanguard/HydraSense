@@ -100,19 +100,19 @@ export default function ConfidenceLeadTime({ risk }) {
       </div>
 
       {/* Live rainfall ticker */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, padding: '5px 8px', background: '#0d1117', borderRadius: 6, border: '1px solid #30363d' }}>
-        <span style={{ fontSize: 10, color: '#8b949e' }}>24h Rainfall</span>
-        <span style={{ fontSize: 12, fontWeight: 700, color: '#58a6ff', fontVariantNumeric: 'tabular-nums' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, padding: '5px 8px', background: 'var(--bg-card)', borderRadius: 'var(--r-xs)', border: '1px solid var(--border)' }}>
+        <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>24h Rainfall</span>
+        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', fontVariantNumeric: 'tabular-nums', fontFamily: 'var(--font-mono)' }}>
           {rainVal.toFixed(1)} mm{' '}
-          <span style={{ fontSize: 10, color: rainDir === '↑' ? '#f97316' : '#22c55e' }}>{rainDir}</span>
+          <span style={{ fontSize: 10, color: rainDir === '↑' ? 'var(--tier-orange)' : 'var(--tier-green)' }}>{rainDir}</span>
         </span>
       </div>
 
       {/* Confidence bar */}
       <div style={{ marginBottom: 12 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 11 }}>
-          <span style={{ color: '#8b949e' }}>Confidence</span>
-          <span style={{ fontWeight: 600 }}>{confidence_score}%</span>
+          <span style={{ color: 'var(--text-muted)' }}>Confidence</span>
+          <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>{confidence_score}%</span>
         </div>
         <div className="confidence-bar-wrap">
           <div className="confidence-bar-fill" style={{ width: `${confidence_score}%` }} />
@@ -120,8 +120,8 @@ export default function ConfidenceLeadTime({ risk }) {
       </div>
 
       {/* Lead time */}
-      <div style={{ borderTop: '1px solid #30363d', paddingTop: 10 }}>
-        <div style={{ fontSize: 11, color: '#8b949e', marginBottom: 4 }}>Lead time (Red crossing)</div>
+      <div style={{ borderTop: '1px solid var(--border)', paddingTop: 10 }}>
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>Lead time (Red crossing)</div>
         {noForecast ? (
           <div className="lead-time-basis">no_red_crossing_in_forecast_window</div>
         ) : (
@@ -134,23 +134,23 @@ export default function ConfidenceLeadTime({ risk }) {
 
       {/* Factor of safety + visual band gauge */}
       {fsVal != null && (
-        <div style={{ marginTop: 10, borderTop: '1px solid #30363d', paddingTop: 8 }}>
+        <div style={{ marginTop: 10, borderTop: '1px solid var(--border)', paddingTop: 8 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: 11 }}>
-            <span style={{ color: '#8b949e' }}>Factor of safety (FS)</span>
-            <span style={{ fontWeight: 700, color: fsColor }}>{fsVal.toFixed(2)}</span>
+            <span style={{ color: 'var(--text-muted)' }}>Factor of safety (FS)</span>
+            <span style={{ fontWeight: 700, color: fsColor, fontFamily: 'var(--font-mono)' }}>{fsVal.toFixed(2)}</span>
           </div>
 
           {fsBandVisible && (
-            <div style={{ position: 'relative', height: 14, borderRadius: 4, background: '#0d1117', border: '1px solid #30363d', overflow: 'hidden', marginBottom: 4 }}>
+            <div style={{ position: 'relative', height: 14, borderRadius: 'var(--r-xs)', background: 'var(--bg-card)', border: '1px solid var(--border)', overflow: 'hidden', marginBottom: 4 }}>
               {/* Failure threshold marker at FS=1.0 */}
-              <div style={{ position: 'absolute', left: `${(1.0 / 3) * 100}%`, top: 0, bottom: 0, width: 1, background: '#ef444488' }} />
+              <div style={{ position: 'absolute', left: `${(1.0 / 3) * 100}%`, top: 0, bottom: 0, width: 1, background: 'rgba(239,68,68,0.5)' }} />
               {/* Uncertainty band */}
               <div style={{
                 position: 'absolute',
                 left: `${Math.min(100, (Math.max(0, fsMin) / 3) * 100)}%`,
                 width: `${Math.min(100, ((Math.min(3, fsMax) - Math.max(0, fsMin)) / 3) * 100)}%`,
                 top: 2, bottom: 2,
-                background: fsBandStraddles ? 'rgba(239,68,68,0.35)' : 'rgba(34,197,94,0.25)',
+                background: fsBandStraddles ? 'rgba(239,68,68,0.35)' : 'rgba(16,185,129,0.25)',
                 borderRadius: 3, transition: 'all 0.5s ease',
               }} />
               {/* Current FS value dot */}
@@ -159,15 +159,15 @@ export default function ConfidenceLeadTime({ risk }) {
                 left: `${Math.min(98, Math.max(2, (Math.min(3, fsVal) / 3) * 100))}%`,
                 top: '50%', transform: 'translate(-50%,-50%)',
                 width: 8, height: 8, borderRadius: '50%',
-                background: fsColor, border: '2px solid #0d1117',
+                background: fsColor, border: '2px solid var(--bg-card)',
               }} />
             </div>
           )}
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: '#484f58' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: 'var(--text-muted)' }}>
             {fsBandVisible && <span>Band: {fsMin.toFixed(2)} – {fsMax.toFixed(2)}</span>}
-            {fsBandStraddles && <span style={{ color: '#ef4444' }}>straddles failure threshold</span>}
-            {fsVal < 1.0 && !fsBandStraddles && <span style={{ color: '#ef4444' }}>FS &lt; 1.0 — instability</span>}
+            {fsBandStraddles && <span style={{ color: 'var(--tier-red)' }}>straddles failure threshold</span>}
+            {fsVal < 1.0 && !fsBandStraddles && <span style={{ color: 'var(--tier-red)' }}>FS &lt; 1.0 — instability</span>}
           </div>
         </div>
       )}
@@ -175,7 +175,7 @@ export default function ConfidenceLeadTime({ risk }) {
       {/* fsVal null but the real backend told us why (e.g. this hex has no
           real terrain data yet) -- disclose it instead of just going quiet. */}
       {fsVal == null && factor_of_safety_note && (
-        <div style={{ marginTop: 10, borderTop: '1px solid #30363d', paddingTop: 8, fontSize: 10, color: '#6e7681', lineHeight: 1.4 }}>
+        <div style={{ marginTop: 10, borderTop: '1px solid var(--border)', paddingTop: 8, fontSize: 10, color: 'var(--text-muted)', lineHeight: 1.4 }}>
           Factor of safety (FS): {factor_of_safety_note}
         </div>
       )}

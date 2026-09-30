@@ -12,7 +12,7 @@
   --text-secondary: var(--mist);
   --text-muted:     var(--mist-light);
 
-  /* Tier palette — Cirrus standard tokens */
+  /* Tier palette */
   --tier-green:     var(--success);
   --tier-yellow:    var(--warning);
   --tier-orange:    var(--orange);
@@ -27,7 +27,7 @@
   --shadow:         var(--sh-card);
   --transition:     var(--dur) var(--ease);
 
-  /* Typography — Inter & JetBrains Mono per Cirrus design system */
+  /* Typography aliases */
   --font-mono: var(--font-mono);
   --font-sans: var(--font-sans);
 }
@@ -998,3 +998,371 @@ button { font-family: var(--font-sans); cursor: pointer; }
   font-family: var(--font-mono);
 }
 
+/* ── Dark-mode adaptive: selects and inputs use design tokens ─────────────── */
+select, input[type="text"], input[type="number"] {
+  color-scheme: light dark;
+}
+[data-theme="dark"] select,
+[data-theme="dark"] input[type="text"],
+[data-theme="dark"] input[type="number"] {
+  background: var(--sky);
+  border-color: var(--edge);
+  color: var(--text);
+}
+
+/* ── Component utility classes referenced by JSX components ────────────── */
+
+/* Empty / placeholder state */
+.empty-state {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 12px 0;
+  font-family: var(--font-mono);
+}
+
+/* Hex info row (ConfidenceLeadTime) */
+.hex-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+/* Pulse dot (tier badge) */
+.pulse-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  margin-right: 5px;
+  animation: dotPulse 2.5s ease-in-out infinite;
+}
+
+/* Confidence bar */
+.confidence-bar-wrap {
+  height: 6px;
+  border-radius: var(--r-pill);
+  background: var(--edge);
+  overflow: hidden;
+}
+.confidence-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: inherit;
+  transition: width 0.6s var(--ease);
+}
+
+/* Lead time display */
+.lead-time-val {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+.lead-time-basis {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
+/* LOEO validation stats */
+.loeo-stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  gap: 8px;
+}
+.loeo-stat:last-child { border-bottom: none; }
+.loeo-val {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-align: right;
+}
+
+/* Alert feed items */
+.alert-item {
+  padding: 8px 10px;
+  border-radius: var(--r-xs);
+  margin-bottom: 6px;
+  border-left: 3px solid var(--border);
+  background: var(--bg-card);
+  font-size: 12px;
+  color: var(--text-primary);
+}
+.alert-item.cap {
+  border-left-color: var(--tier-orange);
+  background: rgba(249, 115, 22, 0.06);
+}
+.alert-item.cap.Red {
+  border-left-color: var(--tier-red);
+  background: rgba(239, 68, 68, 0.08);
+}
+.alert-item.downgrade {
+  border-left-color: var(--text-muted);
+  opacity: 0.75;
+}
+
+/* IAP panel — dashed "live document" border */
+.iap-panel {
+  border: 1.5px dashed rgba(46, 125, 239, 0.4) !important;
+  background: var(--bg-card) !important;
+}
+[data-theme="dark"] .iap-panel {
+  background: rgba(15, 23, 42, 0.95) !important;
+}
+
+/* Gate panel — prominent red border */
+.gate-panel {
+  border-color: rgba(239, 68, 68, 0.4) !important;
+}
+
+/* ── AppHeader select/input overrides ────────────────────────────── */
+.header-region-select {
+  background: var(--sky);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  font-size: 11px;
+  font-family: var(--font-sans);
+  border-radius: var(--r-xs);
+  padding: 4px 8px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color var(--dur) var(--ease);
+}
+.header-region-select:focus { border-color: var(--accent); }
+.header-search-input {
+  background: var(--sky);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  font-size: 11px;
+  font-family: var(--font-sans);
+  border-radius: var(--r-xs);
+  padding: 4px 8px;
+  width: 190px;
+  outline: none;
+  transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+.header-search-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(46, 125, 239, 0.14);
+}
+.header-search-input:disabled { opacity: 0.5; cursor: wait; }
+
+/* ── IoT button premium variant ───────────────────────────────── */
+.iot-btn-live {
+  background: var(--cloud);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  border-radius: var(--r-pill);
+  padding: 6px 12px;
+  font: 500 11px var(--font-sans);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all var(--dur) var(--ease);
+  box-shadow: var(--sh-sm);
+}
+.iot-btn-live:hover {
+  background: var(--sky-tint);
+  box-shadow: 0 0 12px rgba(46,125,239,0.25);
+}
+.iot-btn-offline {
+  background: var(--cloud);
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  border-radius: var(--r-pill);
+  padding: 6px 12px;
+  font: 500 11px var(--font-sans);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all var(--dur) var(--ease);
+  box-shadow: var(--sh-sm);
+  animation: iotOfflinePulse 2s ease-in-out infinite;
+}
+@keyframes iotOfflinePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.3); }
+  50%       { box-shadow: 0 0 0 4px rgba(239,68,68,0); }
+}
+
+/* ── ManualScenarioPanel field overrides ─────────────────────── */
+.scenario-select,
+.scenario-input {
+  background: var(--sky);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xs);
+  color: var(--text-primary);
+  font-size: 11px;
+  font-family: var(--font-sans);
+  padding: 3px 6px;
+  transition: border-color var(--dur) var(--ease);
+}
+.scenario-select:focus,
+.scenario-input:focus { border-color: var(--accent); outline: none; }
+
+/* ── GatePanel hex-id code display ──────────────────────────── */
+.gate-hex-id {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-primary);
+  background: var(--bg-card);
+  padding: 2px 6px;
+  border-radius: var(--r-xs);
+}
+.gate-hex-risk {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--tier-red);
+}
+
+/* ── Persistent threat badge ────────────────────────────────── */
+.persistent-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  margin: 0 12px 8px;
+  background: rgba(249, 115, 22, 0.1);
+  border: 1px solid rgba(249, 115, 22, 0.35);
+  border-radius: var(--r-sm);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--tier-orange);
+  letter-spacing: 0.06em;
+  animation: persistPulse 3s ease-in-out infinite;
+}
+@keyframes persistPulse {
+  0%, 100% { border-color: rgba(249, 115, 22, 0.35); }
+  50%       { border-color: rgba(249, 115, 22, 0.7); }
+}
+
+/* ── HistoricalEventPanel ─────────────────────────────────────── */
+.hist-event-row {
+  display: flex;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.hist-event-row:last-child { border-bottom: none; }
+.hist-event-date {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* ── FeaturePanel bars ───────────────────────────────────────── */
+.feature-bar-row {
+  display: grid;
+  grid-template-columns: 100px 1fr 40px;
+  gap: 8px;
+  align-items: center;
+  font-size: 11px;
+  margin-bottom: 4px;
+}
+.feature-bar-track {
+  height: 5px;
+  border-radius: var(--r-pill);
+  background: var(--edge);
+  overflow: hidden;
+}
+.feature-bar-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 0.5s var(--ease);
+}
+.feature-bar-value {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-align: right;
+  color: var(--text-muted);
+}
+
+/* ── TrendLine sparkline panel ────────────────────────────────── */
+.trendline-panel {
+  padding: 10px 12px;
+}
+
+/* ── CitizenPreviewPanel light-surface styles ───────────────────── */
+/* The citizen card always uses light-mode colors for daylight legibility */
+.citizen-card { background: #ffffff; color: #1f2937; }
+[data-theme="dark"] .citizen-card { background: #ffffff; color: #1f2937; }
+
+/* ── ResponseUnitView large touch targets (§13.5) ─────────────── */
+.ru-task-card:hover {
+  background: var(--bg-panel);
+  box-shadow: var(--sh-sm);
+  transition: background var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+
+/* ── Tier-colored borders for panel sub-sections ───────────────── */
+.border-green  { border-color: var(--tier-green)  !important; }
+.border-yellow { border-color: var(--tier-yellow) !important; }
+.border-orange { border-color: var(--tier-orange) !important; }
+.border-red    { border-color: var(--tier-red)    !important; }
+
+/* ── Tooltip / popover overlay ────────────────────────────────── */
+.map-tooltip {
+  background: var(--cloud);
+  border: 1px solid var(--edge);
+  border-radius: var(--r-inner);
+  box-shadow: var(--sh-elevated);
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--text-primary);
+  max-width: 260px;
+  pointer-events: none;
+}
+.map-tooltip-mono {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* ── Inundation view ───────────────────────────────────────────── */
+.inundation-stat {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--border);
+}
+.inundation-stat:last-child { border-bottom: none; }
+.inundation-stat-val {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--tier-orange);
+}
+
+/* ── LoroPalel ──────────────────────────────────────────────────── */
+.loro-stage-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--r-pill);
+  font: 600 10px var(--font-mono);
+  letter-spacing: 0.06em;
+  background: var(--sky-tint);
+  color: var(--accent);
+  border: 1px solid rgba(46, 125, 239, 0.25);
+}
