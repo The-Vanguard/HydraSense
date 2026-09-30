@@ -49,6 +49,8 @@ import PersistentThreatBadge from './components/PersistentThreatBadge';
 import CitizenPreviewPanel   from './components/CitizenPreviewPanel';
 import DataSourceLabel       from './components/DataSourceLabel';
 import SensorLabel           from './components/SensorLabel';
+import VillagePanel          from './components/VillagePanel';
+import ConfidenceFactors     from './components/ConfidenceFactors';
 
 const POLL_MS         = 10_000;
 const POLL_MS_INITIAL =  3_000;
@@ -351,10 +353,7 @@ export default function App() {
           {/* Map controls bar */}
           <div className="map-controls-bar">
             <HazardToggle mode={hazardMode} onChange={setHazardMode} />
-            <TimeScrubber
-              offsetHours={timeOffset}
-              onChange={setTimeOffset}
-            />
+            {/* TimeScrubber hidden until a replay endpoint exists: moving it changed nothing. */}
             {/* Map Engine Toggle */}
             <button
               className="cir-btn cir-btn--ghost"
@@ -420,10 +419,16 @@ export default function App() {
             />
           )}
 
+          {/* Village table first: "which villages first?" (v2 Sec. 13.1 / 13.3) */}
+          <VillagePanel region={selectedRegionCode} />
+
           {/* Three threat products (§13.1) */}
           {risk && (
             <ConfidenceLeadTime risk={risk} />
           )}
+
+          {/* Four-factor confidence with its main reason (v2 Sec. 9.2 / 13.3) */}
+          <ConfidenceFactors hexId={selectedHexId} />
 
           {/* FS uncertainty band with widened tag (§13.4) */}
           {risk && (

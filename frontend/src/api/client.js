@@ -125,6 +125,18 @@ export const approveGate = (hexId, operatorId, role) =>
 export const rejectGate = (hexId, operatorId, role, reason = '') =>
   api.post('/alert/gate/reject', { hex_id: hexId, operator_id: operatorId, role, reason }).then((r) => r.data);
 
+/** GET /village/priority — ranked village table (risk-only ranking until exposure is built) */
+export const getVillagePriority = (region, limit = 100) =>
+  api.get('/village/priority', { params: { region, limit }, timeout: 60000 }).then((r) => r.data);
+
+/** GET /evacuation/{village_id} — nearest-shelter advisory (straight-line, not routed) */
+export const getEvacuation = (villageId, region) =>
+  api.get(`/evacuation/${villageId}`, { params: { region } }).then((r) => r.data);
+
+/** GET /confidence/{hex_id}/factors — v2 four-factor confidence with reasons */
+export const getConfidenceFactors = (hexId) =>
+  api.get(`/confidence/${hexId}/factors`).then((r) => r.data);
+
 /**
  * createAlertWebSocket — connect directly to the FastAPI backend WebSocket.
  * Bypasses the Vite dev proxy (which cannot reliably handle WS upgrades).
