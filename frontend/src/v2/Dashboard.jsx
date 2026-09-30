@@ -13,7 +13,7 @@ import Kpis from './Kpis';
 import Sidebar from './Sidebar';
 import MapCard from './MapCard';
 import VillageCard from './VillageCard';
-import { EventReplay, ScenarioSimulator, ActiveAlerts } from './BottomPanels';
+import { EventReplay, ActiveAlerts } from './BottomPanels';
 import { REGION_NAMES } from './tiers';
 
 import VillagePanel from '../components/VillagePanel';
@@ -84,11 +84,6 @@ export default function Dashboard() {
                        onInspect={() => setInspect(true)} onOnboarded={d.selectRegion} />
               <MapCard d={d} hazard={hazard} onHazard={setHazard} onOpenRegion={d.selectRegion} />
               <VillageCard d={d} onOpenAlerts={() => setTab('alerts')} />
-            </div>
-            <div className="hs2-bottom">
-              <EventReplay d={d} />
-              <ScenarioSimulator d={d} />
-              <ActiveAlerts d={d} onViewAll={() => setTab('alerts')} />
             </div>
           </>
         )}

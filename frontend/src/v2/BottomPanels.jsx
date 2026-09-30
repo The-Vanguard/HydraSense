@@ -1,16 +1,13 @@
 /**
- * BottomPanels.jsx — Event Replay (real past rainfall through the scorer), Scenario Simulator (what-if on the
- * selected hex's real inputs), Active Alerts (items held at the two-person gate).
+ * BottomPanels.jsx — Event Replay (real past rainfall through the scorer) and Active Alerts (items held at the
+ * two-person gate).  Shown on the Event Replay and Alerts tabs.
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Line, XAxis, YAxis, ResponsiveContainer, ReferenceLine, Tooltip, Bar, ComposedChart } from 'recharts';
-import axios from 'axios';
-import { simulateRisk, approveGate, rejectGate, startExercise } from '../api/client';
+import { approveGate, rejectGate, startExercise } from '../api/client';
 import { getEventReplay } from './useDashboard';
 import { TIER_COLOR, TIER_WORD, REGION_NAMES } from './tiers';
 import { Stepper } from './VillageCard';
-
-const api = axios.create({ baseURL: '/api', timeout: 30000 });
 
 /* ───────────────────────── Event Replay ───────────────────────── */
 export function EventReplay({ d, full = false }) {
@@ -95,90 +92,6 @@ export function EventReplay({ d, full = false }) {
             {full && ` ${rep.note}`}
           </div>
         </>
-      )}
-    </div>
-  );
-}
-
-/* ───────────────────────── Scenario Simulator ───────────────────────── */
-export function ScenarioSimulator({ d }) {
-  const [rainPct, setRainPct] = useState(20);
-  const [soilPts, setSoilPts] = useState(10);
-  const [sensorFail, setSensorFail] = useState('no');
-  const [res, setRes] = useState(null);
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState(null);
-  const hex = d.selectedHexId;
-  const regionCode = d.village?.region_code || d.selectedVillage?.region_code || (d.national ? null : d.region);
-
-  const run = async () => {
-    if (!hex) return;
-    setBusy(true); setErr(null); setRes(null);
-    try {
-      let terrain = {};
-      if (regionCode) {
-        try { terrain = (await api.get(`/region/${regionCode}/static-features/${hex}`)).data; } catch { terrain = {}; }
-      }
-      const inp = d.risk?.inputs || {};
-      const base = {
-        hex_id: hex, slope_deg: terrain.slope_deg ?? undefined, hand_m: terrain.hand_m ?? undefined,
-        elevation: terrain.elevation ?? undefined, TWI: terrain.TWI ?? undefined,
-        rainfall_1h: inp.rainfall_1h ?? 0, rainfall_6h: inp.rainfall_6h ?? 0, rainfall_24h: inp.rainfall_24h ?? 0,
-        rainfall_72h_antecedent: inp.rainfall_72h_antecedent ?? undefined,
-        soil_saturation_ratio: inp.soil_saturation_ratio ?? undefined,
-      };
-      const k = 1 + rainPct / 100;
-      const scen = {
-        ...base,
-        rainfall_1h: +(base.rainfall_1h * k).toFixed(2), rainfall_6h: +(base.rainfall_6h * k).toFixed(2),
-        rainfall_24h: +(base.rainfall_24h * k).toFixed(2),
-        rainfall_72h_antecedent: base.rainfall_72h_antecedent != null ? +(base.rainfall_72h_antecedent * k).toFixed(2) : undefined,
-        soil_saturation_ratio: sensorFail === 'yes' ? undefined
-          : base.soil_saturation_ratio != null ? Math.max(0, Math.min(1, base.soil_saturation_ratio + soilPts / 100)) : undefined,
-      };
-      const [b, s] = await Promise.all([simulateRisk(base), simulateRisk(scen)]);
-      setRes({ b, s, terrainOk: terrain.slope_deg != null });
-    } catch (e) {
-      setErr(e?.response?.data?.detail || 'Scenario failed.');
-    } finally { setBusy(false); }
-  };
-
-  return (
-    <div className="hs2-card">
-      <div className="hs2-card-title">⚙ Scenario simulator <span className="hs2-tag sim">Simulated</span></div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: 8, alignItems: 'end', fontSize: 11 }}>
-        <label>Rainfall change
-          <select className="hs2-select" style={{ width: '100%' }} value={rainPct} onChange={(e) => setRainPct(+e.target.value)}>
-            {[-50, 0, 20, 50, 100, 200, 400].map((v) => <option key={v} value={v}>{v >= 0 ? '+' : ''}{v}%</option>)}
-          </select></label>
-        <label>Soil saturation
-          <select className="hs2-select" style={{ width: '100%' }} value={soilPts} onChange={(e) => setSoilPts(+e.target.value)}>
-            {[-20, -10, 0, 10, 20].map((v) => <option key={v} value={v}>{v >= 0 ? '+' : ''}{v} pts</option>)}
-          </select></label>
-        <label>Soil input lost
-          <select className="hs2-select" style={{ width: '100%' }} value={sensorFail} onChange={(e) => setSensorFail(e.target.value)}>
-            <option value="no">No</option><option value="yes">Yes</option>
-          </select></label>
-        <button className="hs2-btn primary small" disabled={!hex || busy} onClick={run}>{busy ? '…' : 'Run'}</button>
-      </div>
-      {!hex && <div className="hs2-empty">Select a village or hex first.</div>}
-      {err && <div className="hs2-banner" style={{ marginTop: 8 }}>{err}</div>}
-      {res && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 10 }}>
-          {[['Baseline (current inputs)', res.b], ['Scenario', res.s]].map(([label, r]) => (
-            <div key={label} className="hs2-tele">
-              <div className="muted">{label}</div>
-              <div style={{ fontSize: 20, fontWeight: 800, color: TIER_COLOR[r.tier] }} className="num">{Math.round(r.risk_score)}
-                <span style={{ fontSize: 11, marginLeft: 6 }}>{TIER_WORD[r.tier]}</span></div>
-              <div className="faint">confidence {Math.round(r.confidence_score)} · lead {r.lead_time_min == null ? 'not projected' : `${Math.round(r.lead_time_min / 60)} h`}</div>
-            </div>
-          ))}
-          <div className="faint" style={{ gridColumn: '1 / -1', fontSize: 10 }}>
-            What-if only: nothing is stored or sent. Both runs use the same terrain
-            {res.terrainOk ? ' (region GeoPackage)' : ' (terrain not found: slope/HAND missing)'}; soil strength
-            parameters are not available to the simulator, so the numbers can differ from the live map score.
-          </div>
-        </div>
       )}
     </div>
   );

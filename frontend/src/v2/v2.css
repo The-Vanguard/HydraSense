@@ -129,7 +129,6 @@
 
 /* ── Main grid ────────────────────────────────────────── */
 .hs2-main { display: grid; grid-template-columns: 250px minmax(0, 1fr) 360px; gap: 12px; margin-bottom: 12px; align-items: start; }
-.hs2-bottom { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1.1fr); gap: 12px; }
 .hs2-card {
   background: var(--c-surface); border: 1px solid var(--c-border); border-radius: var(--radius);
   padding: 12px 14px; box-shadow: var(--shadow); min-width: 0;
@@ -246,7 +245,6 @@
   .hs2-main { grid-template-columns: minmax(0, 1fr) 320px; }
   .hs2-main > .hs2-side { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
   .hs2-main > .hs2-side .hs2-card + .hs2-card { margin-top: 0; }
-  .hs2-bottom { grid-template-columns: 1fr; }
   .hs2-page-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 860px) {
