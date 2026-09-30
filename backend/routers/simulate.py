@@ -601,6 +601,10 @@ def simulate_risk(scenario: ScenarioInput):
             if should_fire:
                 region_label = _resolve_region_label(hex_id)
                 lead_time_str = _format_lead_time(projection["lead_time_min"])
+                # A what-if scenario never notifies anyone: real alerts go through the two-person gate
+                # (v2 Sec. 10.3).  Opt back in only for a local test with HYDRASENSE_SCENARIO_NOTIFY=1.
+                import os
+                notify = os.environ.get("HYDRASENSE_SCENARIO_NOTIFY") == "1"
                 result = send_ntfy_alert(
                     title=f"HydraSense manual scenario: {region_label} -- {tier}",
                     message=(
@@ -611,7 +615,8 @@ def simulate_risk(scenario: ScenarioInput):
                         "Manual what-if scenario -- user-entered hypothetical, not a live sensor reading."
                     ),
                     tier=tier,
-                )
+                ) if notify else {"sent": False, "detail": "scenario: would reach alert level; nothing is sent "
+                                                            "for a what-if (real alerts need the two-person gate)"}
                 alert_fired = result["sent"]
                 alert_detail = result["detail"]
                 _upsert_alert_state(conn, tier, now.isoformat(), 0)
