@@ -143,3 +143,20 @@ def test_village_index_names_hexes_inside_and_near_villages(monkeypatch, tmp_pat
     far = vi.village_for_hex("t-r", h3.latlng_to_cell(32.3, 77.5, 8))
     assert far["name"] == "Tandari" and far["nearest"] is True
     assert vi.village_for_hex("no-such-region", "x") is None
+
+
+def test_coarse_cache_single_flight_for_concurrent_callers():
+    import threading
+    import time as _t
+    from backend.coarse_cache import coarse_cached
+    calls = []
+
+    @coarse_cached(ttl_s=60)
+    def fetch(lat, lon):
+        calls.append(1)
+        _t.sleep(0.2)
+        return "ok"
+    ts = [threading.Thread(target=fetch, args=(10.01, 76.9 + i * 0.001)) for i in range(6)]   # same 0.1 deg cell
+    for t in ts: t.start()
+    for t in ts: t.join()
+    assert len(calls) == 1

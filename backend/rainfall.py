@@ -144,30 +144,33 @@ def fetch_open_meteo_rainfall(
     Returns (series_dict, data_source).
     Falls back to cached on any error (v2 §6.4 Tier 2).
     """
-    try:
-        resp = httpx.get(
-            _OPEN_METEO_BASE,
-            params={
-                "latitude": lat,
-                "longitude": lon,
-                "hourly": "precipitation",
-                "past_hours": past_hours,
-                "forecast_hours": forecast_hours,
-                "timezone": "UTC",
-                "timeformat": "iso8601",
-            },
-            timeout=_OPEN_METEO_TIMEOUT_S,
-        )
-        resp.raise_for_status()
-        data = resp.json()
-        times = data.get("hourly", {}).get("time", [])
-        precip = data.get("hourly", {}).get("precipitation", [])
-        if times and precip:
-            series = {"time": times, "precipitation": precip}
-            _LAST_GOOD[_cell(lat, lon)] = (time.time(), series)
-            return series, "open_meteo_live"
-    except Exception:
-        pass
+    for attempt in range(2):                  # one retry: a timeout or 429 is usually momentary
+        try:
+            resp = httpx.get(
+                _OPEN_METEO_BASE,
+                params={
+                    "latitude": lat,
+                    "longitude": lon,
+                    "hourly": "precipitation",
+                    "past_hours": past_hours,
+                    "forecast_hours": forecast_hours,
+                    "timezone": "UTC",
+                    "timeformat": "iso8601",
+                },
+                timeout=_OPEN_METEO_TIMEOUT_S,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            times = data.get("hourly", {}).get("time", [])
+            precip = data.get("hourly", {}).get("precipitation", [])
+            if times and precip:
+                series = {"time": times, "precipitation": precip}
+                _LAST_GOOD[_cell(lat, lon)] = (time.time(), series)
+                return series, "open_meteo_live"
+            break                             # a valid but empty answer will not improve on retry
+        except Exception:
+            if attempt == 0:
+                time.sleep(1.5)
 
     # Tier 2: the last successful live reading for this ~10 km cell, if recent enough
     hit = _LAST_GOOD.get(_cell(lat, lon))
