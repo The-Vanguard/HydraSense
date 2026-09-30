@@ -127,7 +127,11 @@ def _compute_village(v: dict, layers: RegionLayers) -> dict:
         slope_deg=layers.slope_deg, hex_population=per_hex_pop,
         candidate_hexes=[h for h in ring if h in ls])
     scored = [h for h in footprint if h in ls]
+    # the hex that sets the village value: the upslope source when that drives it, else the worst footprint hex
+    lead_hex = rec.get("source_hex") if rec.get("alert_driver") == "upslope_source" else (
+        max(scored, key=lambda h: ls[h]) if scored else None)
     rec.update(
+        lead_hex_id=lead_hex,
         name=v["name"], region_code=layers.region_code,
         footprint_hexes_scored=len(scored),
         terrain_available_for_reach=bool(layers.elevation and layers.slope_deg),

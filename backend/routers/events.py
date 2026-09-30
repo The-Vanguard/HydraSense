@@ -326,3 +326,68 @@ def get_event_rainfall_window(event_id: str):
         "event_id": event_id, "event_date": row["date"], "region": row["region"],
         "point_name": point_name, "series": series, "note": note,
     }
+
+
+# ---------------------------------------------------------------------------
+# GET /events/{event_id}/replay -- hour-by-hour replay of a real past event
+# ---------------------------------------------------------------------------
+_GPKG_TERRAIN_CACHE: dict = {}
+
+
+def _terrain_for_hex(hex_id: str) -> tuple[dict, str]:
+    """Real terrain for a hex from any onboarded region GeoPackage; else the database copy (flagged)."""
+    import geopandas as gpd
+    for path in sorted((ROOT / "data" / "regions").glob("*.gpkg")):
+        tbl = _GPKG_TERRAIN_CACHE.get(path.stem)
+        if tbl is None:
+            try:
+                g = gpd.read_file(path, layer="hexes_static")
+                tbl = {r["hex_id"]: {k: r[k] for k in ("slope_deg", "hand_m", "elevation", "TWI")
+                                     if k in g.columns and r[k] == r[k]} for _, r in g.iterrows()}
+            except Exception:
+                tbl = {}
+            _GPKG_TERRAIN_CACHE[path.stem] = tbl
+        if hex_id in tbl:
+            return dict(tbl[hex_id]), f"region GeoPackage ({path.stem})"
+    with get_db() as conn:
+        row = conn.execute("SELECT static_features FROM hexes WHERE hex_id=?", (hex_id,)).fetchone()
+    feats = json.loads((row["static_features"] if row else "{}") or "{}")
+    return feats, "database static_features (may contain demo-seed values; not verified)"
+
+
+@router.get("/{event_id}/replay")
+def replay_event(event_id: str):
+    """
+    Replay a real past event: the real hourly rainfall of the 24 h before it (ERA5-derived, see
+    /rainfall-window) is fed hour by hour through the physics-first index for the event's hex.
+    Soil saturation is not in the historical series, so it is listed as a missing input (never assumed).
+    This is a back-test view, not a forecast and not a validated result.
+    """
+    from backend import physics_risk as pr
+    win = get_event_rainfall_window(event_id)
+    series = win.get("series") or []
+    with get_db() as conn:
+        row = conn.execute("SELECT hex_id, type, severity FROM historical_events WHERE event_id=?",
+                           (event_id,)).fetchone()
+    base = dict(event_id=event_id, event_date=win.get("event_date"), region=win.get("region"),
+                event_type=row["type"] if row else None, severity=row["severity"] if row else None,
+                hex_id=row["hex_id"] if row else None, label="REPLAY of a real past event (back-test view)")
+    if not series or not row or not row["hex_id"]:
+        return dict(base, steps=[], note=win.get("note") or "no rainfall series for this event")
+    terrain, terrain_source = _terrain_for_hex(row["hex_id"])
+    rain = [float(s["rainfall_mm"] or 0.0) for s in series]
+    steps = []
+    for i, s in enumerate(series):
+        window = lambda h: round(sum(rain[max(0, i - h + 1): i + 1]), 2)
+        feats = dict(terrain, rainfall_1h=rain[i], rainfall_3h=window(3), rainfall_6h=window(6),
+                     rainfall_24h=window(24), rainfall_72h_antecedent=None)
+        out = pr.score_features(feats)
+        steps.append(dict(time=s["time"], rainfall_1h=rain[i], rainfall_24h=window(24),
+                          risk_score=round(out["risk_score"], 1), tier=out["tier"],
+                          index_landslide=out.get("index_landslide"), index_flood=out.get("index_flood"),
+                          missing_inputs=out.get("missing_inputs")))
+    peak = max(steps, key=lambda x: x["risk_score"])
+    return dict(base, steps=steps, terrain_source=terrain_source, rainfall_note=win.get("note"),
+                peak=dict(time=peak["time"], risk_score=peak["risk_score"], tier=peak["tier"]),
+                note="Uncalibrated physics-first index on real past rainfall; the 72 h antecedent and soil "
+                     "saturation are not in the historical series and are reported as missing.")

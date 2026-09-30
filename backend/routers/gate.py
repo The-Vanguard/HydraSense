@@ -78,7 +78,9 @@ def region_status():
                 counts[r["tier"]] += 1
         worst = max((t for t, n in counts.items() if n), key=_TIER_RANK.get, default=None)
         peak, last = _peak_rain_and_last_update([r["hex_id"] for r in rows])
+        s, n, w, e = repository.REGION_BBOX[code]
         out.append(dict(region_code=code, worst_tier=worst, scored_hexes=len(rows), tier_counts=counts,
+                        center=dict(lat=(s + n) / 2, lon=(w + e) / 2),
                         peak_rainfall_24h_mm=peak, last_updated=last,
                         region_label=(rows[0].get("region_label") if rows else None)))
     return {"regions": out, "basis": "latest stored score per hex (stale scores excluded); "

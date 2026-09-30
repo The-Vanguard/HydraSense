@@ -37,3 +37,34 @@ def test_history_model_has_optional_hazard_fields():
     from backend.models import RiskHistoryEntry
     e = RiskHistoryEntry(timestamp="t", risk_score=1.0, tier="Green")
     assert e.index_flood is None and e.index_landslide is None and e.rainfall_24h is None
+
+
+def test_replay_without_rainfall_returns_no_steps_and_a_reason(monkeypatch):
+    from backend.routers import events
+    monkeypatch.setattr(events, "get_event_rainfall_window",
+                        lambda e: {"event_date": "01-01-2000", "region": "X", "series": [], "note": "no series"})
+    d = events.replay_event("E1")
+    assert d["steps"] == [] and d["note"] and "REPLAY" in d["label"]
+
+
+def test_replay_scores_real_series_hour_by_hour(monkeypatch):
+    from contextlib import contextmanager
+    import sqlite3
+    from backend.routers import events
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    conn.execute("CREATE TABLE historical_events (event_id TEXT, hex_id TEXT, type TEXT, severity TEXT)")
+    conn.execute("INSERT INTO historical_events VALUES ('E1','h1','landslide','high')")
+
+    @contextmanager
+    def fake_db():
+        yield conn
+    monkeypatch.setattr(events, "get_db", fake_db)
+    series = [{"time": f"2000-01-01T{h:02d}:00:00", "rainfall_mm": r} for h, r in enumerate([0, 5, 40, 60])]
+    monkeypatch.setattr(events, "get_event_rainfall_window",
+                        lambda e: {"event_date": "x", "region": "X", "series": series, "note": "real"})
+    monkeypatch.setattr(events, "_terrain_for_hex", lambda h: ({"slope_deg": 32.0, "hand_m": 50.0}, "test"))
+    d = events.replay_event("E1")
+    assert [s["rainfall_24h"] for s in d["steps"]] == [0, 5, 45, 105]
+    assert d["steps"][-1]["risk_score"] >= d["steps"][0]["risk_score"]
+    assert "soil_saturation" in d["steps"][0]["missing_inputs"]
