@@ -36,6 +36,7 @@ const LEGEND = [
 export default function AppHeader({
   pendingGates = 0,
   coldStart = false,
+  authState = null,             // e.g. "AUTH 1/2" mirrored from the backend gate (v2 Sec. 13.3)
   region = null,
   selectedRegionCode = 'wayanad-kl',
   onRegionChange,
@@ -178,6 +179,11 @@ export default function AppHeader({
 
       {/* ── RIGHT: Live Status, Region Selector, Role & Tools ── */}
       <div className="ref-header-right">
+        {/* Two-person authorisation state, mirrored from the backend gate */}
+        <div className="ref-live-pill" title="Two-person authorisation (duty officer + district authority)"
+             style={authState ? { background: 'rgba(239,68,68,0.15)', color: '#f87171', borderColor: 'rgba(239,68,68,0.4)' } : undefined}>
+          <span>{authState || 'AUTH · no pending alert'}</span>
+        </div>
         {/* Live Monitoring Active Green Pill */}
         <div className="ref-live-pill">
           <span className="ref-live-pulse-dot" />

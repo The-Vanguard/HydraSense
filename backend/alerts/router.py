@@ -17,7 +17,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from .gate import open_gate, approve_gate, get_gate_state
+from .gate import open_gate, approve_gate, get_gate_state, mark_dispatched
 from .cap_generator import generate_cap_xml
 from .dedup import evaluate, is_resolved
 from .fanout import fanout
@@ -183,9 +183,12 @@ def approve_alert(req: ApproveRequest) -> TriggerResponse:
                                % (res["approvals_count"], res["approvals_required"], need))
 
     gate = get_gate_state(req.hex_id)
+    ctx = gate.get("context") or {}
+    exercise = bool(ctx.get("exercise"))
     risk_score = req.risk_score if req.risk_score is not None else gate.get("risk_score", 0.0)
     confidence = req.confidence_score if req.confidence_score is not None else gate.get("confidence", 0.0)
-    tier = req.tier or ("Red" if risk_score >= 75 else "Orange")
+    tier = req.tier or ctx.get("scenario_tier") or ("Red" if risk_score >= 75 else "Orange")
+    trigger_type = ctx.get("trigger_type") or req.trigger_type
     now = datetime.now(timezone.utc)
     alert_id = store.next_alert_id()
     lead_time_min = gate.get("lead_time_min")
@@ -199,7 +202,8 @@ def approve_alert(req: ApproveRequest) -> TriggerResponse:
         lead_time_min  = lead_time_min,
         lead_time_basis = req.lead_time_basis,
         nearest_shelter = req.nearest_shelter,
-        trigger_type   = req.trigger_type,
+        trigger_type   = trigger_type,
+        status         = "Exercise" if exercise else "Actual",
     )
 
     record = AlertRecord(
@@ -216,10 +220,13 @@ def approve_alert(req: ApproveRequest) -> TriggerResponse:
     )
 
     store.append_alert(record)
-    delivered = fanout(record)
+    # An exercise is never fanned out (not even to the mock SACHET / SMS channels).
+    delivered = ["dashboard (exercise)"] if exercise else fanout(record)
     record.delivered_channels = delivered
+    mark_dispatched(req.hex_id)          # one authorisation releases one alert; a new one needs a new gate
 
-    logger.info("Alert FIRED (two-person approved by %s): %s hex=%s tier=%s channels=%s",
-                res["operator_id"], alert_id, req.hex_id, tier, delivered)
+    logger.info("Alert %s (two-person approved by %s): %s hex=%s tier=%s channels=%s",
+                "EXERCISE" if exercise else "FIRED", res["operator_id"], alert_id, req.hex_id, tier, delivered)
 
-    return TriggerResponse(action="fired", alert_id=alert_id)
+    return TriggerResponse(action="exercise_ready" if exercise else "fired", alert_id=alert_id,
+                           reason=("Exercise CAP built (status=Exercise); nothing was sent" if exercise else None))

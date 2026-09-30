@@ -130,6 +130,7 @@ def generate_cap_xml(
     nearest_shelter: Optional[dict] = None,
     sent_ist: Optional[str] = None,
     trigger_type: str = "UNSPECIFIED",
+    status: str = "Actual",          # CAP 1.2: Actual | Exercise | Test ...  (Exercise for drills)
 ) -> tuple[str, dict]:
     """
     Returns (cap_xml_string, cap_payload_dict).
@@ -168,7 +169,7 @@ def generate_cap_xml(
     ET.SubElement(root, "identifier").text = alert_id
     ET.SubElement(root, "sender").text     = SENDER
     ET.SubElement(root, "sent").text       = sent
-    ET.SubElement(root, "status").text     = "Actual"
+    ET.SubElement(root, "status").text     = status
     ET.SubElement(root, "msgType").text    = "Alert"
     ET.SubElement(root, "scope").text      = "Public"
 
@@ -195,7 +196,7 @@ def generate_cap_xml(
         "identifier":        alert_id,
         "sender":            SENDER,
         "sent":              sent,
-        "status":            "Actual",
+        "status":            status,
         "msgType":           "Alert",
         "scope":             "Public",
         "tier":              tier,

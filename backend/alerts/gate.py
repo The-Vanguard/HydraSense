@@ -39,7 +39,7 @@ from typing import Any, Literal
 ROOT = Path(__file__).resolve().parents[2]
 
 GATE_TIMEOUT_MINUTES = 10
-GateStatus = Literal["PENDING", "APPROVED", "REJECTED", "EXPIRED", "BYPASSED", "NONE"]
+GateStatus = Literal["PENDING", "APPROVED", "DISPATCHED", "REJECTED", "EXPIRED", "BYPASSED", "NONE"]
 
 # v2 Sec. 10.3 / 16.3: an alert is released only after TWO different people, holding TWO different
 # roles, have approved it.  There is no operator authentication yet: operator_id and role are
@@ -63,6 +63,7 @@ class GateRequest:
         lead_time_min: int | None = None,
         approvals:    list | None = None,
         rejection:    dict | None = None,
+        context:      dict | None = None,
     ):
         self.hex_id        = hex_id
         self.risk_score    = risk_score
@@ -74,6 +75,9 @@ class GateRequest:
         self.lead_time_min = lead_time_min
         self.approvals     = approvals or []      # [{operator_id, role, at}]
         self.rejection     = rejection            # {operator_id, role, reason, at} or None
+        # alert context for the console popup: region_code, village, hazard, trigger, actions, and
+        # exercise=True for drills (CAP status=Exercise, nothing is fanned out)
+        self.context       = context or {}
 
     def to_dict(self) -> dict:
         return {
@@ -90,6 +94,8 @@ class GateRequest:
             "approvals_required": REQUIRED_APPROVALS,
             "roles_needed":  [r for r in REQUIRED_ROLES if r not in {a["role"] for a in self.approvals}],
             "rejection":     self.rejection,
+            "exercise":      bool(self.context.get("exercise")),
+            "context":       self.context,
         }
 
     @classmethod
@@ -105,6 +111,7 @@ class GateRequest:
             lead_time_min = d.get("lead_time_min"),
             approvals     = list(d.get("approvals") or []),
             rejection     = d.get("rejection"),
+            context       = d.get("context") or {},
         )
 
     def is_expired(self) -> bool:
@@ -161,6 +168,7 @@ def open_gate(
     risk_score: float,
     confidence: float,
     lead_time_min: int | None = None,
+    context: dict | None = None,
 ) -> GateRequest:
     """
     Create or reset a PENDING gate for a Red-tier hex.
@@ -176,6 +184,7 @@ def open_gate(
         created_at    = datetime.now(timezone.utc).isoformat(),
         status        = "PENDING",
         lead_time_min = lead_time_min,
+        context       = context,
     )
     _save(req)
     print("[gate] PENDING gate opened for hex=%s risk=%.1f" % (hex_id, risk_score))
@@ -258,6 +267,15 @@ def reject_gate(hex_id: str, operator_id: str, role: str = "duty_officer", reaso
     _save(req)
     print("[gate] REJECTED by %s (%s) for hex=%s" % (operator_id, role, hex_id))
     return {"success": True, "hex_id": hex_id, "status": "REJECTED", "rejection": req.rejection}
+
+
+def mark_dispatched(hex_id: str) -> None:
+    """After an APPROVED gate has released its alert, close it so it cannot release another one."""
+    with _STATE_LOCK:
+        req = _get(hex_id)
+        if req is not None and req.status == "APPROVED":
+            req.status = "DISPATCHED"
+            _save(req)
 
 
 def check_gate(hex_id: str) -> GateStatus:

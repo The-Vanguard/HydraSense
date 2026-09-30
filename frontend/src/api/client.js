@@ -125,6 +125,15 @@ export const approveGate = (hexId, operatorId, role) =>
 export const rejectGate = (hexId, operatorId, role, reason = '') =>
   api.post('/alert/gate/reject', { hex_id: hexId, operator_id: operatorId, role, reason }).then((r) => r.data);
 
+/** GET /alert/gate/region-status — worst current tier per region (region strip) */
+export const getRegionStatus = () =>
+  api.get('/alert/gate/region-status', { timeout: 30000 }).then((r) => r.data);
+
+/** POST /alert/gate/exercise — labelled EXERCISE alert through the real gate; nothing is sent */
+export const startExercise = (regionCode, scenarioTier = 'Red', hazard = 'landslide') =>
+  api.post('/alert/gate/exercise', { region_code: regionCode, scenario_tier: scenarioTier, hazard },
+           { timeout: 60000 }).then((r) => r.data);
+
 /** GET /village/priority — ranked village table (risk-only ranking until exposure is built) */
 export const getVillagePriority = (region, limit = 100) =>
   api.get('/village/priority', { params: { region, limit }, timeout: 60000 }).then((r) => r.data);

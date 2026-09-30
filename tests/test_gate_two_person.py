@@ -89,3 +89,35 @@ def test_http_flow_fires_only_after_second_approval():
     b = c.post("/alert/gate/approve", json={"hex_id": HEX, "operator_id": "ravi", "role": "district_authority"})
     assert b.json()["action"] == "fired"
     assert c.post("/alert/gate/reject", json={"hex_id": HEX, "operator_id": "x", "role": "duty_officer"}).status_code == 409
+
+
+def test_dispatched_gate_cannot_release_a_second_alert():
+    gate.open_gate(HEX, 90.0, 60.0)
+    gate.approve_gate(HEX, "asha", "duty_officer")
+    gate.approve_gate(HEX, "ravi", "district_authority")
+    gate.mark_dispatched(HEX)
+    assert gate.check_gate(HEX) == "DISPATCHED"
+    assert not gate.approve_gate(HEX, "meera", "duty_officer")["success"]
+    assert gate.open_gate(HEX, 92.0, 60.0).status == "PENDING"          # next Red needs a fresh authorisation
+
+
+def test_exercise_is_labelled_and_never_fanned_out(monkeypatch):
+    from fastapi.testclient import TestClient
+    from backend.main import app
+    from backend import repository
+    from backend.alerts import router as alerts_router
+    rows = [dict(hex_id=HEX, risk_score=12.0, tier="Green", confidence_score=20.0, region_label="Test")]
+    monkeypatch.setattr(repository, "get_risk_map_data", lambda code, *a, **k: rows if code == "test-rg" else [])
+    sent = []
+    monkeypatch.setattr(alerts_router, "fanout", lambda rec: sent.append(rec) or ["x"])
+    c = TestClient(app)
+    assert c.post("/alert/gate/exercise", json={"region_code": "empty-rg"}).status_code == 409
+    g = c.post("/alert/gate/exercise", json={"region_code": "test-rg", "scenario_tier": "Red"}).json()
+    assert g["exercise"] and g["hex_id"] == "EX-" + HEX and g["context"]["real_tier"] == "Green"
+    assert "nothing is being sent" in g["banner"]
+    c.post("/alert/gate/approve", json={"hex_id": g["hex_id"], "operator_id": "asha", "role": "duty_officer"})
+    r = c.post("/alert/gate/approve", json={"hex_id": g["hex_id"], "operator_id": "ravi",
+                                            "role": "district_authority"}).json()
+    assert r["action"] == "exercise_ready" and not sent
+    alert = next(a for a in c.get("/alert/feed").json() if a.get("alert_id") == r["alert_id"])
+    assert alert["cap_payload"]["status"] == "Exercise" and alert["tier"] == "Red"

@@ -55,6 +55,81 @@ def pending_gates():
     }
 
 
+class ExerciseRequest(BaseModel):
+    region_code:   str
+    scenario_tier: str = "Red"          # the DRILL tier; the real current score is reported alongside
+    hazard:        str = "landslide"
+
+
+_HAZARD_TRIGGER = {"landslide": "SATURATION_LANDSLIDE", "flood": "SATURATION_FLOOD"}
+_TIER_RANK = {"Green": 0, "Yellow": 1, "Orange": 2, "Red": 3}
+
+
+@router.get("/region-status")
+def region_status():
+    """Worst CURRENT tier per region for the console's region strip (real stored scores only)."""
+    from backend import repository
+    out = []
+    for code in repository.REGION_BBOX:
+        rows = repository.get_risk_map_data(code)
+        counts = {t: 0 for t in _TIER_RANK}
+        for r in rows:
+            if r.get("tier") in counts:
+                counts[r["tier"]] += 1
+        worst = max((t for t, n in counts.items() if n), key=_TIER_RANK.get, default=None)
+        out.append(dict(region_code=code, worst_tier=worst, scored_hexes=len(rows), tier_counts=counts))
+    return {"regions": out, "basis": "latest stored score per hex (stale scores excluded)"}
+
+
+@router.post("/exercise")
+def start_exercise(req: ExerciseRequest):
+    """
+    v2 Sec. 16.3: raise a clearly labelled EXERCISE alert for a region so the two-person workflow can be
+    demonstrated.  The alert is held at the gate like a real one; on authorisation a CAP with
+    status=Exercise is built and NOTHING is fanned out.  The drill tier is the operator's scenario; the
+    region's real current score is attached so the two are never confused.
+    """
+    from backend.alerts.gate import open_gate
+    from backend.alerts.broadcast import TRIGGER_ACTIONS
+    from backend import repository
+    if req.scenario_tier not in ("Orange", "Red"):
+        raise HTTPException(422, detail="scenario_tier must be Orange or Red")
+    rows = repository.get_risk_map_data(req.region_code)
+    if not rows:
+        raise HTTPException(409, detail=f"region '{req.region_code}' has no current scores; "
+                                        "run a scoring cycle for it first")
+    top = max(rows, key=lambda r: r.get("risk_score") or 0.0)
+    village = None
+    try:                                              # the village containing the top hex, when onboarded
+        from backend.routers import village as village_api
+        from backend import village_rollup as vr
+        layers = village_api.load_region_layers(req.region_code)
+        for v in layers.villages:
+            fp, _ = vr.footprint_hexes(v["geometry"])
+            if top["hex_id"] in fp:
+                village = v["name"]
+                break
+    except Exception:
+        village = None
+    trigger = _HAZARD_TRIGGER.get(req.hazard, "SATURATION_LANDSLIDE")
+    context = dict(
+        exercise=True, region_code=req.region_code, region_label=top.get("region_label"),
+        village=village, hazard=req.hazard, trigger_type=trigger, scenario_tier=req.scenario_tier,
+        real_hex_id=top["hex_id"], real_tier=top.get("tier"), real_risk_score=top.get("risk_score"),
+        what_is_happening=(f"EXERCISE scenario: {req.scenario_tier} {req.hazard} alert. "
+                           f"Real current score here is {round(top.get('risk_score') or 0)} ({top.get('tier')})."),
+        what_to_do=TRIGGER_ACTIONS.get(trigger, "Take precautions now"),
+    )
+    gate_key = f"EX-{top['hex_id']}"
+    g = open_gate(gate_key, risk_score=top.get("risk_score") or 0.0,
+                  confidence=top.get("confidence_score") or 0.0, context=context)
+    broadcast_sync({"type": "gate_pending", "hex_id": gate_key, "exercise": True,
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "message": "EXERCISE alert awaiting two-person authorisation"})
+    return {**g.to_dict(), "banner": "Simulated feed. Exercise alert, nothing is being sent.",
+            "reference": "HydraSense_v2 Sec. 16.3"}
+
+
 @router.get("/{hex_id}")
 def gate_state(hex_id: str):
     """Current two-person gate state for a hex."""

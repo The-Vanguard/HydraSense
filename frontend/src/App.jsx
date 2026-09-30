@@ -43,13 +43,13 @@ import ValidationPanel       from './components/ValidationPanel';
 import AlertFeed             from './components/AlertFeed';
 import HistoricalEventPanel  from './components/HistoricalEventPanel';
 import ManualScenarioPanel   from './components/ManualScenarioPanel';
-import GatePanel             from './components/GatePanel';
 import LoroPanel             from './components/LoroPanel';
 import PersistentThreatBadge from './components/PersistentThreatBadge';
 import CitizenPreviewPanel   from './components/CitizenPreviewPanel';
 import DataSourceLabel       from './components/DataSourceLabel';
 import SensorLabel           from './components/SensorLabel';
 import VillagePanel          from './components/VillagePanel';
+import AlertConsole          from './components/AlertConsole';
 import ConfidenceFactors     from './components/ConfidenceFactors';
 
 const POLL_MS         = 10_000;
@@ -333,7 +333,8 @@ export default function App() {
         iotOffline={iotOffline}
         onToggleIoT={handleToggleIoT}
         onRoleChange={setRole}
-        highRiskCount={hexes.filter(h => h.tier === 'Red' || h.tier === 'Orange').length || 2}
+        highRiskCount={hexes.filter(h => h.tier === 'Red' || h.tier === 'Orange').length}
+        authState={pendingGates.length ? `AUTH ${pendingGates[0].approvals_count ?? 0}/${pendingGates[0].approvals_required ?? 2}${pendingGates.length > 1 ? ` (+${pendingGates.length - 1})` : ''}` : null}
       />
 
       {/* ── Body: Left | Center | Right ── */}
@@ -350,6 +351,12 @@ export default function App() {
 
         {/* Center — map zone */}
         <div className="center-map-zone">
+          {/* Region strip + alerts held at the two-person gate + exercise banner (v2 Sec. 16.3) */}
+          <AlertConsole
+            selectedRegionCode={selectedRegionCode}
+            onRegionChange={handleRegionChange}
+            onGatesChange={setPendingGates}
+          />
           {/* Map controls bar */}
           <div className="map-controls-bar">
             <HazardToggle mode={hazardMode} onChange={setHazardMode} />
@@ -460,8 +467,7 @@ export default function App() {
           {/* Inundation (gated Orange/Red) */}
           {inundation && <InundationView tier={risk?.tier} inundation={inundation} />}
 
-          {/* Two-person gate */}
-          {selectedHexId && <GatePanel hexId={selectedHexId} onApprove={() => {}} />}
+          {/* Two-person gate: shown in the AlertConsole above the map */}
 
           {/* Incident Action Plan (IAP) with dashed live document border (§13.4) */}
           <IncidentActionPlan selectedHex={selectedHex} region={currentRegion} />
