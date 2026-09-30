@@ -116,6 +116,10 @@ export default function VillageCard({ d, onOpenAlerts }) {
   const lead = risk?.lead_time_min;
   const gate = d.gates.find((g) => g.hex_id === selectedHexId || g.context?.real_hex_id === selectedHexId);
   const regionCode = village?.region_code || selectedVillage?.region_code || d.region;
+  const hexEntry = d.hexes.find((h) => h.hex_id === selectedHexId);
+  // Always a place name: the village, else the village this hex lies in (or is nearest to), else the region.
+  const title = village?.name
+    || (selectedVillage ? 'Loading…' : hexEntry?.village || REGION_NAMES[regionCode] || 'Selected area');
 
   return (
     <div>
@@ -123,9 +127,19 @@ export default function VillageCard({ d, onOpenAlerts }) {
         <div className="hs2-vhead">
           <span style={{ fontSize: 22, color: TIER_COLOR[tier] || '#94a3b8' }}>▲</span>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div className="name">{village?.name || (selectedVillage ? 'Loading…' : `Hex ${selectedHexId}`)}</div>
+            <div className="name">{title}</div>
             <div className="muted" style={{ fontSize: 12 }}>{REGION_NAMES[regionCode] || regionCode}
-              {village?.boundary_quality ? ` · boundary: ${village.boundary_quality}` : ''}</div>
+              {village?.boundary_quality ? ` · boundary: ${village.boundary_quality.replace('_', ' ')}` : ''}</div>
+            {!village && !selectedVillage && hexEntry && (
+              <div className="faint" style={{ fontSize: 10.5 }}>
+                one map cell {hexEntry.village_is_nearest ? 'nearest to' : 'inside'} {hexEntry.village}
+                {hexEntry.village_id && (
+                  <button className="hs2-btn small" style={{ marginLeft: 6, padding: '1px 7px' }}
+                          onClick={() => d.selectVillage({ village_id: hexEntry.village_id, region_code: regionCode })}>
+                    view village</button>)}
+              </div>
+            )}
+            {selectedHexId && <div className="faint num" style={{ fontSize: 9.5 }}>cell {selectedHexId}</div>}
           </div>
           {tier && <span className="hs2-tierbadge" style={{ background: TIER_COLOR[tier] }}>{TIER_WORD[tier].toUpperCase()} RISK</span>}
         </div>

@@ -80,6 +80,8 @@ class RiskMapEntry(BaseModel):
     fs_band_widened_for_no_calibration: bool = False
     instrumented_hex:                   bool = False
     village:                            Optional[str] = None
+    village_id:                         Optional[str] = None
+    village_is_nearest:                 bool = False
     lat:                                Optional[float] = None
     lng:                                Optional[float] = None
     region_code:                        Optional[str] = "wayanad-kl"

@@ -313,14 +313,14 @@ function DeckHexMapInner({
               </span>
             )}
           </div>
-          {hoverInfo.object.hex_id && (
-            <div style={{ color: '#8b949e', fontSize: 10, fontFamily: 'monospace', marginBottom: 4 }}>
-              {hoverInfo.object.hex_id}
+          {hoverInfo.object.village && (
+            <div style={{ color: '#e6edf3', marginBottom: 2 }}>
+              {hoverInfo.object.village_is_nearest ? 'near ' : ''}{hoverInfo.object.village}
             </div>
           )}
-          {hoverInfo.object.village && (
-            <div style={{ color: '#8b949e', marginBottom: 4 }}>
-              {hoverInfo.object.village}
+          {hoverInfo.object.hex_id && (
+            <div style={{ color: '#6e7681', fontSize: 9, fontFamily: 'monospace', marginBottom: 4 }}>
+              cell {hoverInfo.object.hex_id}
             </div>
           )}
           {/* Confidence reason (§13.4) */}

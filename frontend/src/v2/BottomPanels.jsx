@@ -124,7 +124,7 @@ function AlertItem({ g, onDone }) {
       <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 4 }}>
         {g.exercise && <span className="hs2-tag sim">EXERCISE</span>}
         <strong>{TIER_WORD[tier]} {ctx.hazard || 'hazard'} risk</strong>
-        <span className="muted">· {ctx.village || REGION_NAMES[ctx.region_code] || g.hex_id}</span>
+        <span className="muted">· {ctx.village || REGION_NAMES[ctx.region_code] || 'unnamed area'}</span>
         <span className="num faint" style={{ marginLeft: 'auto' }}>{new Date(g.created_at).toLocaleTimeString('en-IN', { hour12: false })}</span>
       </div>
       {ctx.what_is_happening && <div><strong>What is happening:</strong> {ctx.what_is_happening}</div>}

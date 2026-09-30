@@ -88,7 +88,7 @@ def compute_and_store_risk(hex_id: str) -> dict[str, Any] | None:
     with get_db() as conn:
         # 1. Load static features
         hex_row = conn.execute(
-            "SELECT static_features FROM hexes WHERE hex_id = ?", (hex_id,)
+            "SELECT static_features, region_code FROM hexes WHERE hex_id = ?", (hex_id,)
         ).fetchone()
         static_feats: dict = {}
         if hex_row:
@@ -287,6 +287,7 @@ def compute_and_store_risk(hex_id: str) -> dict[str, Any] | None:
                     risk_score    = pred["risk_score"],
                     confidence    = pred["confidence_score"],
                     lead_time_min = lead_time_min,
+                    context       = _gate_context(hex_id, hex_row, pred),
                 )
                 broadcast_sync({
                     "type":       "gate_pending",
@@ -313,6 +314,25 @@ def compute_and_store_risk(hex_id: str) -> dict[str, Any] | None:
 
 
 import os  # noqa: E402
+
+
+def _gate_context(hex_id: str, hex_row, pred: dict) -> dict:
+    """Plain-language context for an alert held at the gate: where (region / village), which hazard, what to do."""
+    from backend.alerts.broadcast import TRIGGER_ACTIONS
+    region = (hex_row["region_code"] if hex_row is not None and "region_code" in hex_row.keys() else "") or ""
+    village = None
+    try:
+        from backend.village_index import village_for_hex
+        v = village_for_hex(region, hex_id) if region else None
+        village = v["name"] if v else None
+    except Exception:
+        village = None
+    hazard = pred.get("hazard") or "landslide"
+    trigger = "SATURATION_FLOOD" if hazard == "flood" else "SATURATION_LANDSLIDE"
+    return dict(region_code=region or None, village=village, hazard=hazard, trigger_type=trigger,
+                what_is_happening=(f"{hazard.capitalize()} index {round(pred['risk_score'])} (Red) sustained over "
+                                   "consecutive cycles (persistent threat)."),
+                what_to_do=TRIGGER_ACTIONS.get(trigger, "Take precautions now"))
 
 
 def scoring_regions() -> list[str]:

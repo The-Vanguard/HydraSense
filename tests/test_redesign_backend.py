@@ -126,3 +126,20 @@ def test_live_failure_uses_last_good_reading_for_the_same_cell(monkeypatch):
     series, src = fn(30.52, 79.02)                                           # same ~10 km cell
     assert src == "open_meteo_cached" and series["precipitation"] == [1.5]
     assert fn(11.5, 76.0)[1] == "unavailable"                                 # nothing for another place
+
+
+def test_village_index_names_hexes_inside_and_near_villages(monkeypatch, tmp_path):
+    import geopandas as gpd
+    import h3
+    from shapely.geometry import box
+    from backend import village_index as vi
+    g = gpd.GeoDataFrame({"village_id": ["v1"], "name": ["Tandari"]},
+                         geometry=[box(77.10, 31.90, 77.14, 31.94)], crs="EPSG:4326")
+    g.to_file(tmp_path / "t-r.gpkg", layer="villages", driver="GPKG")
+    monkeypatch.setattr(vi, "GPKG_DIR", tmp_path)
+    monkeypatch.setattr(vi, "_CACHE", {})
+    inside = vi.village_for_hex("t-r", h3.latlng_to_cell(31.92, 77.12, 8))
+    assert inside == {"village_id": "v1", "name": "Tandari", "nearest": False}
+    far = vi.village_for_hex("t-r", h3.latlng_to_cell(32.3, 77.5, 8))
+    assert far["name"] == "Tandari" and far["nearest"] is True
+    assert vi.village_for_hex("no-such-region", "x") is None

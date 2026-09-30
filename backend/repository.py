@@ -72,6 +72,8 @@ def _state_from_label(label: str) -> str:
     return parts[1].split("(")[0].strip() if len(parts) > 1 else "India"
 
 
+from backend.village_index import village_for_hex  # noqa: E402
+
 def get_risk_map_data(region_code: Optional[str] = None, bbox: Optional[str] = None) -> List[Dict[str, Any]]:
     """
     Map entries for one region, built ONLY from real stored scores.
@@ -136,6 +138,7 @@ def get_risk_map_data(region_code: Optional[str] = None, bbox: Optional[str] = N
         tier = r["tier"] or tier_from_score(score)
         mem = risk_engine.LAST_RESULTS.get(hid) or {}
         ff_score, ls_score = mem.get("index_flood"), mem.get("index_landslide")
+        vinfo = village_for_hex(region_code, hid) if region_code else None
         entries.append({
             "hex_id": hid,
             "risk_score": score,
@@ -149,7 +152,12 @@ def get_risk_map_data(region_code: Optional[str] = None, bbox: Optional[str] = N
             "fs_band_widened_for_no_calibration": not has_cal,
             "instrumented_hex": bool(r["sensor_adjusted"]),       # a real/simulated node adjusted this hex
             "sensor_adjusted": bool(r["sensor_adjusted"]),
-            "village": _nearest_village(lat, lon) if region_code == "wayanad-kl" else district,
+            # the village this hex belongs to (from the region's village footprints); legacy Wayanad pilot
+            # hexes keep their named-village lookup; otherwise the district name, never a hex id
+            "village": (vinfo["name"] if vinfo else
+                        _nearest_village(lat, lon) if region_code == "wayanad-kl" else district),
+            "village_id": vinfo["village_id"] if vinfo else None,
+            "village_is_nearest": bool(vinfo and vinfo["nearest"]),
             "lat": lat,
             "lng": lon,
             "region_code": region_code,

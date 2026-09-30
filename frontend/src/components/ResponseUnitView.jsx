@@ -55,17 +55,19 @@ export default function ResponseUnitView({ hexes = [], alerts = [], region = nul
           {alerts.map((a, i) => (
             <div key={i} className="ru-task-card"
                  style={{ borderLeft: `4px solid ${TIER_COLOR[a.tier] || '#484f58'}` }}>
-              <div className="ru-task-tier" style={{ color: TIER_COLOR[a.tier] }}>
-                {a.tier}
+              <div className="ru-task-tier" style={{ color: TIER_COLOR[a.tier || a.context?.scenario_tier || (a.risk_score >= 75 ? 'Red' : 'Orange')] }}>
+                {a.exercise ? 'EXERCISE · ' : ''}{a.tier || a.context?.scenario_tier || (a.risk_score >= 75 ? 'Red' : 'Orange')}
               </div>
-              <div className="ru-task-hex">{a.hex_id}</div>
+              {/* a place name, never a bare cell id */}
+              <div className="ru-task-hex">{a.context?.village || a.village || a.context?.region_code || 'unnamed area'}</div>
+              {a.context?.what_to_do && <div className="ru-task-detail">{a.context.what_to_do}</div>}
               {a.ward  && <div className="ru-task-detail">Ward: {a.ward}</div>}
               {a.route && <div className="ru-task-detail">Route: {a.route}</div>}
               {a.eta   && <div className="ru-task-detail">ETA: {a.eta}</div>}
               <div className="ru-auth-note">
-                {a.authorized_by
-                  ? `✓ Auth by ${a.authorized_by}`
-                  : 'Pending authorization'}
+                {a.status === 'APPROVED' || a.status === 'DISPATCHED'
+                  ? `✓ Authorised by ${a.operator_id}`
+                  : `Pending authorisation (${a.approvals_count ?? 0}/${a.approvals_required ?? 2})`}
               </div>
             </div>
           ))}
