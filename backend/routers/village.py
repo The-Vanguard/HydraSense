@@ -151,6 +151,44 @@ def village_drafts():
                 reference="HydraSense_v2 Sec. 5.3.4")
 
 
+SUMMARY_MAX_AGE_S = 1200     # reuse a region summary for 20 min (the scoring cycle is 15 min)
+
+
+@router.get("/summary")
+def village_summary(region: Optional[str] = Query(None, description="one region, or all onboarded regions")):
+    """
+    Village counts by tier for the KPI cards (v2 Sec. 13.1 'which villages first?').  Uses the counts the
+    village cycle already computed when fresh, else computes them.  Unscored villages are counted separately,
+    never as Safe.
+    """
+    from datetime import datetime, timezone
+    from backend import village_cycle as vc
+    codes = [region] if region else sorted(p.stem for p in GPKG_DIR.glob("*.gpkg"))
+    regions, total = [], {"Red": 0, "Orange": 0, "Yellow": 0, "Green": 0}
+    villages = scored = 0
+    top = None
+    for code in codes:
+        s = vc.SUMMARY.get(code)
+        fresh = s and (datetime.now(timezone.utc) - datetime.fromisoformat(s["at"])).total_seconds() < SUMMARY_MAX_AGE_S
+        if not fresh:
+            try:
+                s = vc.summarise_region(code)
+            except HTTPException:
+                continue
+        regions.append(dict(region_code=code, **s))
+        for t, n in s["tier_counts"].items():
+            total[t] += n
+        villages += s["villages"]
+        scored += s["scored"]
+        tv = s.get("top_village")
+        if tv and (top is None or (tv.get("alert_value") or 0) > (top.get("alert_value") or 0)):
+            top = dict(tv, region_code=code)
+    return dict(scope=region or "all_onboarded", tier_counts=total, villages=villages, scored_villages=scored,
+                unscored_villages=villages - scored, top_village=top, regions=regions,
+                basis="landslide village value (v2 Sec. 5.3); flood per village is not built",
+                reference="HydraSense_v2 Sec. 13.1")
+
+
 @router.get("/priority")
 def village_priority(region: str = Query(..., description="region_code of an onboarded region"),
                      limit: int = Query(50, ge=1, le=500)):

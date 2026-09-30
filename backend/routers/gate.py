@@ -77,8 +77,34 @@ def region_status():
             if r.get("tier") in counts:
                 counts[r["tier"]] += 1
         worst = max((t for t, n in counts.items() if n), key=_TIER_RANK.get, default=None)
-        out.append(dict(region_code=code, worst_tier=worst, scored_hexes=len(rows), tier_counts=counts))
-    return {"regions": out, "basis": "latest stored score per hex (stale scores excluded)"}
+        peak, last = _peak_rain_and_last_update([r["hex_id"] for r in rows])
+        out.append(dict(region_code=code, worst_tier=worst, scored_hexes=len(rows), tier_counts=counts,
+                        peak_rainfall_24h_mm=peak, last_updated=last,
+                        region_label=(rows[0].get("region_label") if rows else None)))
+    return {"regions": out, "basis": "latest stored score per hex (stale scores excluded); "
+                                     "peak rainfall is null where the 24 h rainfall was not stored"}
+
+
+def _peak_rain_and_last_update(hex_ids: list[str]):
+    """Max 24 h rainfall over the latest score of each hex (NULL-safe) and the newest score time."""
+    from backend.database import get_db
+    if not hex_ids:
+        return None, None
+    peak, last = None, None
+    with get_db() as conn:
+        cols = [r["name"] for r in conn.execute("PRAGMA table_info(risk_scores)").fetchall()]
+        rain = "r.rainfall_24h" if "rainfall_24h" in cols else "NULL"
+        for i in range(0, len(hex_ids), 500):
+            chunk = hex_ids[i:i + 500]
+            q = ",".join("?" * len(chunk))
+            p, l = conn.execute(
+                f"SELECT MAX({rain}), MAX(r.timestamp) FROM risk_scores r JOIN (SELECT hex_id, MAX(id) mid "
+                f"FROM risk_scores WHERE hex_id IN ({q}) GROUP BY hex_id) m ON r.id = m.mid", chunk).fetchone()
+            if p is not None:
+                peak = p if peak is None else max(peak, p)
+            if l is not None:
+                last = l if last is None else max(last, l)
+    return (round(peak, 1) if peak is not None else None), last
 
 
 @router.post("/exercise")

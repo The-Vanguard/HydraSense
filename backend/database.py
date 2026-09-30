@@ -208,5 +208,9 @@ def init_db() -> None:
             )
         if "sensor_adjusted" not in cols_rs:
             conn.execute("ALTER TABLE risk_scores ADD COLUMN sensor_adjusted INTEGER DEFAULT 0")
+        # per-hazard indices and the 24 h rainfall the score used (nullable; older rows stay NULL)
+        for col in ("index_landslide", "index_flood", "rainfall_24h"):
+            if col not in cols_rs:
+                conn.execute(f"ALTER TABLE risk_scores ADD COLUMN {col} REAL")
 
     print(f"[db] Schema initialised -> {DB_PATH}")

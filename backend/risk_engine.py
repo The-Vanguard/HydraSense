@@ -190,8 +190,9 @@ def compute_and_store_risk(hex_id: str) -> dict[str, Any] | None:
         conn.execute(
             """INSERT INTO risk_scores
                (hex_id, timestamp, risk_score, tier, confidence_score,
-                lead_time_min, lead_time_basis, feature_contributions, data_source, sensor_adjusted)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                lead_time_min, lead_time_basis, feature_contributions, data_source, sensor_adjusted,
+                index_landslide, index_flood, rainfall_24h)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 hex_id,
                 now_ts,
@@ -203,6 +204,9 @@ def compute_and_store_risk(hex_id: str) -> dict[str, Any] | None:
                 json.dumps(top_features),
                 data_source,
                 int(sensor_adjusted),
+                pred.get("index_landslide"),
+                pred.get("index_flood"),
+                dynamic_feats.get("rainfall_24h"),
             )
         )
 

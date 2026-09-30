@@ -98,6 +98,9 @@ class RiskHistoryEntry(BaseModel):
     timestamp:  str
     risk_score: float
     tier:       str
+    index_landslide: Optional[float] = None     # NULL for rows written before these were stored
+    index_flood:     Optional[float] = None
+    rainfall_24h:    Optional[float] = None
 
 class UncertaintyResponse(BaseModel):
     hex_id:              str

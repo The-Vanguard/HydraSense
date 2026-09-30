@@ -118,15 +118,16 @@ def get_risk_history(hex_id: str, limit: int = Query(48, ge=1, le=500)):
     """GET /risk/{hex_id}/history -- time series of risk_score (1D trend view)."""
     with get_db() as conn:
         rows = conn.execute(
-            "SELECT timestamp, risk_score, tier FROM risk_scores "
-            "WHERE hex_id=? ORDER BY timestamp DESC LIMIT ?",
+            "SELECT * FROM risk_scores WHERE hex_id=? ORDER BY timestamp DESC LIMIT ?",
             (hex_id, limit)
         ).fetchall()
     if not rows:
         raise HTTPException(status_code=404, detail=f"No history for hex {hex_id}")
-    return [RiskHistoryEntry(timestamp=r["timestamp"],
-                             risk_score=r["risk_score"],
-                             tier=r["tier"]) for r in reversed(rows)]
+    keys = rows[0].keys()
+    opt = lambda r, k: r[k] if k in keys else None
+    return [RiskHistoryEntry(timestamp=r["timestamp"], risk_score=r["risk_score"], tier=r["tier"],
+                             index_landslide=opt(r, "index_landslide"), index_flood=opt(r, "index_flood"),
+                             rainfall_24h=opt(r, "rainfall_24h")) for r in reversed(rows)]
 
 
 @router.get("/{hex_id}/inundation")
