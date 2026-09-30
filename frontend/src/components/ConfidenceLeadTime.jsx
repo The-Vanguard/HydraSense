@@ -88,7 +88,7 @@ export default function ConfidenceLeadTime({ risk }) {
             lineHeight: 1,
             letterSpacing: '-0.03em',
           }}>
-            {risk_score}
+            {risk_score == null ? "—" : Math.round(risk_score)}
           </span>
           <span style={{ fontSize: 14, color: 'var(--text-muted)', fontFamily: 'var(--font-display)' }}>/ 100</span>
         </div>
@@ -115,7 +115,7 @@ export default function ConfidenceLeadTime({ risk }) {
       <div style={{ marginBottom: 12 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 11 }}>
           <span style={{ color: 'var(--text-muted)' }}>Confidence</span>
-          <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>{confidence_score}%</span>
+          <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>{confidence_score == null ? "—" : `${Math.round(confidence_score)}%`}</span>
         </div>
         <div className="confidence-bar-wrap">
           <div className="confidence-bar-fill" style={{ width: `${confidence_score}%` }} />
