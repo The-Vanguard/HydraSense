@@ -150,10 +150,11 @@ def _fetch_dem(
 
 def fetch_dem_for_region(region_code: str, bbox: dict) -> DemResult:
     """
-    Public entry point. Tries SRTMGL1 first, falls back to COP90 if unavailable.
+    Public entry point. Tries SRTMGL1, then COP30 (Copernicus GLO-30), then COP90.
     Returns the first successful DemResult, or the last failure if both fail.
     """
-    for dem_type in ("SRTMGL1", "COP90"):
+    # COP30 = Copernicus GLO-30; it can be staged without a key by scripts/stage0/fetch_cop30_dem.py
+    for dem_type in ("SRTMGL1", "COP30", "COP90"):
         result = _fetch_dem(region_code, bbox, dem_type=dem_type)
         if result.success:
             print(f"    DEM ({dem_type}): {result.source} — {result.dem_path.name}")

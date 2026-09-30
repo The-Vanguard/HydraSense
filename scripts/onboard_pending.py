@@ -4,7 +4,8 @@ scripts/onboard_pending.py -- onboard every region that has a real, district-sca
 For each region: (1) stage the cached real inputs where the pipeline expects them (copy, never
 move), (2) fetch ESA WorldCover land cover, (3) run the standard onboarding pipeline with --force.
 
-  * wayanad-kl is SKIPPED: its only DEM (data/terrain/dem_wayanad.tif) is a ~4x5 km tile, so the
+  * wayanad-kl (formerly skipped for lack of a district DEM) now uses a Copernicus GLO-30 DEM staged by
+    scripts/stage0/fetch_cop30_dem.py.  Historical note: its old DEM (data/terrain/dem_wayanad.tif) is a ~4x5 km tile, so the
     pipeline would compute terrain for a fraction of the district and label the rest missing.
   * Soil: SoilGrids rasters are cached for wayanad, idukki, ribhoi, rudraprayag, chamoli only.
     Other regions run with the pipeline's flagged fallback soil parameters (soil_data_source).
@@ -22,11 +23,12 @@ sys.path.insert(0, str(ROOT))
 
 # region_code -> short name used by the earlier multi-region ingest scripts
 CACHED_DEM = {
+    "wayanad-kl": "wayanad",          # DEM: Copernicus GLO-30 staged by scripts/stage0/fetch_cop30_dem.py
     "ribhoi-ml": "ribhoi", "idukki-kl": "idukki", "nilgiris-tn": "nilgiris",
     "rudraprayag-uk": "rudraprayag", "chamoli-uk": "chamoli", "kullu-hp": "kullu",
     "mangan-sk": "sikkim", "darjeeling-wb": "darjeeling", "dhemaji-as": "dhemaji",
 }
-SKIPPED = {"wayanad-kl": "only a ~4x5 km DEM tile exists; district-scale DEM needs an OpenTopography key"}
+SKIPPED: dict = {}                    # wayanad-kl used to be skipped (only a 4x5 km DEM tile); now uses GLO-30
 
 
 def stage_inputs(code: str, short: str) -> list[str]:

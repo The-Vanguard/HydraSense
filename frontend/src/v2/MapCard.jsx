@@ -1,5 +1,5 @@
 /**
- * MapCard.jsx — hazard toggle, village search, map (deck.gl or Leaflet), legend, degraded-input banner.
+ * MapCard.jsx — hazard toggle, village search, map (deck.gl or Leaflet), degraded-input banner.
  * National view shows one marker per onboarded region coloured by its worst current tier.
  */
 import React, { useMemo, useState } from 'react';
@@ -97,18 +97,6 @@ export default function MapCard({
           ))}
         </div>
         {engine === 'deck' ? <DeckHexMap {...props} /> : <HexMap {...props} />}
-        <div className="hs2-legend">
-          <div style={{ fontWeight: 700, marginBottom: 4 }}>Risk level</div>
-          {['Red', 'Orange', 'Yellow', 'Green'].map((t) => (
-            <div key={t} className="hs2-legend-row">
-              <span className="hs2-swatch" style={{ background: TIER_COLOR[t] }} />{TIER_WORD[t]} ({t})
-            </div>
-          ))}
-          <div className="hs2-legend-row faint" style={{ marginTop: 4 }}>
-            {d.national ? 'Circles: regions, worst current tier' : 'Hexes: H3 res-8; faded = low confidence'}
-          </div>
-          {hazard === 'flood' && <div className="hs2-legend-row faint">Flood: hex flood index (village flood not built)</div>}
-        </div>
       </div>
     </div>
   );
