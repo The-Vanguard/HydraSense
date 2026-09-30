@@ -179,14 +179,10 @@ export default function AppHeader({
           <button
             type="submit"
             disabled={isResolving}
+            className="cir-btn cir-btn--accent"
             style={{
-              background: isResolving ? '#21262d' : '#238636',
-              border: '1px solid #2ea043',
-              color: '#ffffff',
-              fontSize: 10,
-              fontWeight: 600,
-              borderRadius: 4,
-              padding: '4px 8px',
+              padding: '6px 12px',
+              fontSize: 11,
               cursor: isResolving ? 'wait' : 'pointer',
             }}
             title="Trigger Autonomous Region Onboarding Pipeline (§6)"
@@ -202,18 +198,11 @@ export default function AppHeader({
       {/* ── Deliberate IoT Failure Demo Button (§14.5) ── */}
       <button
         onClick={onToggleIoT}
+        className={iotOffline ? 'cir-btn cir-btn--ghost' : 'cir-btn'}
         style={{
-          background: iotOffline ? 'rgba(239, 68, 68, 0.15)' : 'rgba(56, 189, 248, 0.12)',
-          border: `1px solid ${iotOffline ? '#ef4444' : '#38bdf888'}`,
-          color: iotOffline ? '#f87171' : '#38bdf8',
-          fontSize: 11,
-          fontWeight: 600,
-          borderRadius: 4,
-          padding: '4px 10px',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 5,
+          border: `1px solid ${iotOffline ? 'var(--danger)' : 'var(--blue)'}`,
+          color: iotOffline ? 'var(--danger)' : 'var(--blue)',
+          padding: '6px 12px',
         }}
         title="Toggle deliberate sensor failure to demonstrate live fallback to satellite/forecast (Final.md §14.5)"
       >
@@ -241,15 +230,15 @@ export default function AppHeader({
       )}
 
       {/* Role switcher */}
-      <div className="header-role-switcher">
+      <div className="cir-tabs" style={{ flexShrink: 0 }}>
         {ROLES.map(r => (
-          <button
+          <div
             key={r}
-            className={`role-btn${role === r ? ' active' : ''}`}
+            className={`cir-tab${role === r ? ' is-active' : ''}`}
             onClick={() => handleRole(r)}
           >
             {r === 'Decision Authority' ? 'DA' : 'RU'}
-          </button>
+          </div>
         ))}
       </div>
 

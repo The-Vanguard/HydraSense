@@ -17,7 +17,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from .gate import open_gate, approve_gate
+from .gate import open_gate, approve_gate, get_gate_state
 from .cap_generator import generate_cap_xml
 from .dedup import evaluate, is_resolved
 from .fanout import fanout
@@ -160,9 +160,10 @@ def alert_feed() -> list[dict]:
 class ApproveRequest(BaseModel):
     hex_id: str
     operator_id: str
-    tier: str
-    risk_score: float
-    confidence_score: float
+    role: str = "duty_officer"              # duty_officer | district_authority (v2 Sec. 10.3)
+    tier: Optional[str] = None              # default: taken from the held alert
+    risk_score: Optional[float] = None
+    confidence_score: Optional[float] = None
     lead_time_basis: str = "no_red_crossing_in_forecast_window"
     nearest_shelter: Optional[dict] = None
     trigger_type: str = "UNSPECIFIED"
@@ -170,22 +171,31 @@ class ApproveRequest(BaseModel):
 @router.post("/alert/gate/approve", response_model=TriggerResponse, status_code=200)
 def approve_alert(req: ApproveRequest) -> TriggerResponse:
     """
-    Phase 7: Two-person authorization gate approval.
+    Two-person authorization gate (v2 Sec. 10.3): the first approval only records 1/2; the alert is
+    fanned out when a second, different operator holding the other role approves.
     """
-    res = approve_gate(req.hex_id, req.operator_id)
+    res = approve_gate(req.hex_id, req.operator_id, req.role)
     if not res.get("success"):
         raise HTTPException(status_code=400, detail=res.get("error", "Unknown error"))
-        
+    if res["status"] != "APPROVED":
+        need = " and ".join(res.get("roles_needed", []))
+        return TriggerResponse(action="held", reason="Approval %d/%d recorded; waiting for %s"
+                               % (res["approvals_count"], res["approvals_required"], need))
+
+    gate = get_gate_state(req.hex_id)
+    risk_score = req.risk_score if req.risk_score is not None else gate.get("risk_score", 0.0)
+    confidence = req.confidence_score if req.confidence_score is not None else gate.get("confidence", 0.0)
+    tier = req.tier or ("Red" if risk_score >= 75 else "Orange")
     now = datetime.now(timezone.utc)
     alert_id = store.next_alert_id()
-    lead_time_min = None # Simplified for now
-    
+    lead_time_min = gate.get("lead_time_min")
+
     cap_xml, cap_dict = generate_cap_xml(
         alert_id       = alert_id,
         hex_id         = req.hex_id,
-        tier           = req.tier,
-        risk_score     = req.risk_score,
-        confidence_score = req.confidence_score,
+        tier           = tier,
+        risk_score     = risk_score,
+        confidence_score = confidence,
         lead_time_min  = lead_time_min,
         lead_time_basis = req.lead_time_basis,
         nearest_shelter = req.nearest_shelter,
@@ -196,9 +206,9 @@ def approve_alert(req: ApproveRequest) -> TriggerResponse:
         alert_id         = alert_id,
         hex_id           = req.hex_id,
         timestamp        = now,
-        tier             = req.tier,
-        risk_score       = req.risk_score,
-        confidence_score = req.confidence_score,
+        tier             = tier,
+        risk_score       = risk_score,
+        confidence_score = confidence,
         lead_time_min    = lead_time_min,
         lead_time_basis  = req.lead_time_basis,
         cap_xml          = cap_xml,
@@ -209,7 +219,7 @@ def approve_alert(req: ApproveRequest) -> TriggerResponse:
     delivered = fanout(record)
     record.delivered_channels = delivered
 
-    logger.info("Alert FIRED (Approved): %s hex=%s tier=%s channels=%s",
-                alert_id, req.hex_id, req.tier, delivered)
+    logger.info("Alert FIRED (two-person approved by %s): %s hex=%s tier=%s channels=%s",
+                res["operator_id"], alert_id, req.hex_id, tier, delivered)
 
     return TriggerResponse(action="fired", alert_id=alert_id)

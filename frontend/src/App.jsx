@@ -349,7 +349,8 @@ export default function App() {
             />
             {/* Map Engine Toggle */}
             <button
-              className={`map-engine-btn ${mapEngine === 'leaflet' ? 'active' : ''}`}
+              className="cir-btn cir-btn--ghost"
+              style={{ padding: '6px 12px', fontSize: 11 }}
               onClick={() => setMapEngine(e => e === 'deck' ? 'leaflet' : 'deck')}
               title="Toggle Map Engine (3D deck.gl H3 / 2D Leaflet)"
             >

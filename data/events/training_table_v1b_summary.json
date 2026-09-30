@@ -1,0 +1,332 @@
+{
+  "rows": 2070,
+  "by_type": {
+    "temporal": 1225,
+    "spatial_place": 600,
+    "positive": 245
+  },
+  "events_with_spatial": 45,
+  "events_without_spatial": [
+    "ANNAMAYYA-2021-FF-01",
+    "IRSHALWADI-2023-LS-01",
+    "MALIN-2014-LS-01",
+    "MEDARASOLA-2014-LS-01",
+    "MOGALRAJAPURAM-2024-LS-01",
+    "SATTARI-2021-FF-01",
+    "VALPARAI-2024-LS-01"
+  ],
+  "per_event": {
+    "AIZAWL-2024-LS-01": {
+      "place_nodes": 31,
+      "eligible": 27,
+      "chosen": 3,
+      "rows": 15
+    },
+    "AMARNATH-2022-FF-01": {
+      "place_nodes": 55,
+      "eligible": 49,
+      "chosen": 3,
+      "rows": 21
+    },
+    "ANNAMAYYA-2021-FF-01": {
+      "place_nodes": 801,
+      "eligible": 657,
+      "chosen": 0,
+      "rows": 0
+    },
+    "AVALANCHE-2019-LS-01": {
+      "place_nodes": 260,
+      "eligible": 155,
+      "chosen": 3,
+      "rows": 6
+    },
+    "BARAGHARA-2018-LS-01": {
+      "place_nodes": 715,
+      "eligible": 652,
+      "chosen": 1,
+      "rows": 3
+    },
+    "BARAK-2020-LS-01": {
+      "place_nodes": 310,
+      "eligible": 172,
+      "chosen": 2,
+      "rows": 8
+    },
+    "BATSERI-2021-LS-01": {
+      "place_nodes": 236,
+      "eligible": 194,
+      "chosen": 3,
+      "rows": 12
+    },
+    "BEAS-2023-FF-01": {
+      "place_nodes": 479,
+      "eligible": 395,
+      "chosen": 3,
+      "rows": 9
+    },
+    "CANACONA-2009-FF-01": {
+      "place_nodes": 298,
+      "eligible": 215,
+      "chosen": 2,
+      "rows": 6
+    },
+    "CHASOTI-2025-FF-01": {
+      "place_nodes": 158,
+      "eligible": 124,
+      "chosen": 3,
+      "rows": 21
+    },
+    "CHATEN-2025-LS-01": {
+      "place_nodes": 22,
+      "eligible": 10,
+      "chosen": 3,
+      "rows": 21
+    },
+    "DARJEELING-2025-LS-01": {
+      "place_nodes": 202,
+      "eligible": 179,
+      "chosen": 3,
+      "rows": 15
+    },
+    "DHARALI-2025-FF-01": {
+      "place_nodes": 87,
+      "eligible": 72,
+      "chosen": 3,
+      "rows": 21
+    },
+    "GAROHILLS-2024-LS-01": {
+      "place_nodes": 34,
+      "eligible": 27,
+      "chosen": 2,
+      "rows": 8
+    },
+    "GAURIKUND-2023-LS-01": {
+      "place_nodes": 383,
+      "eligible": 237,
+      "chosen": 3,
+      "rows": 15
+    },
+    "HUNZAR-2021-FF-01": {
+      "place_nodes": 240,
+      "eligible": 218,
+      "chosen": 3,
+      "rows": 12
+    },
+    "IRSHALWADI-2023-LS-01": {
+      "place_nodes": 370,
+      "eligible": 291,
+      "chosen": 0,
+      "rows": 0
+    },
+    "JODHGHATI-2025-FF-01": {
+      "place_nodes": 387,
+      "eligible": 343,
+      "chosen": 2,
+      "rows": 10
+    },
+    "KATTIPPARA-2018-LS-01": {
+      "place_nodes": 692,
+      "eligible": 565,
+      "chosen": 2,
+      "rows": 10
+    },
+    "KAVALAPPARA-2019-LS-01": {
+      "place_nodes": 304,
+      "eligible": 226,
+      "chosen": 1,
+      "rows": 4
+    },
+    "KODAGU-2018-LS-01": {
+      "place_nodes": 342,
+      "eligible": 284,
+      "chosen": 3,
+      "rows": 6
+    },
+    "KOOTTICKAL-2021-LS-01": {
+      "place_nodes": 418,
+      "eligible": 358,
+      "chosen": 1,
+      "rows": 4
+    },
+    "KOTRUPI-2017-LS-01": {
+      "place_nodes": 2029,
+      "eligible": 1666,
+      "chosen": 3,
+      "rows": 12
+    },
+    "LAPTAP-2017-LS-01": {
+      "place_nodes": 48,
+      "eligible": 43,
+      "chosen": 3,
+      "rows": 21
+    },
+    "LEH-2010-FF-01": {
+      "place_nodes": 121,
+      "eligible": 87,
+      "chosen": 3,
+      "rows": 21
+    },
+    "MALIN-2014-LS-01": {
+      "place_nodes": 0,
+      "eligible": 0,
+      "chosen": 0,
+      "rows": 0
+    },
+    "MALPA-1998-LS-01": {
+      "place_nodes": 966,
+      "eligible": 842,
+      "chosen": 3,
+      "rows": 21
+    },
+    "MANGAN-2024-LS-01": {
+      "place_nodes": 57,
+      "eligible": 40,
+      "chosen": 3,
+      "rows": 12
+    },
+    "MARAPPALAM-1993-LS-01": {
+      "place_nodes": 271,
+      "eligible": 168,
+      "chosen": 3,
+      "rows": 12
+    },
+    "MEDARASOLA-2014-LS-01": {
+      "place_nodes": 900,
+      "eligible": 784,
+      "chosen": 0,
+      "rows": 0
+    },
+    "MIRIK-2015-LS-01": {
+      "place_nodes": 202,
+      "eligible": 179,
+      "chosen": 3,
+      "rows": 15
+    },
+    "MOGALRAJAPURAM-2024-LS-01": {
+      "place_nodes": 658,
+      "eligible": 553,
+      "chosen": 0,
+      "rows": 0
+    },
+    "NH29-2024-LS-01": {
+      "place_nodes": 128,
+      "eligible": 91,
+      "chosen": 3,
+      "rows": 12
+    },
+    "NIGULSARI-2021-LS-01": {
+      "place_nodes": 856,
+      "eligible": 610,
+      "chosen": 3,
+      "rows": 21
+    },
+    "NILGIRIS-2009-LS-01": {
+      "place_nodes": 264,
+      "eligible": 168,
+      "chosen": 1,
+      "rows": 2
+    },
+    "PAKALAPAHAR-2023-LS-01": {
+      "place_nodes": 74,
+      "eligible": 43,
+      "chosen": 3,
+      "rows": 21
+    },
+    "PETTIMUDI-2020-LS-01": {
+      "place_nodes": 324,
+      "eligible": 293,
+      "chosen": 3,
+      "rows": 12
+    },
+    "PHAMLA-2016-LS-01": {
+      "place_nodes": 151,
+      "eligible": 116,
+      "chosen": 3,
+      "rows": 12
+    },
+    "PUTHUMALA-2019-LS-01": {
+      "place_nodes": 491,
+      "eligible": 308,
+      "chosen": 2,
+      "rows": 8
+    },
+    "SAMEJ-2024-FF-01": {
+      "place_nodes": 1545,
+      "eligible": 1275,
+      "chosen": 3,
+      "rows": 15
+    },
+    "SATARA-2021-LS-01": {
+      "place_nodes": 141,
+      "eligible": 124,
+      "chosen": 3,
+      "rows": 12
+    },
+    "SATTARI-2021-FF-01": {
+      "place_nodes": 527,
+      "eligible": 441,
+      "chosen": 0,
+      "rows": 0
+    },
+    "SERAJ-2025-FF-01": {
+      "place_nodes": 3666,
+      "eligible": 3236,
+      "chosen": 3,
+      "rows": 15
+    },
+    "SUMMERHILL-2023-LS-01": {
+      "place_nodes": 2726,
+      "eligible": 2332,
+      "chosen": 3,
+      "rows": 21
+    },
+    "TALACAUVERY-2020-LS-01": {
+      "place_nodes": 385,
+      "eligible": 335,
+      "chosen": 3,
+      "rows": 12
+    },
+    "TALIYE-2021-LS-01": {
+      "place_nodes": 362,
+      "eligible": 302,
+      "chosen": 3,
+      "rows": 12
+    },
+    "THARALI-2025-FF-01": {
+      "place_nodes": 1659,
+      "eligible": 1448,
+      "chosen": 3,
+      "rows": 15
+    },
+    "TUPUL-2022-LS-01": {
+      "place_nodes": 342,
+      "eligible": 306,
+      "chosen": 3,
+      "rows": 18
+    },
+    "UKHIMATH-2012-LS-01": {
+      "place_nodes": 883,
+      "eligible": 710,
+      "chosen": 3,
+      "rows": 15
+    },
+    "VAISHNODEVI-2025-LS-01": {
+      "place_nodes": 355,
+      "eligible": 320,
+      "chosen": 3,
+      "rows": 21
+    },
+    "VALPARAI-2024-LS-01": {
+      "place_nodes": 301,
+      "eligible": 230,
+      "chosen": 0,
+      "rows": 0
+    },
+    "WAYANAD-2024-LS-01": {
+      "place_nodes": 442,
+      "eligible": 285,
+      "chosen": 3,
+      "rows": 15
+    }
+  }
+}

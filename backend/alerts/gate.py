@@ -12,15 +12,18 @@ Red alert without human oversight).
 
 Final.md §17.4 rules (frozen):
   - Only Red tier triggers the gate. Orange fires immediately (dedup permitting).
-  - Gate state: PENDING | APPROVED | EXPIRED | BYPASSED
+  - Gate state: PENDING | APPROVED | REJECTED | EXPIRED | BYPASSED
   - BYPASSED is only allowed when explicitly flagged (e.g. during drills).
-  - Gate approval requires operator_id (any non-empty string — no auth in v1).
+  - v2 Sec. 10.3: approval needs TWO distinct operator_ids holding the two roles duty_officer and
+    district_authority; one person or one role can never release an alert; either role can reject.
+    (operator_id/role are self-declared; there is no operator authentication yet.)
   - Timeout: GATE_TIMEOUT_MINUTES = 10 (one ingestion cycle window).
   - After approval: normal dedup/fanout runs with gate_approved=True.
   - Expired gate: log to audit trail, do NOT fire alert.
 
 API surface (registered in main.py as /alert/gate/...):
-  POST /alert/gate/approve   {hex_id, operator_id}
+  POST /alert/gate/approve   {hex_id, operator_id, role}
+  POST /alert/gate/reject    {hex_id, operator_id, role, reason}
   GET  /alert/gate/pending   list all pending gate requests
   GET  /alert/gate/{hex_id}  current gate state for a hex
 """
@@ -35,7 +38,13 @@ from typing import Any, Literal
 ROOT = Path(__file__).resolve().parents[2]
 
 GATE_TIMEOUT_MINUTES = 10
-GateStatus = Literal["PENDING", "APPROVED", "EXPIRED", "BYPASSED", "NONE"]
+GateStatus = Literal["PENDING", "APPROVED", "REJECTED", "EXPIRED", "BYPASSED", "NONE"]
+
+# v2 Sec. 10.3 / 16.3: an alert is released only after TWO different people, holding TWO different
+# roles, have approved it.  There is no operator authentication yet: operator_id and role are
+# self-declared, so this enforces the two-person rule but does not prove who the people are.
+REQUIRED_ROLES = ("duty_officer", "district_authority")
+REQUIRED_APPROVALS = 2
 
 _GATE_STATE_PATH = ROOT / "data" / "validation" / "gate_state.json"
 
@@ -51,6 +60,8 @@ class GateRequest:
         operator_id:  str = "",
         approved_at:  str = "",
         lead_time_min: int | None = None,
+        approvals:    list | None = None,
+        rejection:    dict | None = None,
     ):
         self.hex_id        = hex_id
         self.risk_score    = risk_score
@@ -60,6 +71,8 @@ class GateRequest:
         self.operator_id   = operator_id
         self.approved_at   = approved_at
         self.lead_time_min = lead_time_min
+        self.approvals     = approvals or []      # [{operator_id, role, at}]
+        self.rejection     = rejection            # {operator_id, role, reason, at} or None
 
     def to_dict(self) -> dict:
         return {
@@ -71,6 +84,11 @@ class GateRequest:
             "operator_id":   self.operator_id,
             "approved_at":   self.approved_at,
             "lead_time_min": self.lead_time_min,
+            "approvals":     self.approvals,
+            "approvals_count": len(self.approvals),
+            "approvals_required": REQUIRED_APPROVALS,
+            "roles_needed":  [r for r in REQUIRED_ROLES if r not in {a["role"] for a in self.approvals}],
+            "rejection":     self.rejection,
         }
 
     @classmethod
@@ -84,6 +102,8 @@ class GateRequest:
             operator_id   = d.get("operator_id", ""),
             approved_at   = d.get("approved_at", ""),
             lead_time_min = d.get("lead_time_min"),
+            approvals     = list(d.get("approvals") or []),
+            rejection     = d.get("rejection"),
         )
 
     def is_expired(self) -> bool:
@@ -141,6 +161,9 @@ def open_gate(
     Create or reset a PENDING gate for a Red-tier hex.
     Called by risk_engine when tier=Red + is_persistent_threat=True.
     """
+    existing = _get(hex_id)
+    if existing is not None and existing.status == "PENDING" and not existing.is_expired():
+        return existing                      # keep collected approvals; do not reset each cycle
     req = GateRequest(
         hex_id        = hex_id,
         risk_score    = risk_score,
@@ -154,38 +177,82 @@ def open_gate(
     return req
 
 
-def approve_gate(hex_id: str, operator_id: str) -> dict[str, Any]:
-    """
-    Approve a PENDING gate. Returns result dict.
-    operator_id must be non-empty (any string accepted in v1).
-    """
+def _validate_actor(operator_id: str, role: str) -> str | None:
     if not operator_id or not operator_id.strip():
-        return {"success": False, "error": "operator_id must not be empty"}
+        return "operator_id must not be empty"
+    if role not in REQUIRED_ROLES:
+        return "role must be one of %s" % ", ".join(REQUIRED_ROLES)
+    return None
 
+
+def _open_request(hex_id: str) -> tuple[GateRequest | None, dict | None]:
+    """The gate if it can still be acted on, else (None, error-result)."""
     req = _get(hex_id)
     if req is None:
-        return {"success": False, "error": "No gate found for hex_id=%s" % hex_id}
-
+        return None, {"success": False, "error": "No gate found for hex_id=%s" % hex_id}
     if req.is_expired():
         req.status = "EXPIRED"
         _save(req)
-        return {"success": False, "error": "Gate expired (>%d min). Re-trigger required." % GATE_TIMEOUT_MINUTES}
-
+        return None, {"success": False, "error": "Gate expired (>%d min). Re-trigger required." % GATE_TIMEOUT_MINUTES}
     if req.status != "PENDING":
-        return {"success": False, "error": "Gate status is %s, not PENDING" % req.status}
+        return None, {"success": False, "error": "Gate status is %s, not PENDING" % req.status}
+    return req, None
 
-    req.status      = "APPROVED"
-    req.operator_id = operator_id.strip()
-    req.approved_at = datetime.now(timezone.utc).isoformat()
+
+def approve_gate(hex_id: str, operator_id: str, role: str = "duty_officer") -> dict[str, Any]:
+    """
+    Record one approval.  The gate moves PENDING -> APPROVED only when two DIFFERENT operators holding
+    the two DIFFERENT required roles have approved (0/2 -> 1/2 -> 2/2).  The same person, or the same
+    role, cannot approve twice.  Returns a result dict; `status` stays PENDING after the first approval.
+    """
+    err = _validate_actor(operator_id, role)
+    if err:
+        return {"success": False, "error": err}
+    operator_id = operator_id.strip()
+    req, fail = _open_request(hex_id)
+    if fail:
+        return fail
+    if any(a["operator_id"].lower() == operator_id.lower() for a in req.approvals):
+        return {"success": False, "error": "operator '%s' has already approved this alert; a second, "
+                                           "different person is required" % operator_id}
+    if any(a["role"] == role for a in req.approvals):
+        return {"success": False, "error": "the %s role has already approved; the other role must "
+                                           "give the second approval" % role}
+    now = datetime.now(timezone.utc).isoformat()
+    req.approvals.append({"operator_id": operator_id, "role": role, "at": now})
+    if len(req.approvals) >= REQUIRED_APPROVALS:
+        req.status      = "APPROVED"
+        req.operator_id = ", ".join(a["operator_id"] for a in req.approvals)
+        req.approved_at = now
     _save(req)
-    print("[gate] APPROVED by operator=%s for hex=%s" % (operator_id, hex_id))
+    print("[gate] approval %d/%d by %s (%s) for hex=%s" % (len(req.approvals), REQUIRED_APPROVALS, operator_id, role, hex_id))
     return {
-        "success":     True,
-        "hex_id":      hex_id,
-        "approved_at": req.approved_at,
-        "operator_id": req.operator_id,
-        "status":      "APPROVED",
+        "success":            True,
+        "hex_id":             hex_id,
+        "status":             req.status,
+        "approvals_count":    len(req.approvals),
+        "approvals_required": REQUIRED_APPROVALS,
+        "approvals":          req.approvals,
+        "roles_needed":       req.to_dict()["roles_needed"],
+        "approved_at":        req.approved_at,
+        "operator_id":        req.operator_id,
     }
+
+
+def reject_gate(hex_id: str, operator_id: str, role: str = "duty_officer", reason: str = "") -> dict[str, Any]:
+    """Either required role can reject; the alert is then NOT released (a new cycle must reopen the gate)."""
+    err = _validate_actor(operator_id, role)
+    if err:
+        return {"success": False, "error": err}
+    req, fail = _open_request(hex_id)
+    if fail:
+        return fail
+    req.status    = "REJECTED"
+    req.rejection = {"operator_id": operator_id.strip(), "role": role, "reason": (reason or "").strip(),
+                     "at": datetime.now(timezone.utc).isoformat()}
+    _save(req)
+    print("[gate] REJECTED by %s (%s) for hex=%s" % (operator_id, role, hex_id))
+    return {"success": True, "hex_id": hex_id, "status": "REJECTED", "rejection": req.rejection}
 
 
 def check_gate(hex_id: str) -> GateStatus:

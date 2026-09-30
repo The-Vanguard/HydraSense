@@ -117,9 +117,13 @@ export const getPendingGates = () =>
 export const getGateState = (hexId) =>
   api.get(`/alert/gate/${hexId}`).then((r) => r.data);
 
-/** POST /alert/gate/approve — second-operator gate approval */
-export const approveGate = (hexId, operatorId) =>
-  api.post('/alert/gate/approve', { hex_id: hexId, operator_id: operatorId }).then((r) => r.data);
+/** POST /alert/gate/approve — two-person gate approval (needs 2 different operators, roles duty_officer + district_authority) */
+export const approveGate = (hexId, operatorId, role) =>
+  api.post('/alert/gate/approve', { hex_id: hexId, operator_id: operatorId, role }).then((r) => r.data);
+
+/** POST /alert/gate/reject — either role rejects a pending alert */
+export const rejectGate = (hexId, operatorId, role, reason = '') =>
+  api.post('/alert/gate/reject', { hex_id: hexId, operator_id: operatorId, role, reason }).then((r) => r.data);
 
 /**
  * createAlertWebSocket — connect directly to the FastAPI backend WebSocket.

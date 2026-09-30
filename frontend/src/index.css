@@ -1,4 +1,4 @@
-@import './hydrasense-theme.css';
+@import './cirrus.css';
 
 :root {
   /* Surfaces mapped to Cirrus design tokens */
@@ -808,6 +808,7 @@ html, body, #root {
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 14px;
+  box-shadow: var(--shadow);
 }
 .panel-title {
   font-family: var(--font-mono);
@@ -823,6 +824,7 @@ html, body, #root {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 10px 12px;
+  box-shadow: var(--sh-sm);
 }
 
 /* Tier badge */

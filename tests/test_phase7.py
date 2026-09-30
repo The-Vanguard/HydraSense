@@ -70,7 +70,10 @@ def test_approve_held_alert():
         "confidence_score": 90.0
     }
     
-    resp = client.post("/alert/gate/approve", json=approve_req)
+    first = client.post("/alert/gate/approve", json=approve_req)      # 1/2: nothing is sent yet
+    assert first.status_code == 200 and first.json()["action"] == "held"
+    resp = client.post("/alert/gate/approve", json={**approve_req, "operator_id": "authority_01",
+                                                     "role": "district_authority"})
     assert resp.status_code == 200
     data = resp.json()
     assert data["action"] == "fired"
@@ -83,8 +86,9 @@ def test_trigger_specific_cap_template():
         "hex_id": hex_id, "tier": "Red", "risk_score": 95.0, "confidence_score": 90.0
     })
     
+    client.post("/alert/gate/approve", json={"hex_id": hex_id, "operator_id": "duty", "role": "duty_officer"})
     resp = client.post("/alert/gate/approve", json={
-        "hex_id": hex_id, "operator_id": "admin", "tier": "Red",
+        "hex_id": hex_id, "operator_id": "admin", "role": "district_authority", "tier": "Red",
         "risk_score": 95.0, "confidence_score": 90.0,
         "trigger_type": "CLOUDBURST_FLASH"
     })

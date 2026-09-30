@@ -15,17 +15,18 @@ const MODES = [
 
 export default function HazardToggle({ mode = 'compound', onChange }) {
   return (
-    <div className="hazard-toggle">
+    <div className="cir-tabs" style={{ background: 'var(--bg-card)' }}>
       {MODES.map(m => (
-        <button
+        <div
           key={m.key}
-          className={`hazard-btn${mode === m.key ? ' active' : ''}`}
+          className={`cir-tab${mode === m.key ? ' is-active' : ''}`}
           onClick={() => onChange?.(m.key)}
           title={m.label}
+          style={{ display: 'flex', alignItems: 'center', gap: 4 }}
         >
           <span className="hazard-icon">{m.icon}</span>
           <span className="hazard-label">{m.label}</span>
-        </button>
+        </div>
       ))}
     </div>
   );

@@ -363,11 +363,11 @@ export default function ManualScenarioPanel({ onClose, externalPointRequest }) {
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
         <button onClick={handleSubmit} disabled={loading}
-          style={{ flex: 1, background: '#a78bfa', border: 'none', borderRadius: 6, color: '#0d1117', fontWeight: 700, fontSize: 12, padding: '8px 0', cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.6 : 1 }}>
+          className="cir-btn cir-btn--accent" style={{ flex: 1, padding: '8px 0', justifyContent: 'center' }}>
           {loading ? 'Scoring…' : 'Run Scenario'}
         </button>
         <button onClick={handleReset}
-          style={{ background: 'none', border: '1px solid #30363d', borderRadius: 6, color: '#8b949e', fontSize: 12, padding: '8px 12px', cursor: 'pointer' }}>
+          className="cir-btn cir-btn--ghost" style={{ padding: '8px 12px' }}>
           Reset
         </button>
       </div>

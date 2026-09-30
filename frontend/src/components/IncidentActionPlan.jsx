@@ -128,28 +128,14 @@ export default function IncidentActionPlan({ readOnly = false, selectedHex = nul
             placeholder="Operational Directive / Mission Order"
             value={newTask}
             onChange={e => setNewTask(e.target.value)}
-            style={{
-              background: '#0d1117',
-              border: '1px solid #30363d',
-              color: '#e6edf3',
-              padding: '4px 8px',
-              borderRadius: 3,
-              fontSize: 11,
-            }}
+            className="cir-input"
+            style={{ padding: '6px 10px', fontSize: 11 }}
             required
           />
           <button
             type="submit"
-            style={{
-              background: '#38bdf8',
-              color: '#0d1117',
-              border: 'none',
-              borderRadius: 3,
-              padding: '4px 10px',
-              fontSize: 11,
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
+            className="cir-btn cir-btn--accent"
+            style={{ padding: '6px 12px', fontSize: 11 }}
           >
             Authorize & Issue Dispatch Order
           </button>

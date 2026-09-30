@@ -2,7 +2,7 @@
 backend/routers/gate.py
 Two-Person Gate API — Stage 5 (Final.md §17.4)
 
-POST /alert/gate/approve    — second operator approves a pending Red alert
+POST /alert/gate/reject     — either role rejects a pending alert
 GET  /alert/gate/pending    — list all pending (unresolved) gate requests
 GET  /alert/gate/{hex_id}  — gate state for a specific hex
 """
@@ -12,7 +12,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from backend.alerts.gate import (
-    approve_gate, list_pending_gates, get_gate_state,
+    reject_gate, list_pending_gates, get_gate_state,
     GATE_TIMEOUT_MINUTES,
 )
 from backend.alerts.websocket_manager import broadcast_sync
@@ -21,39 +21,25 @@ from datetime import datetime, timezone
 router = APIRouter(prefix="/alert/gate", tags=["gate"])
 
 
-class ApproveRequest(BaseModel):
+class RejectRequest(BaseModel):
     hex_id:      str
     operator_id: str
+    role:        str = "duty_officer"
+    reason:      str = ""
 
 
-@router.post("/approve")
-def approve(req: ApproveRequest):
-    """
-    Second-operator approval for a pending Red-tier alert (Final.md §17.4).
-    After approval, the next ingestion cycle will see gate=APPROVED and fire the CAP.
-    """
-    if not req.operator_id.strip():
-        raise HTTPException(status_code=422, detail="operator_id must not be empty")
-
-    result = approve_gate(req.hex_id, req.operator_id)
+# NOTE: POST /alert/gate/approve lives in backend/alerts/router.py (it also fans the alert out once the
+# second approval lands).  Reject is here.
+@router.post("/reject")
+def reject(req: RejectRequest):
+    """Either required role rejects a pending alert; nothing is sent."""
+    result = reject_gate(req.hex_id, req.operator_id, req.role, req.reason)
     if not result["success"]:
         raise HTTPException(status_code=409, detail=result["error"])
-
-    # Broadcast gate approval to dashboard
-    broadcast_sync({
-        "type":        "gate_approved",
-        "hex_id":      req.hex_id,
-        "operator_id": req.operator_id,
-        "timestamp":   datetime.now(timezone.utc).isoformat(),
-        "message":     "Red alert gate approved — CAP will fire on next cycle",
-    })
-
-    return {
-        **result,
-        "next_step": "Red CAP alert will fire on the next risk_engine ingestion cycle.",
-        "timeout_min": GATE_TIMEOUT_MINUTES,
-        "reference": "Final.md §17.4",
-    }
+    broadcast_sync({"type": "gate_rejected", "hex_id": req.hex_id, "operator_id": req.operator_id,
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "message": "Alert rejected at the authorization gate; nothing was sent"})
+    return {**result, "reference": "HydraSense_v2 Sec. 10.3"}
 
 
 @router.get("/pending")

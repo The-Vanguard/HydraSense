@@ -3,10 +3,11 @@
  *
  * Polls GET /alert/gate/pending every 5s.
  * Shows a prominent red alert for each pending Red gate.
- * Second operator enters their ID and clicks Approve to fire the CAP.
+ * Two different people in two different roles (duty officer + district authority) must approve
+ * before the alert is sent.  Either can reject.  IDs/roles are self-declared (no login yet).
  */
 import React, { useState, useEffect, useCallback } from 'react';
-import { getPendingGates, approveGate } from '../api/client';
+import { getPendingGates, approveGate, rejectGate } from '../api/client';
 
 const POLL_MS = 5_000;
 
@@ -29,7 +30,9 @@ export default function GatePanel() {
     return () => clearInterval(iv);
   }, [fetchGates]);
 
-  const handleApprove = async (hexId) => {
+  const [role, setRole] = useState('duty_officer');
+
+  const act = async (hexId, kind) => {
     if (!opId.trim()) {
       setResult({ success: false, message: 'Enter your operator ID first.' });
       return;
@@ -37,12 +40,18 @@ export default function GatePanel() {
     setLoading(true);
     setApproving(hexId);
     try {
-      const res = await approveGate(hexId, opId.trim());
-      setResult({ success: true, message: `Approved by ${res.operator_id}. CAP fires next cycle.` });
+      if (kind === 'reject') {
+        await rejectGate(hexId, opId.trim(), role, 'rejected from dashboard');
+        setResult({ success: true, message: 'Alert rejected. Nothing was sent.' });
+      } else {
+        const res = await approveGate(hexId, opId.trim(), role);
+        setResult({ success: true, message: res.action === 'fired'
+          ? 'Second approval recorded. Alert released.'
+          : (res.reason || 'Approval recorded, waiting for the second person.') });
+      }
       fetchGates();
     } catch (e) {
-      const msg = e?.response?.data?.detail || 'Approval failed.';
-      setResult({ success: false, message: msg });
+      setResult({ success: false, message: e?.response?.data?.detail || 'Request failed.' });
     } finally {
       setLoading(false);
       setApproving(null);
@@ -62,8 +71,9 @@ export default function GatePanel() {
       </div>
 
       <p style={{ fontSize: 11, color: '#f87171', marginBottom: 10, lineHeight: 1.5 }}>
-        The following hex(es) have a sustained Red tier alert waiting for a second-operator
-        approval before the CAP notification is sent.
+        These alerts need approval from two different people (duty officer and district
+        authority) before anything is sent. Operator ID and role are self-declared: there is no
+        login yet.
       </p>
 
       {gates.map((g) => (
@@ -80,31 +90,42 @@ export default function GatePanel() {
           </div>
           <div style={{ fontSize: 10, color: '#8b949e', marginBottom: 8 }}>
             Created: {g.created_at ? new Date(g.created_at).toLocaleTimeString() : '—'} ·
-            Expires in {10} min
+            Expires 10 min after creation
           </div>
-          <div style={{ display: 'flex', gap: 6 }}>
+          <div style={{ fontSize: 11, color: '#e6edf3', marginBottom: 6 }}>
+            Approvals {g.approvals_count ?? 0}/{g.approvals_required ?? 2}
+            {(g.approvals || []).map((a) => ` · ${a.operator_id} (${a.role.replace('_', ' ')})`)}
+            {g.roles_needed?.length ? ` · waiting for: ${g.roles_needed.map((r) => r.replace('_', ' ')).join(', ')}` : ''}
+          </div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             <input
               type="text"
               placeholder="Your Operator ID"
               value={opId}
               onChange={(e) => setOpId(e.target.value)}
-              style={{
-                flex: 1, padding: '5px 8px', fontSize: 11,
-                background: 'rgba(22,27,34,0.8)',
-                border: '1px solid #30363d', borderRadius: 4, color: '#e6edf3',
-              }}
+              className="cir-input"
+              style={{ flex: 1, minWidth: 110, padding: '5px 8px', fontSize: 11 }}
             />
+            <select value={role} onChange={(e) => setRole(e.target.value)}
+                    className="cir-input" style={{ padding: '5px 8px', fontSize: 11 }}>
+              <option value="duty_officer">Duty officer</option>
+              <option value="district_authority">District authority</option>
+            </select>
             <button
-              onClick={() => handleApprove(g.hex_id)}
+              onClick={() => act(g.hex_id, 'approve')}
               disabled={loading && approving === g.hex_id}
-              style={{
-                padding: '5px 12px', fontSize: 11, fontWeight: 700,
-                background: loading && approving === g.hex_id
-                  ? 'rgba(239,68,68,0.3)' : '#ef4444',
-                border: 'none', borderRadius: 4, color: '#fff', cursor: 'pointer',
-              }}
+              className="cir-btn"
+              style={{ padding: '5px 12px', fontSize: 11, background: 'var(--danger)', color: 'var(--cloud)' }}
             >
-              {loading && approving === g.hex_id ? 'Approving…' : 'Approve'}
+              {loading && approving === g.hex_id ? 'Working…' : 'Approve'}
+            </button>
+            <button
+              onClick={() => act(g.hex_id, 'reject')}
+              disabled={loading && approving === g.hex_id}
+              className="cir-btn"
+              style={{ padding: '5px 12px', fontSize: 11 }}
+            >
+              Reject
             </button>
           </div>
         </div>

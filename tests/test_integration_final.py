@@ -237,7 +237,9 @@ try:
     g = open_gate(GATE_HEX, risk_score=88.0, confidence=70.0)
     check("open_gate -> PENDING", g.status == "PENDING")
     check("check_gate -> PENDING", check_gate(GATE_HEX) == "PENDING")
-    res = approve_gate(GATE_HEX, "op_integration_test")
+    res = approve_gate(GATE_HEX, "op_integration_test", "duty_officer")
+    check("first approval is 1/2 and the gate stays PENDING", res["success"] and res["status"] == "PENDING")
+    res = approve_gate(GATE_HEX, "op_integration_second", "district_authority")
     check("approve_gate success", res["success"])
     check("check_gate -> APPROVED after approval",
           check_gate(GATE_HEX) == "APPROVED")
