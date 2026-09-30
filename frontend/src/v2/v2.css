@@ -151,6 +151,9 @@
 
 /* Map card */
 .hs2-mapcard { display: flex; flex-direction: column; padding: 10px; height: 640px; }
+/* Overview: the map stays in view while the side columns scroll (sticky inside the scrolling area),
+   and is never taller than the visible area so it is always shown whole. */
+.hs2-main > .hs2-mapcard { position: sticky; top: 0; z-index: 2; height: min(640px, calc(100vh - 110px)); }
 .hs2-mapcard.tall { height: calc(100vh - 250px); min-height: 520px; }
 .hs2-maptools { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
 .hs2-seg { display: flex; border: 1px solid var(--c-border); border-radius: 8px; overflow: hidden; }
@@ -232,7 +235,7 @@
   .hs2-tab .ico, .hs2-brand-sub { display: none; }
   .hs2-top { gap: 10px; padding: 8px 12px; }
   .hs2-pill { padding: 4px 8px; }
-  .hs2-mapcard { height: 580px; }
+  .hs2-mapcard, .hs2-main > .hs2-mapcard { height: min(580px, calc(100vh - 100px)); }
 }
 @media (max-width: 1200px) {
   .hs2-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -242,6 +245,7 @@
   .hs2-page-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 860px) {
+  .hs2-main > .hs2-mapcard { position: static; height: 480px; }
   .hs2-main { grid-template-columns: 1fr; }
   .hs2-main > .hs2-side { grid-template-columns: 1fr; }
   .hs2-kpis { grid-template-columns: 1fr 1fr; }
