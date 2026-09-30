@@ -79,28 +79,11 @@ def _fetch_live_forecast(lat: float, lon: float) -> tuple[dict, str]:
 
 
 def _load_cached_forecast(lat: float, lon: float) -> dict:
-    """Load cached_demo_snapshot.json or rainfall_forecast.json fallback."""
-    for cache_file in [_CACHE_PATH, _FORECAST_FILE]:
-        if not cache_file.exists():
-            continue
-        try:
-            data = json.loads(cache_file.read_text(encoding="utf-8"))
-            locations = data.get("locations", [])
-            if not locations:
-                continue
-            best = min(
-                locations,
-                key=lambda loc: (loc.get("lat", 0) - lat) ** 2
-                                + (loc.get("lon", 0) - lon) ** 2,
-            )
-            series = best.get("series", {})
-            times  = series.get("time", [])
-            precip = series.get("precipitation_mm", series.get("precipitation", []))
-            if times and precip:
-                return {"time": times, "precipitation": precip}
-        except Exception:
-            continue
-    return {"time": [], "precipitation": []}
+    """Snapshot-file fallback, with the same rules as rainfall: only a file fetched within the last 6 h whose
+    nearest point is within 25 km.  Otherwise no forecast (lead time is then 'not projected', never borrowed
+    from another place or another week)."""
+    from backend.rainfall import _load_cached_rainfall
+    return _load_cached_rainfall(lat, lon) or {"time": [], "precipitation": []}
 
 
 def _extract_forecast_rainfall(

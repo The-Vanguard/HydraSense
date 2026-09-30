@@ -52,7 +52,10 @@ RAIN_PROFILES = {
 
 
 def get_all_hex_ids(conn):
-    rows = conn.execute("SELECT hex_id FROM hexes ORDER BY hex_id").fetchall()
+    # Only legacy demo hexes (no region code).  Onboarded regions hold REAL terrain from the onboarding
+    # pipeline; this script once overwrote all 12,718 of them with 8 invented profiles (2026-09-30).
+    rows = conn.execute("SELECT hex_id FROM hexes WHERE region_code IS NULL OR region_code = '' "
+                        "ORDER BY hex_id").fetchall()
     return [r[0] for r in rows]
 
 
@@ -123,4 +126,9 @@ def run():
 
 
 if __name__ == "__main__":
+    if "--i-understand-this-writes-simulated-data" not in sys.argv:
+        print("[seed_demo_risk] Refusing to run: it replaces terrain with invented profiles and writes SIMULATED
+"
+              "observations for the legacy demo hexes.  Re-run with --i-understand-this-writes-simulated-data.")
+        sys.exit(1)
     run()

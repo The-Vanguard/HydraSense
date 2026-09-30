@@ -54,7 +54,8 @@ def _store_observation(hex_id: str, timestamp: str, new_fields: dict) -> None:
             )
         else:
             conn.execute(
-                "INSERT INTO observations (hex_id, timestamp, dynamic_features) VALUES (?,?,?)",
+                "INSERT INTO observations (hex_id, timestamp, provenance, dynamic_features) "
+                "VALUES (?,?,'REAL_RECONSTRUCTED',?)",   # field data: unverified, but not simulated
                 (hex_id, timestamp, json.dumps(new_fields))
             )
 
@@ -80,7 +81,8 @@ def ingest_rainfall_forecast(body: RainfallForecastIngest):
     hid = _resolve_hex(body.hex_id, body.lat, body.lon)
     with get_db() as conn:
         conn.execute(
-            "INSERT INTO observations (hex_id, timestamp, dynamic_features) VALUES (?,?,?)",
+            "INSERT INTO observations (hex_id, timestamp, provenance, dynamic_features) "
+                "VALUES (?,?,'REAL_RECONSTRUCTED',?)",   # field data: unverified, but not simulated
             (
                 hid,
                 datetime.now(timezone.utc).isoformat(),

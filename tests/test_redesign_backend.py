@@ -68,3 +68,61 @@ def test_replay_scores_real_series_hour_by_hour(monkeypatch):
     assert [s["rainfall_24h"] for s in d["steps"]] == [0, 5, 45, 105]
     assert d["steps"][-1]["risk_score"] >= d["steps"][0]["risk_score"]
     assert "soil_saturation" in d["steps"][0]["missing_inputs"]
+
+
+def test_simulated_observations_never_feed_the_sensor_path(monkeypatch):
+    import json
+    import sqlite3
+    from contextlib import contextmanager
+    from backend import database, rainfall
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    conn.execute("CREATE TABLE observations (hex_id TEXT, timestamp TEXT, provenance TEXT, dynamic_features TEXT)")
+    now = datetime.now(timezone.utc).isoformat()
+    feats = json.dumps({"rainfall_1h": 28.0, "soil_moisture_surface": 0.5, "soil_saturation_ratio": 0.92})
+    conn.execute("INSERT INTO observations VALUES ('h1', ?, 'SIMULATED', ?)", (now, feats))
+
+    @contextmanager
+    def fake_db():
+        yield conn
+    monkeypatch.setattr(database, "get_db", fake_db)
+    assert rainfall._get_sensor_rainfall("h1") is None
+    assert rainfall._get_sensor_soil_moisture("h1") is None
+    conn.execute("INSERT INTO observations VALUES ('h1', ?, 'REAL_RECONSTRUCTED', ?)", (now, feats))
+    assert rainfall._get_sensor_rainfall("h1")["rainfall_1h"] == 28.0
+
+
+def test_cached_rainfall_is_never_far_away_or_stale(monkeypatch, tmp_path):
+    import json
+    from backend import rainfall
+    now = datetime.now(timezone.utc)
+    snap = {"fetched_at": now.isoformat(), "locations": [
+        {"location": "Mundakkai", "lat": 11.51, "lon": 76.05,
+         "series": {"time": ["2026-01-01T00:00"], "precipitation_mm": [5.0]}}]}
+    (tmp_path / "cached_demo_snapshot.json").write_text(json.dumps(snap))
+    monkeypatch.setattr(rainfall, "_CACHE_DIR", tmp_path)
+    assert rainfall._load_cached_rainfall(11.52, 76.06) is not None          # 1-2 km away, fresh: usable
+    assert rainfall._load_cached_rainfall(30.5, 79.0) is None                 # Uttarakhand: too far
+    snap["fetched_at"] = "2026-01-01T00:00:00+00:00"
+    (tmp_path / "cached_demo_snapshot.json").write_text(json.dumps(snap))
+    assert rainfall._load_cached_rainfall(11.52, 76.06) is None               # too old
+
+
+def test_live_failure_uses_last_good_reading_for_the_same_cell(monkeypatch):
+    import httpx
+    from backend import rainfall
+    monkeypatch.setattr(rainfall, "_LAST_GOOD", {})
+    monkeypatch.setattr(rainfall, "_load_cached_rainfall", lambda lat, lon: None)
+    fn = getattr(rainfall.fetch_open_meteo_rainfall, "__wrapped__", rainfall.fetch_open_meteo_rainfall)
+
+    class R:
+        def raise_for_status(self): pass
+        def json(self): return {"hourly": {"time": ["t0"], "precipitation": [1.5]}}
+    monkeypatch.setattr(httpx, "get", lambda *a, **k: R())
+    assert fn(30.51, 79.01)[1] == "open_meteo_live"
+
+    def boom(*a, **k): raise httpx.ConnectError("down")
+    monkeypatch.setattr(httpx, "get", boom)
+    series, src = fn(30.52, 79.02)                                           # same ~10 km cell
+    assert src == "open_meteo_cached" and series["precipitation"] == [1.5]
+    assert fn(11.5, 76.0)[1] == "unavailable"                                 # nothing for another place

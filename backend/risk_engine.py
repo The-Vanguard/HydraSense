@@ -128,7 +128,8 @@ def compute_and_store_risk(hex_id: str) -> dict[str, Any] | None:
         # 2b. Load remaining dynamic features from observations (e.g. edge FS)
         obs_row = conn.execute(
             "SELECT dynamic_features, timestamp FROM observations "
-            "WHERE hex_id = ? ORDER BY timestamp DESC LIMIT 1",
+            "WHERE hex_id = ? AND COALESCE(provenance, '') != 'SIMULATED' "   # simulated rows never feed live scores
+            "ORDER BY timestamp DESC LIMIT 1",
             (hex_id,)
         ).fetchone()
         dynamic_feats: dict = {}

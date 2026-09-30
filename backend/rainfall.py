@@ -20,6 +20,7 @@ Owner: Phase 3 migration
 from __future__ import annotations
 
 import json
+import time
 import math
 import sys
 import time as _time
@@ -162,14 +163,21 @@ def fetch_open_meteo_rainfall(
         times = data.get("hourly", {}).get("time", [])
         precip = data.get("hourly", {}).get("precipitation", [])
         if times and precip:
-            return {"time": times, "precipitation": precip}, "open_meteo_live"
+            series = {"time": times, "precipitation": precip}
+            _LAST_GOOD[_cell(lat, lon)] = (time.time(), series)
+            return series, "open_meteo_live"
     except Exception:
         pass
 
-    # Tier 2: cached fallback
+    # Tier 2: the last successful live reading for this ~10 km cell, if recent enough
+    hit = _LAST_GOOD.get(_cell(lat, lon))
+    if hit and time.time() - hit[0] <= CACHE_MAX_AGE_S:
+        return hit[1], "open_meteo_cached"
+    # Tier 2b: a prefetched snapshot file, only if it is near this point and recent
     cached = _load_cached_rainfall(lat, lon)
     if cached:
         return cached, "open_meteo_cached"
+    # Nothing trustworthy: report rainfall as unavailable (the score lists it as a missing input)
     return {"time": [], "precipitation": []}, "unavailable"
 
 
@@ -223,8 +231,21 @@ def _get_earthdata_token() -> Optional[str]:
     return None
 
 
+CACHE_MAX_AGE_S = 6 * 3600          # a cached reading older than this is not used as "current" rain
+CACHE_MAX_DIST_KM = 25.0            # nor one taken more than this far from the hex
+_LAST_GOOD: dict = {}               # (lat_cell, lon_cell) -> (epoch_s, series): last successful live fetch
+
+
+def _cell(lat: float, lon: float) -> tuple:
+    return (round(lat, 1), round(lon, 1))
+
+
 def _load_cached_rainfall(lat: float, lon: float) -> Optional[dict]:
-    """Load cached rainfall from demo snapshot or forecast files."""
+    """
+    Rainfall from a prefetched snapshot file, ONLY when its nearest location is within CACHE_MAX_DIST_KM of this
+    point and the file was fetched within CACHE_MAX_AGE_S.  (It used to return the nearest of four Wayanad
+    points from any distance and any age, e.g. weeks-old Wayanad rain for a hex in Uttarakhand.)
+    """
     for cache_file in [
         _CACHE_DIR / "cached_demo_snapshot.json",
         _CACHE_DIR / "rainfall_forecast.json",
@@ -236,11 +257,22 @@ def _load_cached_rainfall(lat: float, lon: float) -> Optional[dict]:
             locations = data.get("locations", [])
             if not locations:
                 continue
+            fetched = data.get("fetched_at")
+            try:
+                age = time.time() - datetime.fromisoformat(fetched.replace("Z", "+00:00")).timestamp()
+            except Exception:
+                continue                      # unknown age: not usable as current rain
+            if age > CACHE_MAX_AGE_S:
+                continue
             best = min(
                 locations,
                 key=lambda loc: (loc.get("lat", 0) - lat) ** 2
                                 + (loc.get("lon", 0) - lon) ** 2,
             )
+            km = 111.0 * (((best.get("lat", 0) - lat) ** 2
+                           + ((best.get("lon", 0) - lon) * math.cos(math.radians(lat))) ** 2) ** 0.5)
+            if km > CACHE_MAX_DIST_KM:
+                continue
             series = best.get("series", {})
             times = series.get("time", [])
             precip = series.get("precipitation_mm", series.get("precipitation", []))
@@ -385,7 +417,8 @@ def _get_sensor_soil_moisture(hex_id: str) -> Optional[SoilState]:
         with get_db() as conn:
             row = conn.execute(
                 "SELECT dynamic_features, timestamp FROM observations "
-                "WHERE hex_id = ? ORDER BY timestamp DESC LIMIT 1",
+                "WHERE hex_id = ? AND COALESCE(provenance, '') != 'SIMULATED' "   # simulated rows never feed live scores
+                "ORDER BY timestamp DESC LIMIT 1",
                 (hex_id,)
             ).fetchone()
             if row is None:
@@ -607,7 +640,8 @@ def _get_sensor_rainfall(hex_id: str) -> Optional[dict]:
         with get_db() as conn:
             row = conn.execute(
                 "SELECT dynamic_features, timestamp FROM observations "
-                "WHERE hex_id = ? ORDER BY timestamp DESC LIMIT 1",
+                "WHERE hex_id = ? AND COALESCE(provenance, '') != 'SIMULATED' "   # simulated rows never feed live scores
+                "ORDER BY timestamp DESC LIMIT 1",
                 (hex_id,)
             ).fetchone()
             if row is None:

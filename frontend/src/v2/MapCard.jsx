@@ -87,8 +87,13 @@ export default function MapCard({
               "sensor", but no sensors are deployed: they were scored from simulated observations.</div>
           )}
           {nonLive.map(([k, n]) => (
-            <div key={k} className="hs2-banner" style={{ marginTop: 4 }}>Rainfall degraded: {n} of {d.hexes.length} hexes
-              scored from "{k}" (not live); confidence is lower.</div>
+            <div key={k} className="hs2-banner" style={{ marginTop: 4 }}>
+              {k === 'unavailable'
+                ? `${n} of ${d.hexes.length} hexes have no rainfall: the live Open-Meteo call failed and there is no recent reading nearby, so rain is counted as a missing input.`
+                : k === 'open_meteo_cached'
+                  ? `${n} of ${d.hexes.length} hexes use the last good Open-Meteo reading for their area (under 6 h old) because the live call failed; confidence is lower.`
+                  : `Rainfall degraded: ${n} of ${d.hexes.length} hexes scored from "${k}" (not live); confidence is lower.`}
+            </div>
           ))}
         </div>
         {engine === 'deck' ? <DeckHexMap {...props} /> : <HexMap {...props} />}
