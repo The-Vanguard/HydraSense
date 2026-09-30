@@ -5,7 +5,7 @@
  * Flood per village is not built yet and is shown as such (never blank, never estimated).
  * Shelter advice is straight-line distance from the backend, not a routed path.
  */
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { getVillagePriority, getEvacuation } from '../api/client';
 
 const TIER_COLOR = { Green: '#22c55e', Yellow: '#eab308', Orange: '#f97316', Red: '#ef4444' };
@@ -58,17 +58,18 @@ export default function VillagePanel({ region }) {
   const [open, setOpen]    = useState(null);
   const [sortKey, setSort] = useState('priority');
 
-  const load = useCallback(() => {
-    if (!region) return;
-    getVillagePriority(region).then((d) => { setData(d); setErr(null); })
-      .catch((e) => setErr(e?.response?.data?.detail || 'village table unavailable'));
-  }, [region]);
-
   useEffect(() => {
-    setData(null); setOpen(null); load();
-    const iv = setInterval(load, POLL_MS);
+    if (!region) return undefined;
+    let iv = null;
+    const load = () => getVillagePriority(region).then((d) => { setData(d); setErr(null); })
+      .catch((e) => {
+        setErr(e?.response?.data?.detail || 'village table unavailable');
+        if (e?.response?.status === 404) clearInterval(iv);     // region not onboarded: stop polling
+      });
+    setData(null); setOpen(null); setErr(null); load();
+    iv = setInterval(load, POLL_MS);
     return () => clearInterval(iv);
-  }, [load]);
+  }, [region]);
 
   if (!region) return null;
   let rows = data?.villages || [];

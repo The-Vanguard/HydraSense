@@ -7,15 +7,23 @@
  */
 import React from 'react';
 
+// Layers the pipeline actually uses.  Static layers are fetched once at onboarding (GeoPackage).
 const SOURCES = [
-  { key: 'dem',      label: 'DEM',       agency: 'OpenTopography' },
-  { key: 'landcover',label: 'Land Cover', agency: 'ESA WorldCover' },
-  { key: 'soil',     label: 'Soil',       agency: 'SoilGrids' },
-  { key: 'rainfall', label: 'Rainfall',   agency: 'Open-Meteo' },
-  { key: 'era5',     label: 'ERA5',       agency: 'Copernicus' },
-  { key: 'smap',     label: 'SMAP',       agency: 'NASA' },
-  { key: 'iot',      label: 'IoT',        agency: 'MQTT Sensor' },
+  { key: 'dem',       label: 'DEM',           agency: 'OpenTopography SRTM (onboarding)', fixed: 'static' },
+  { key: 'landcover', label: 'Land cover',    agency: 'ESA WorldCover (onboarding)',      fixed: 'static' },
+  { key: 'soil',      label: 'Soil',          agency: 'SoilGrids (onboarding)',           fixed: 'static' },
+  { key: 'rainfall',  label: 'Rainfall',      agency: 'IMERG / Open-Meteo (live chain)' },
+  { key: 'sensors',   label: 'Sensors',       agency: 'none deployed',                    fixed: 'none' },
 ];
+
+// Map a backend data_source label to a display status.
+function normalise(v) {
+  if (!v) return 'unknown';
+  if (/live/.test(v)) return 'live';
+  if (/cached|demo/.test(v)) return 'cached';
+  if (v === 'sensor') return 'simulated';
+  return STATUS_COLOR[v] ? v : 'unknown';
+}
 
 const STATUS_COLOR = {
   live:     '#22c55e',
@@ -23,6 +31,9 @@ const STATUS_COLOR = {
   fallback: '#f97316',
   offline:  '#ef4444',
   unknown:  '#484f58',
+  static:   '#60a5fa',
+  simulated:'#a855f7',
+  none:     '#484f58',
 };
 
 const STATUS_LABEL = {
@@ -31,6 +42,9 @@ const STATUS_LABEL = {
   fallback: 'FALLBACK',
   offline:  'OFFLINE',
   unknown:  '—',
+  static:   'STATIC',
+  simulated:'SIMULATED',
+  none:     'NONE',
 };
 
 export default function AppFooter({ dataSources = {}, frozenDate = null }) {
@@ -38,8 +52,8 @@ export default function AppFooter({ dataSources = {}, frozenDate = null }) {
     <footer className="app-footer">
       {/* Agency connection dots */}
       <div className="footer-sources">
-        {SOURCES.map(({ key, label, agency }) => {
-          const status = dataSources[key] || 'unknown';
+        {SOURCES.map(({ key, label, agency, fixed }) => {
+          const status = fixed || normalise(dataSources[key]);
           const color  = STATUS_COLOR[status] || STATUS_COLOR.unknown;
           return (
             <div key={key} className="footer-source-dot" title={`${agency}: ${STATUS_LABEL[status]}`}>
@@ -66,7 +80,7 @@ export default function AppFooter({ dataSources = {}, frozenDate = null }) {
       </div>
 
       {/* HydraSense_Final.md reference */}
-      <div className="footer-ref">HydraSense_Final.md · §15.5</div>
+      <div className="footer-ref">HydraSense · SIH prototype · not an official warning service</div>
     </footer>
   );
 }

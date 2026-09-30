@@ -7,7 +7,7 @@
  *  - QUICK REGIONAL VIEWS pill buttons (Tamil Nadu, Kerala, Uttarakhand, Himachal, All India, Reset)
  *  - "Inspect & Debug Predictions" blue pill button
  *  - FOCUS NATIONAL CORRIDORS 2-column pill grid
- *  - REAL-TIME HYDRO-TELEMETRY status card
+ *  - Rainfall-source card (from the latest scores) and a note that no real sensors are deployed
  *  - Collapsible FORCE STATUS & AUDIT LOG (tamper-evident feed & gate records)
  */
 import React, { useState, useEffect, useRef } from 'react';
@@ -52,6 +52,7 @@ export default function LeftColumn({
   selectedRegionCode = 'wayanad-kl',
   onRegionChange,
   onDebugClick,
+  rainSource = null,
 }) {
   const [feed, setFeed]                 = useState([]);
   const [pulse, setPulse]               = useState(null);
@@ -231,11 +232,14 @@ export default function LeftColumn({
         <div className="ref-section-label">REAL-TIME HYDRO-TELEMETRY</div>
         <div className="ref-telemetry-card">
           <div className="ref-telemetry-top">
-            <span className="ref-telemetry-brand">📡 NASA IMERG & SMAP Live</span>
-            <span className="ref-live-tag">Live Feed</span>
+            <span className="ref-telemetry-brand">Rainfall source (latest scores)</span>
+            {rainSource && /live/.test(rainSource) && <span className="ref-live-tag">Live</span>}
           </div>
           <div className="ref-telemetry-sub">
-            <strong>Precipitation:</strong> NASA GPM IMERG (~4h latency)
+            <strong>Rainfall:</strong> {rainSource || 'no current scores'} · chain: sensor → IMERG → Open-Meteo → cached
+          </div>
+          <div className="ref-telemetry-sub">
+            <strong>Sensors:</strong> none deployed; the telemetry ticks below are simulated
           </div>
         </div>
       </div>
@@ -305,9 +309,10 @@ function buildText(msg) {
     case 'persist_declared':     return `PERSISTENT THREAT — ${msg.hex_id?.slice(0, 8)} (${msg.cycles} cycles)`;
     case 'gate_pending':         return `AUTH needed — ${msg.hex_id?.slice(0, 8)}`;
     case 'gate_approved':        return `AUTH approved — ${msg.hex_id?.slice(0, 8)} by ${msg.operator_id}`;
+    case 'gate_rejected':        return `AUTH rejected — ${msg.hex_id?.slice(0, 8)} by ${msg.operator_id}`;
     case 'snapshot':             return `Snapshot loaded — ${msg.hexes?.length ?? '?'} hexes`;
-    case 'telemetry_tick':       return `📡 IoT Stream — ${msg.stations || 4} nodes active (${msg.rain_mm || 0}mm/h)`;
-    case 'sensor_status_changed':return `⚡ SENSOR ${msg.status?.toUpperCase()} — ${msg.status === 'offline' ? 'Fallback to Satellite/NWP' : 'Restored to Live Telemetry'}`;
+    case 'telemetry_tick':       return `SIMULATED sensor tick — ${msg.sensor_type || 'sensor'} ${msg.value ?? ''} (no real nodes deployed; not used for scoring)`;
+    case 'sensor_status_changed':return `SIMULATED sensor ${msg.status?.toUpperCase()} — ${msg.status === 'offline' ? 'demo of the fallback path' : 'demo stream restored'}`;
     case 'region_onboarded':     return `📍 Pipeline Resolved — ${msg.region || msg.label} (${msg.hex_count} hexes)`;
     default:                     return msg.type;
   }

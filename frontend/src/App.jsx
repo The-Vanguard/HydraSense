@@ -293,6 +293,15 @@ export default function App() {
 
   const selectedHex = hexes.find(h => h.hex_id === selectedHexId) || null;
 
+  // ── Input-source summary for the degraded-mode banner and footer (v2 Sec. 13.3) ──
+  const sourceCounts = hexes.reduce((m, h) => {
+    const k = typeof h.data_source === 'string' ? h.data_source : 'unknown';
+    m[k] = (m[k] || 0) + 1;
+    return m;
+  }, {});
+  const mainRainSource = Object.entries(sourceCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+  const degraded = Object.entries(sourceCounts).filter(([k]) => !/live/.test(k));
+
   // ── Response Unit view ────────────────────────────────────────────────
   if (role === 'Response Unit') {
     return (
@@ -312,7 +321,7 @@ export default function App() {
         <div className="app-body ru-mode">
           <ResponseUnitView hexes={hexes} alerts={pendingGates} region={currentRegion} />
         </div>
-        <AppFooter dataSources={dataSources} frozenDate={loroFrozen} />
+        <AppFooter dataSources={{ rainfall: mainRainSource }} frozenDate={loroFrozen} />
       </div>
     );
   }
@@ -347,6 +356,7 @@ export default function App() {
           selectedRegionCode={selectedRegionCode}
           onRegionChange={handleRegionChange}
           onDebugClick={() => setManualOpen(true)}
+          rainSource={mainRainSource}
         />
 
         {/* Center — map zone */}
@@ -357,6 +367,19 @@ export default function App() {
             onRegionChange={handleRegionChange}
             onGatesChange={setPendingGates}
           />
+          {/* Degraded mode: name the layer, never hide it (v2 Sec. 13.3) */}
+          {degraded.length > 0 && (
+            <div style={{ padding: '5px 12px', fontSize: 11, lineHeight: 1.45, background: 'var(--warning-soft)',
+                          color: 'var(--warning)', borderBottom: '1px solid rgba(245,158,11,0.3)' }}>
+              {degraded.map(([k, n]) => (
+                <div key={k}>
+                  {k === 'sensor'
+                    ? `${n} of ${hexes.length} hexes are tagged "sensor", but no sensors are deployed: they were scored from simulated observations.`
+                    : `Rainfall layer degraded: ${n} of ${hexes.length} hexes scored from "${k}" (not live); confidence is lower for them.`}
+                </div>
+              ))}
+            </div>
+          )}
           {/* Map controls bar */}
           <div className="map-controls-bar">
             <HazardToggle mode={hazardMode} onChange={setHazardMode} />
@@ -500,7 +523,7 @@ export default function App() {
       </div>
 
       {/* ── Footer — agency dots (§13.4) ── */}
-      <AppFooter dataSources={dataSources} frozenDate={loroFrozen} />
+      <AppFooter dataSources={{ rainfall: mainRainSource }} frozenDate={loroFrozen} />
     </div>
   );
 }
